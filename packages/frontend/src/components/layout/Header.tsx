@@ -31,6 +31,12 @@ export default function Header() {
               >
                 My APIs
               </Link>
+              <Link
+                href="/docs"
+                className="text-sm font-medium text-gray-600 hover:text-gray-900"
+              >
+                Docs
+              </Link>
             </nav>
           </div>
           <ConnectButton />
