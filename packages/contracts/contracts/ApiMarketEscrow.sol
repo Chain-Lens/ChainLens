@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+interface IERC20 {
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+    function transfer(address to, uint256 amount) external returns (bool);
+}
+
 contract ApiMarketEscrow {
     struct Payment {
         address buyer;
         uint256 apiId;
-        address payable seller;
+        address seller;
         uint256 amount;
         bool completed;
         bool refunded;
@@ -13,6 +18,7 @@ contract ApiMarketEscrow {
 
     address public owner;
     address public gateway;
+    IERC20 public immutable usdc;
     uint256 public nextPaymentId;
     uint256 public feeRate; // basis points (100 = 1%, 1000 = 10%)
 
@@ -53,11 +59,12 @@ contract ApiMarketEscrow {
         _;
     }
 
-    constructor(address _gateway, uint256 _feeRate) {
+    constructor(address _gateway, uint256 _feeRate, address _usdc) {
         require(_feeRate <= 3000, "Fee rate max 30%");
         owner = msg.sender;
         gateway = _gateway;
         feeRate = _feeRate;
+        usdc = IERC20(_usdc);
     }
 
     function approveApi(uint256 apiId) external onlyOwner {
@@ -72,23 +79,26 @@ contract ApiMarketEscrow {
 
     function pay(
         uint256 apiId,
-        address payable seller
-    ) external payable returns (uint256 paymentId) {
+        address seller,
+        uint256 amount
+    ) external returns (uint256 paymentId) {
         require(approvedApis[apiId], "API not approved");
-        require(msg.value > 0, "Payment must be > 0");
+        require(amount > 0, "Payment must be > 0");
         require(seller != address(0), "Invalid seller");
+
+        require(usdc.transferFrom(msg.sender, address(this), amount), "USDC transfer failed");
 
         paymentId = nextPaymentId++;
         payments[paymentId] = Payment({
             buyer: msg.sender,
             apiId: apiId,
             seller: seller,
-            amount: msg.value,
+            amount: amount,
             completed: false,
             refunded: false
         });
 
-        emit PaymentReceived(paymentId, msg.sender, apiId, seller, msg.value);
+        emit PaymentReceived(paymentId, msg.sender, apiId, seller, amount);
     }
 
     function complete(uint256 paymentId) external onlyGateway {
@@ -117,7 +127,7 @@ contract ApiMarketEscrow {
         require(!p.refunded, "Already refunded");
 
         p.refunded = true;
-        payable(p.buyer).transfer(p.amount);
+        require(usdc.transfer(p.buyer, p.amount), "USDC refund failed");
 
         emit PaymentRefunded(paymentId, p.buyer, p.amount);
     }
@@ -126,7 +136,7 @@ contract ApiMarketEscrow {
         uint256 amount = pendingWithdrawals[msg.sender];
         require(amount > 0, "Nothing to claim");
         pendingWithdrawals[msg.sender] = 0;
-        payable(msg.sender).transfer(amount);
+        require(usdc.transfer(msg.sender, amount), "USDC claim failed");
         emit Claimed(msg.sender, amount);
     }
 
