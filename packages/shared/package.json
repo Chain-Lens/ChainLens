@@ -1,11 +1,11 @@
 {
   "name": "@chainlens/shared",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Shared types, ABIs, addresses, and task-type registry for ChainLens (Type 2 MVP).",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lejuho/ChainLens.git",
+    "url": "https://github.com/Chain-Lens/ChainLens.git",
     "directory": "packages/shared"
   },
   "main": "dist/index.js",

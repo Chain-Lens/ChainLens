@@ -1,11 +1,11 @@
 {
   "name": "@chainlens/mcp-tool",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "ChainLens MCP tool — discover sellers, request data, check job status from Claude Desktop and other MCP clients.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lejuho/ChainLens.git",
+    "url": "https://github.com/Chain-Lens/ChainLens.git",
     "directory": "packages/mcp-tool"
   },
   "keywords": [
