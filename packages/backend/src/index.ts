@@ -1,6 +1,9 @@
 import app from "./app.js";
 import { env } from "./config/env.js";
+import { publicClient } from "./config/viem.js";
 import { startEventListener } from "./services/event-listener.service.js";
+import { startV2EventListener } from "./services/v2-event-listener.service.js";
+import { prismaEvidenceStore } from "./services/evidence-store.js";
 import { logger } from "./utils/logger.js";
 
 async function main() {
@@ -15,7 +18,26 @@ async function main() {
   } catch (error) {
     logger.warn(
       { error },
-      "Event listener failed to start (contract may not be deployed yet)"
+      "v1 event listener failed to start (contract may not be deployed yet)"
+    );
+  }
+
+  try {
+    const chainId = publicClient.chain?.id;
+    if (chainId === undefined) throw new Error("publicClient.chain not configured");
+    startV2EventListener({
+      chainId,
+      publicClient,
+      deps: {
+        store: prismaEvidenceStore,
+        platformUrl: env.PLATFORM_URL,
+        logger,
+      },
+    });
+  } catch (error) {
+    logger.warn(
+      { error },
+      "v2 event listener failed to start (contracts may not be deployed yet)"
     );
   }
 }

@@ -27,7 +27,7 @@
 | 3 | Gateway 확장 (validation + responseHash/evidenceURI + reputation) | ✅ Done |
 | 4 | Evidence 저장 (Phase 1: DB) + `/api/evidence/:jobId` | ✅ Done |
 | 5 | Prisma 마이그레이션 (Job, SellerProfile, ApiTestResult) + reputation 엔드포인트 | ✅ Done |
-| 6-7 | Event listener 확장 + E2E 테스트 | 📅 Planned |
+| 6-7 | Event listener 확장 + E2E 테스트 | ✅ Done |
 
 ### Week 3 — 프론트엔드 + MCP + 데모
 
@@ -74,6 +74,14 @@
 > 작업 단위(커밋 기준)로 누적 기록. 최신이 위.
 
 ### 2026-04-19
+
+- **Week 2 Day 6-7: V2 Event Listener + E2E 테스트**
+  - [packages/backend/src/services/v2-event-listener.service.ts](packages/backend/src/services/v2-event-listener.service.ts) — 4개 이벤트 구독 (스펙 3개 + 데이터 정합성을 위해 `PaymentRefunded` 추가). 각 핸들러는 pure DI 함수: `handleJobCreated`(PAID 행 생성 — `evidenceURI`는 `buildEvidenceURI(jobId, PLATFORM_URL)` 캐노니컬, taskType==0x00은 `null`로 저장해 legacy 경로 명시), `handleJobSubmitted`(`status=COMPLETED`, `responseHash` 이벤트에서 직접 복사), `handlePaymentRefunded`(`status=REFUNDED`), `handleJobResultRecorded`(로그만 — reputation은 on-chain이 authoritative). 모든 핸들러는 store/logger 실패를 **삼킨 뒤 error 로그만 남김** — 이벤트 구독이 한 번의 실패로 끊기면 후속 이벤트를 전부 놓치므로 격리. `startV2EventListener({chainId, publicClient, deps})`가 wiring을 담당, 미배포 체인에서는 명시적 throw (fail-fast). 반환값은 `stop()` 언서브 함수.
+  - [packages/backend/src/index.ts](packages/backend/src/index.ts) — v1 리스너 `try/catch`는 그대로 유지, v2 리스너를 별도 `try/catch`로 래핑해 한쪽 실패가 다른 쪽을 막지 않도록 분리 (v2만 배포된 dev 환경 + v1만 남은 legacy 환경 모두 동일하게 동작).
+  - [packages/backend/src/services/v2-event-listener.service.test.ts](packages/backend/src/services/v2-event-listener.service.test.ts) — 핸들러 단위 테스트 7 케이스: JobCreated(happy / ZERO_BYTES32 → null / store 실패시 swallow+error 로그), JobSubmitted(happy / record missing race), PaymentRefunded(REFUNDED 전환), JobResultRecorded(로그만).
+  - [packages/backend/src/services/v2-event-listener.start.test.ts](packages/backend/src/services/v2-event-listener.start.test.ts) — start 통합 2 케이스: 미배포 chainId에 대한 throw / 4개 이벤트 구독 + 각 onLogs 경로가 올바른 핸들러로 라우팅됨 + stop()이 모두 언서브.
+  - [packages/backend/src/services/job-flow.e2e.test.ts](packages/backend/src/services/job-flow.e2e.test.ts) — **E2E 2 케이스** (in-memory store + fake on-chain deps로 실제 프로덕션 코드 경로 전체 주행): **정상 경로** JobCreated → 게이트웨이 `finalizeJob` (responseHash keccak256 생성 + submit + recordSellerResult) → JobSubmitted → JobResultRecorded → 최종 상태 검증 (`status=COMPLETED`, `responseHash` 일치, `completedAt` 세팅, JobResultRecorded는 DB 미변경). **환불 경로** JobCreated → 게이트웨이가 injection 탐지로 refund → PaymentRefunded → `status=REFUNDED`. 가짜 deps만 viem/env를 대체하고, 게이트웨이·리스너·evidence 서비스는 전부 실제 코드.
+  - **73/73 통과**, `tsc --noEmit` 클린. E2E 테스트가 "Seller 등록 → Job 요청 → 정산" 전체 파이프라인을 DB/RPC 없이 검증.
 
 - **Week 2 Day 5: SellerProfile/ApiTestResult 스키마 + reputation/jobs 엔드포인트**
   - [packages/backend/prisma/schema.prisma](packages/backend/prisma/schema.prisma) — `SellerProfile` (`sellerAddress` unique, `endpointUrl`, `capabilities Json`, `pricePerCall Decimal(18,6)`, `status` + `@@index`, `jobsCompleted/jobsFailed/totalEarnings` 캐시) + `ApiTestResult` (`sellerAddress` + `capability`별 테스트 기록, `responseTimeMs`/`schemaValid`/`injectionFree`/`statusCode`) 모델 추가. `pnpm prisma generate`로 타입 재생성.
