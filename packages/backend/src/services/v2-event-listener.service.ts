@@ -3,7 +3,7 @@ import {
   SellerRegistryAbi,
   CONTRACT_ADDRESSES_V2,
   SELLER_REGISTRY_ADDRESSES,
-} from "@apimarket/shared";
+} from "@chainlens/shared";
 import {
   recordJobPaid,
   recordJobCompletion,

@@ -1,5 +1,5 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
-import { baseSepolia } from "@apimarket/shared";
+import { baseSepolia } from "@chainlens/shared";
 
 export const wagmiConfig = getDefaultConfig({
   appName: "ChainLens",

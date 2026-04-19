@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
 import { mockApis } from "@/lib/mock-data";
-import type { ApiListingPublic } from "@apimarket/shared";
+import type { ApiListingPublic } from "@chainlens/shared";
 
 export function useApiList(filters?: { category?: string; search?: string }) {
   const [apis, setApis] = useState<ApiListingPublic[]>([]);

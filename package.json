@@ -1,14 +1,14 @@
 {
-  "name": "monapi-market",
+  "name": "chainlens",
   "private": true,
   "scripts": {
-    "dev": "pnpm -r --parallel --filter @apimarket/backend --filter @apimarket/frontend dev",
-    "build": "pnpm --filter @apimarket/shared build && pnpm --filter @apimarket/backend build && pnpm --filter @apimarket/frontend build",
+    "dev": "pnpm -r --parallel --filter @chainlens/backend --filter @chainlens/frontend dev",
+    "build": "pnpm --filter @chainlens/shared build && pnpm --filter @chainlens/backend build && pnpm --filter @chainlens/frontend build",
     "test": "pnpm -r test",
-    "contracts:compile": "pnpm --filter @apimarket/contracts compile",
-    "contracts:test": "pnpm --filter @apimarket/contracts test",
-    "db:migrate": "pnpm --filter @apimarket/backend db:migrate",
-    "db:studio": "pnpm --filter @apimarket/backend db:studio",
+    "contracts:compile": "pnpm --filter @chainlens/contracts compile",
+    "contracts:test": "pnpm --filter @chainlens/contracts test",
+    "db:migrate": "pnpm --filter @chainlens/backend db:migrate",
+    "db:studio": "pnpm --filter @chainlens/backend db:studio",
     "clean": "pnpm -r exec rm -rf dist node_modules .next"
   },
   "devDependencies": {

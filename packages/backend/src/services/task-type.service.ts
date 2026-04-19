@@ -3,7 +3,7 @@ import {
   TaskTypeRegistryAbi,
   TASK_TYPE_REGISTRY_ADDRESSES,
   type OnChainTaskTypeConfig,
-} from "@apimarket/shared";
+} from "@chainlens/shared";
 import { publicClient } from "../config/viem.js";
 
 export function taskTypeId(name: string): `0x${string}` {

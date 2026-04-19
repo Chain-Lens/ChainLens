@@ -1,4 +1,4 @@
-import type { OnChainTaskTypeConfig } from "@apimarket/shared";
+import type { OnChainTaskTypeConfig } from "@chainlens/shared";
 import { validateAgainstSchema } from "./schema-validator.service.js";
 import { scanResponse } from "./injection-filter.service.js";
 import { getTestPayload } from "./test-payloads.js";

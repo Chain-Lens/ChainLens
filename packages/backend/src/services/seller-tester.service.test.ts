@@ -1,6 +1,6 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import type { OnChainTaskTypeConfig } from "@apimarket/shared";
+import type { OnChainTaskTypeConfig } from "@chainlens/shared";
 import { testSeller } from "./seller-tester.service.js";
 import {
   primeSchemaCache,

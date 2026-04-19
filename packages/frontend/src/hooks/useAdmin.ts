@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { apiClient } from "@/lib/api-client";
-import type { ApiListing } from "@apimarket/shared";
+import type { ApiListing } from "@chainlens/shared";
 
 export function useAdmin() {
   const [pendingApis, setPendingApis] = useState<ApiListing[]>([]);

@@ -1,5 +1,5 @@
 import { formatUnits } from "viem";
-import type { ApiListingPublic } from "@apimarket/shared";
+import type { ApiListingPublic } from "@chainlens/shared";
 import StatusBadge from "../shared/StatusBadge";
 
 export default function ApiInfo({ api }: { api: ApiListingPublic }) {

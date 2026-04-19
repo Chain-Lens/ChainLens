@@ -1,4 +1,4 @@
-import { ApiStatus, type ApiListingPublic } from "@apimarket/shared";
+import { ApiStatus, type ApiListingPublic } from "@chainlens/shared";
 
 export const mockApis: ApiListingPublic[] = [
   {

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@apimarket/shared"],
+  transpilePackages: ["@chainlens/shared"],
   output: "standalone",
 };
 

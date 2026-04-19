@@ -23,7 +23,7 @@ import {
   USDC_ADDRESSES,
   baseSepolia,
   baseMainnet,
-} from "@apimarket/shared";
+} from "@chainlens/shared";
 
 import { loadMcpConfig } from "./config.js";
 import { buildMcpServer } from "./server.js";

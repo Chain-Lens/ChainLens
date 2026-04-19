@@ -18,9 +18,9 @@ RUN pnpm install --frozen-lockfile
 COPY packages/shared ./packages/shared
 COPY packages/backend ./packages/backend
 
-RUN pnpm --filter @apimarket/shared build
-RUN pnpm --filter @apimarket/backend db:generate
-RUN pnpm --filter @apimarket/backend build
+RUN pnpm --filter @chainlens/shared build
+RUN pnpm --filter @chainlens/backend db:generate
+RUN pnpm --filter @chainlens/backend build
 
 COPY docker/backend-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

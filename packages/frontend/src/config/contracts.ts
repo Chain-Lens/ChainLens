@@ -1,4 +1,4 @@
-import { ApiMarketEscrowAbi } from "@apimarket/shared";
+import { ApiMarketEscrowAbi } from "@chainlens/shared";
 
 export const ESCROW_ADDRESS =
   (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`) ||

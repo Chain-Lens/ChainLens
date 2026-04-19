@@ -1,5 +1,5 @@
 import prisma from "../config/prisma.js";
-import { PaymentStatus } from "@apimarket/shared";
+import { PaymentStatus } from "@chainlens/shared";
 import { NotFoundError, BadRequestError } from "../utils/errors.js";
 import * as apiService from "./api.service.js";
 import { env } from "../config/env.js";

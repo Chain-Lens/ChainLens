@@ -30,8 +30,8 @@ RUN pnpm install --frozen-lockfile
 COPY packages/shared ./packages/shared
 COPY packages/frontend ./packages/frontend
 
-RUN pnpm --filter @apimarket/shared build
-RUN pnpm --filter @apimarket/frontend build
+RUN pnpm --filter @chainlens/shared build
+RUN pnpm --filter @chainlens/frontend build
 
 # ---- Runner ----
 FROM node:20-alpine AS runner

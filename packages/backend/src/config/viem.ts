@@ -1,6 +1,6 @@
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { baseSepolia, baseMainnet } from "@apimarket/shared";
+import { baseSepolia, baseMainnet } from "@chainlens/shared";
 import { env } from "./env.js";
 
 const chain = env.RPC_URL.includes("sepolia") ? baseSepolia : baseMainnet;

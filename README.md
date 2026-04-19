@@ -75,7 +75,7 @@ committed. Bad responses trigger refund + reputation penalty automatically.
 pnpm install
 cp .env.example .env                                  # fill PLATFORM_URL, PRIVATE_KEY, DATABASE_URL
 docker compose up -d                                  # postgres
-pnpm --filter @apimarket/backend db:migrate
+pnpm --filter @chainlens/backend db:migrate
 pnpm dev                                              # starts backend + frontend
 ```
 

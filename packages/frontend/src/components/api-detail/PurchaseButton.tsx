@@ -4,7 +4,7 @@ import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import { usePayment } from "@/hooks/usePayment";
 import { useEffect } from "react";
-import type { ApiListingPublic } from "@apimarket/shared";
+import type { ApiListingPublic } from "@chainlens/shared";
 
 export default function PurchaseButton({ api }: { api: ApiListingPublic }) {
   const { address, isConnected } = useAccount();

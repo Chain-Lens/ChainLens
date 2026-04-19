@@ -75,6 +75,16 @@
 
 ### 2026-04-19
 
+- **Phase A: npm 퍼블리싱 사전 준비 — `@apimarket/*` → `@chainlens/*` 리네임**
+  - 전수 치환: `grep -rl '@apimarket/' | xargs sed -i 's|@apimarket/|@chainlens/|g'` 43개 파일 (package.json 5종, 소스 임포트, Dockerfile, README, 루트 package.json scripts, PROGRESS 기록).
+  - `packages/shared/package.json` — `private: true` 제거, `license: MIT`, `repository`, `files: [dist, README.md]`, `prepublishOnly: "pnpm build"`, `publishConfig.access: public` 추가. 외부 퍼블리싱 가능한 라이브러리로 전환.
+  - `packages/shared/README.md` — 신규. 외부 소비자용 usage 예시 (`@chainlens/shared` 임포트, 노출 심볼 카테고리별 요약).
+  - `packages/mcp-tool/package.json` — `license`, `repository`, `keywords` (mcp/claude/base/web3/agents), `prepublishOnly`, `publishConfig.access: public` 추가. `bin: chainlens-mcp`와 `files: [dist, README.md]`는 기존 유지.
+  - `packages/mcp-tool/README.md` — 사용자 가이드를 `npx -y @chainlens/mcp-tool` 중심으로 재작성. Claude Desktop config 예시도 `command: "npx"` 형태로 교체 (git clone + 절대 경로 제거). Alchemy/Infura RPC 권장 노트 추가.
+  - 루트 `package.json` 이름 `monapi-market` → `chainlens`.
+  - 검증: `pnpm install` 성공(workspace 해결), `@chainlens/shared` + `@chainlens/mcp-tool` build 성공, MCP 17/17 pass, frontend `tsc --noEmit` 클린. `pnpm publish --dry-run`은 네트워크/인증 필요해 보류 — workspace:* 자동 버전 치환은 pnpm 공식 동작.
+  - 설계 결정: v0.1.0 그대로 유지 (아직 미출판 초기 릴리즈). 실제 `pnpm publish`는 npm 로그인 + 2FA 필요하므로 사용자가 직접 실행.
+
 - **Week 3 Day 6-7: 문서 + 데모 시나리오 (Type 2 MVP 완료)**
   - [README.md](README.md) — v1 중심의 원래 README를 Type 2 Market 관점으로 전면 재작성. v2 배포 주소(ApiMarketEscrowV2/SellerRegistry/TaskTypeRegistry), 6-패키지 모노레포 레이아웃, 초기 5 task type, 보안 포스처 요약, MCP 연결 예시(Claude Desktop config JSON) 포함. 레거시 `pay()` x402 설명은 제거 — v2는 `createJob` 기반이라 혼란 방지.
   - [docs/DEMO.md](docs/DEMO.md) — 데모 시나리오 3종: **(A) 브라우저 바이어** (marketplace → wallet sign → evidence explorer에서 client-side 해시 매치 확인), **(B) MCP 에이전트** (Claude Desktop에 mcp-tool 등록 → 자연어 프롬프트로 discover/request/status 체이닝), **(C) Seller 온보딩** (sample-sellers Express 앱 → `/api/sellers/register` → seller-tester 자동 검증 → 마켓플레이스 등록). 각 시나리오의 "무엇을 가리킬지" 포인트와 Base Sepolia 예상 타이밍표(전체 ~6-10s) 명시. 추가로 **refund 경로 실패 데모**(injection 필터가 실제로 돈을 돌려보내는지 10초 내 증명) 제공 — 필터가 장식이 아니라 load-bearing임을 보여주는 용도.
@@ -100,7 +110,7 @@
   - [packages/backend/src/routes/sellers.routes.ts](packages/backend/src/routes/sellers.routes.ts) — `GET /api/sellers`. Zod `safeParse`로 쿼리 검증 (task_type, active_only 'true'/'false' → boolean transform, limit/offset coerce.number). 실패 시 `{400: invalid_query, details: flatten()}`.
   - [packages/backend/src/routes/index.ts](packages/backend/src/routes/index.ts) — `/sellers` 마운트.
   - [packages/backend/src/services/sellers.service.test.ts](packages/backend/src/services/sellers.service.test.ts) — 6 케이스 (activeOnly 기본/명시 false / limit·offset 클램프 / taskType 패스스루 / listSellers가 정규화 필터로 store 호출).
-  - [packages/mcp-tool/package.json](packages/mcp-tool/package.json) + [packages/mcp-tool/tsconfig.json](packages/mcp-tool/tsconfig.json) + [packages/mcp-tool/README.md](packages/mcp-tool/README.md) — 신규 워크스페이스 패키지 `@chainlens/mcp-tool`, `bin: chainlens-mcp` 바이너리. `@modelcontextprotocol/sdk` + `viem` + `@apimarket/shared` + `@types/node` 의존.
+  - [packages/mcp-tool/package.json](packages/mcp-tool/package.json) + [packages/mcp-tool/tsconfig.json](packages/mcp-tool/tsconfig.json) + [packages/mcp-tool/README.md](packages/mcp-tool/README.md) — 신규 워크스페이스 패키지 `@chainlens/mcp-tool`, `bin: chainlens-mcp` 바이너리. `@modelcontextprotocol/sdk` + `viem` + `@chainlens/shared` + `@types/node` 의존.
   - [packages/mcp-tool/src/config.ts](packages/mcp-tool/src/config.ts) — env → `McpConfig`. `CHAINLENS_API_URL` 트레일링 슬래시 제거, `CHAIN_ID` 정수 검증, `WALLET_PRIVATE_KEY` 0x64hex 정규식 검증 (실패 시 fail-fast). `WALLET_PRIVATE_KEY`가 없으면 request 툴 비활성화, discover/status는 여전히 사용 가능.
   - [packages/mcp-tool/src/tools/discover.ts](packages/mcp-tool/src/tools/discover.ts) — `chainlens.discover` pure 핸들러. `URLSearchParams`로 `task_type / limit / offset / active_only` 쿼리 빌드, 필터 없으면 `?` 자체를 붙이지 않음. 백엔드 non-ok는 명시적 `Error` throw.
   - [packages/mcp-tool/src/tools/status.ts](packages/mcp-tool/src/tools/status.ts) — `chainlens.status` pure 핸들러. `job_id` bigint/number/string 모두 수용, decimal 정규식 검증, 404 시 `{found:false}` (예외 아님 — "존재하지 않음"은 정상 응답).

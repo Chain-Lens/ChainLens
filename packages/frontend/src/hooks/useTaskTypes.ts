@@ -1,6 +1,6 @@
 "use client";
 
-import { INITIAL_TASK_TYPE_NAMES } from "@apimarket/shared";
+import { INITIAL_TASK_TYPE_NAMES } from "@chainlens/shared";
 
 /**
  * MVP: returns the static list of task types registered on deploy.

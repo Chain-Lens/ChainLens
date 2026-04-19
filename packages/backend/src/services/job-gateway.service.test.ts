@@ -1,7 +1,7 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { keccak256, stringToBytes } from "viem";
-import type { OnChainTaskTypeConfig } from "@apimarket/shared";
+import type { OnChainTaskTypeConfig } from "@chainlens/shared";
 import {
   finalizeJob,
   type JobGatewayDeps,

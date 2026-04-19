@@ -1,8 +1,24 @@
 # @chainlens/mcp-tool
 
 Model Context Protocol (MCP) server that lets Claude Desktop (and any other MCP
-client) discover ChainLens sellers, place paid data requests, and read the
-resulting on-chain-verified evidence.
+client) discover [ChainLens](https://github.com/lejuho/ChainLens) sellers,
+place paid data requests in USDC on Base, and read the resulting
+on-chain-verified evidence — no API keys, no OAuth, just a wallet.
+
+## Install
+
+No install step is required — `npx` runs the latest published version:
+
+```bash
+npx -y @chainlens/mcp-tool
+```
+
+Or install globally:
+
+```bash
+npm install -g @chainlens/mcp-tool
+chainlens-mcp
+```
 
 ## Tools exposed
 
@@ -22,33 +38,26 @@ submits on-chain transactions.
 | --- | --- | --- |
 | `CHAINLENS_API_URL` | `http://localhost:3001/api` | Backend base URL, no trailing slash needed. |
 | `CHAIN_ID` | `84532` | Base Sepolia by default; `8453` for Base Mainnet. |
-| `RPC_URL` | `https://sepolia.base.org` | Used by both the public client and (if set) the wallet client. |
+| `RPC_URL` | `https://sepolia.base.org` | Used by both the public client and (if set) the wallet client. An Alchemy/Infura URL is strongly recommended for reliability. |
 | `WALLET_PRIVATE_KEY` | *unset* | `0x`-prefixed 32-byte hex. Enables `chainlens.request`. |
 | `CHAINLENS_POLL_INTERVAL_MS` | `2000` | How often `chainlens.request` polls evidence. |
 | `CHAINLENS_POLL_TIMEOUT_MS` | `120000` | Gives up with `status: "TIMEOUT"` after this long. |
 
-## Running locally
-
-```bash
-pnpm --filter @chainlens/mcp-tool build
-node packages/mcp-tool/dist/index.js
-```
-
 ## Claude Desktop integration
 
 Add an entry to `~/Library/Application Support/Claude/claude_desktop_config.json`
-(macOS) or `%APPDATA%/Claude/claude_desktop_config.json` (Windows):
+(macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
-```json
+```jsonc
 {
   "mcpServers": {
     "chainlens": {
-      "command": "node",
-      "args": ["/absolute/path/to/ChainLens/packages/mcp-tool/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "@chainlens/mcp-tool"],
       "env": {
         "CHAINLENS_API_URL": "https://your-chainlens-host/api",
         "CHAIN_ID": "84532",
-        "RPC_URL": "https://sepolia.base.org",
+        "RPC_URL": "https://base-sepolia.g.alchemy.com/v2/<YOUR_KEY>",
         "WALLET_PRIVATE_KEY": "0x..."
       }
     }
@@ -58,11 +67,34 @@ Add an entry to `~/Library/Application Support/Claude/claude_desktop_config.json
 
 Restart Claude Desktop; the three `chainlens.*` tools appear in the tool menu.
 
-## Tests
+`WALLET_PRIVATE_KEY` is optional — without it the agent can still `discover`
+sellers and `status` past jobs, just not spend.
+
+## Example prompt
+
+> "Find a ChainLens seller that serves `defillama_tvl`, request Uniswap's TVL
+> for 0.05 USDC, and tell me the job id."
+
+Claude will chain `chainlens.discover → chainlens.request` and return the
+on-chain job id plus the verified response JSON.
+
+## Security
+
+- Private keys live in MCP server env vars; never send them through prompts.
+- Every response is committed on-chain as `keccak256(JSON.stringify(response))`
+  so you can re-verify independently — see the evidence explorer at
+  `https://your-chainlens-host/evidence/<jobId>`.
+
+## Development
 
 ```bash
+git clone https://github.com/lejuho/ChainLens.git
+cd ChainLens
+pnpm install
+pnpm --filter @chainlens/mcp-tool build
 pnpm --filter @chainlens/mcp-tool test
 ```
 
-Unit tests inject fake `fetch`, `publicClient`, and `walletClient`, so they run
-without network access, on-chain state, or a real wallet.
+## License
+
+MIT

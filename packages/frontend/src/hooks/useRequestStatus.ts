@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
-import type { PaymentRequest } from "@apimarket/shared";
+import type { PaymentRequest } from "@chainlens/shared";
 
 type RequestWithApi = PaymentRequest & {
   api?: { name: string; description: string };

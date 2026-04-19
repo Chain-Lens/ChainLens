@@ -1,5 +1,5 @@
 import { keccak256, stringToBytes } from "viem";
-import type { OnChainTaskTypeConfig } from "@apimarket/shared";
+import type { OnChainTaskTypeConfig } from "@chainlens/shared";
 import { scanResponse } from "./injection-filter.service.js";
 import { validateAgainstSchema } from "./schema-validator.service.js";
 import { logger } from "../utils/logger.js";

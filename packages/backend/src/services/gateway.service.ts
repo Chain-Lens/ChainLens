@@ -1,4 +1,4 @@
-import { PaymentStatus, ApiMarketEscrowV2Abi } from "@apimarket/shared";
+import { PaymentStatus, ApiMarketEscrowV2Abi } from "@chainlens/shared";
 import { keccak256, stringToBytes } from "viem";
 import { env } from "../config/env.js";
 import { walletClient, publicClient } from "../config/viem.js";

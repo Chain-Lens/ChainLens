@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatUnits } from "viem";
-import type { ApiListing } from "@apimarket/shared";
+import type { ApiListing } from "@chainlens/shared";
 import StatusBadge from "../shared/StatusBadge";
 
 const BASE_URL =

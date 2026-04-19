@@ -1,17 +1,31 @@
 {
-  "name": "@apimarket/shared",
+  "name": "@chainlens/shared",
   "version": "0.1.0",
-  "private": true,
+  "description": "Shared types, ABIs, addresses, and task-type registry for ChainLens (Type 2 MVP).",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lejuho/ChainLens.git",
+    "directory": "packages/shared"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "viem": "^2.21.0"
   },
   "devDependencies": {
     "typescript": "^5.7.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
