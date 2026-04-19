@@ -23,7 +23,7 @@
 | Day | 작업 | Status |
 |-----|------|--------|
 | 1 | schema-validator (ajv) + injection-filter (OWASP) | ✅ Done |
-| 2 | seller-tester 자동 API 테스트 서비스 | 📅 Planned |
+| 2 | seller-tester 자동 API 테스트 서비스 | ✅ Done |
 | 3 | Gateway 확장 (validation + responseHash/evidenceURI + reputation) | 📅 Planned |
 | 4 | Evidence 저장 (Phase 1: DB) + `/api/evidence/:jobId` | 📅 Planned |
 | 5 | Prisma 마이그레이션 (Job, SellerProfile, ApiTestResult) + reputation 엔드포인트 | 📅 Planned |
@@ -74,6 +74,12 @@
 > 작업 단위(커밋 기준)로 누적 기록. 최신이 위.
 
 ### 2026-04-19
+
+- **Week 2 Day 2: seller-tester 자동 API 테스트 서비스**
+  - [packages/backend/src/services/task-type.service.ts](packages/backend/src/services/task-type.service.ts) — viem `publicClient.readContract` 래퍼. `taskTypeId(name)` = keccak256(utf8), `getTaskTypeConfig(name)` (on-chain "not found" 감지 시 `null`), `isTaskTypeEnabled(name)`. registry 주소는 chainId별 `TASK_TYPE_REGISTRY_ADDRESSES` 조회 + 미배포 체인/제로 주소에서 명시적 에러.
+  - [packages/backend/src/services/test-payloads.ts](packages/backend/src/services/test-payloads.ts) — 5개 초기 task_type 캐노니컬 프로브 페이로드 (UNI 컨트랙트 주소, 유명 트랜잭션 해시, `uniswap` protocol, ETH/USD 피드). `getTestPayload(cap)`는 미등록 시 `{}` 폴백.
+  - [packages/backend/src/services/seller-tester.service.ts](packages/backend/src/services/seller-tester.service.ts) — `testSeller({sellerAddress,endpointUrl,capabilities}, deps?)`. DI로 `getConfig`/`fetchImpl`/`payloadFor` 오버라이드 가능 (테스트 시 on-chain·네트워크 의존성 제거). capability별 `probeCapability`: POST `{task_type, inputs}` → `AbortSignal.timeout(maxResponseTime*1000)` → HTTP/JSON 파싱 → `scanResponse` (주입 차단) → `validateAgainstSchema` 순서. 스키마 페치 실패는 **해당 capability만 실패** 처리해서 registry placeholder 단계에서 전체 온보딩이 막히지 않도록 방어. 기본 `getConfig`는 lazy `import()` — 테스트가 viem/env 체인을 로드하지 않도록 분리.
+  - [packages/backend/src/services/seller-tester.service.test.ts](packages/backend/src/services/seller-tester.service.test.ts) — 13 케이스 (unknown_task_type / disabled / HTTP 503 / network error / invalid_json / injection 탐지 / schema_invalid / schema_fetch_failed(단일 capability만 실패) / 정상 경로 / schemaURI 빈 문자열 / 빈 capabilities / mixed pass+fail / 요청 body 구조 검증). 전체 25/25 통과.
 
 - **Week 2 Day 1: schema-validator + injection-filter (백엔드 보안 서비스)**
   - [packages/backend/src/services/schema-validator.service.ts](packages/backend/src/services/schema-validator.service.ts) — ajv (strict + allErrors) + ajv-formats, **컴파일된 validator 캐싱**(스펙은 raw schema만 캐시해서 compile 반복 — 개선), `primeSchemaCache`/`clearSchemaCache` 테스트 훅 노출, ipfs:// → https://ipfs.io 게이트웨이 변환
