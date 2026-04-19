@@ -22,7 +22,7 @@
 
 | Day | 작업 | Status |
 |-----|------|--------|
-| 1 | schema-validator (ajv) + injection-filter (OWASP) | 📅 Planned |
+| 1 | schema-validator (ajv) + injection-filter (OWASP) | ✅ Done |
 | 2 | seller-tester 자동 API 테스트 서비스 | 📅 Planned |
 | 3 | Gateway 확장 (validation + responseHash/evidenceURI + reputation) | 📅 Planned |
 | 4 | Evidence 저장 (Phase 1: DB) + `/api/evidence/:jobId` | 📅 Planned |
@@ -75,6 +75,12 @@
 
 ### 2026-04-19
 
+- **Week 2 Day 1: schema-validator + injection-filter (백엔드 보안 서비스)**
+  - [packages/backend/src/services/schema-validator.service.ts](packages/backend/src/services/schema-validator.service.ts) — ajv (strict + allErrors) + ajv-formats, **컴파일된 validator 캐싱**(스펙은 raw schema만 캐시해서 compile 반복 — 개선), `primeSchemaCache`/`clearSchemaCache` 테스트 훅 노출, ipfs:// → https://ipfs.io 게이트웨이 변환
+  - [packages/backend/src/services/injection-filter.service.ts](packages/backend/src/services/injection-filter.service.ts) — 13개 OWASP LLM01 패턴 (`[SYSTEM:`, `<|im_start|>`, `[INST]`, ignore/disregard/forget previous, persona hijack 등) + 1MB 사이즈 캡 + cycle/bigint/function 직렬화 실패 방어 (`response_unserializable`)
+  - [packages/backend/src/services/*.test.ts](packages/backend/src/services/) — node:test 기반 12 케이스 전부 통과 (injection 패턴 12개 + benign 4개 + scanResponse 5개 + schema 5개)
+  - `pnpm test` 스크립트 추가 (`tsx --test 'src/**/*.test.ts'`) — 별도 테스트 런타임 없이 Node 내장 사용
+  - 의존성: `ajv@^8.18`, `ajv-formats@^3.0` 추가
 - **Week 1 Day 5: shared ABI + 타입 확장 (v2 + 2개 Registry)**
   - [packages/contracts/scripts/copy-abi.ts](packages/contracts/scripts/copy-abi.ts) — 4개 ABI 배치 복사 (ApiMarketEscrow, ApiMarketEscrowV2, SellerRegistry, TaskTypeRegistry)
   - [packages/shared/src/abi/](packages/shared/src/abi/) — 4개 JSON + `index.ts` 에서 전부 재수출
