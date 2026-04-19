@@ -15,7 +15,7 @@
 |-----|------|--------|
 | 1 | TaskTypeRegistry.sol + 테스트 + Ignition + 배포 + task_type 5개 등록 | ✅ Done |
 | 2 | SellerRegistry.sol (ERC-8004 호환) + 테스트 + 배포 | ✅ Done |
-| 3-4 | ApiMarketEscrow v2 evolve (Job 개념, ERC-8183 alias, 하위 호환) | 🚧 In progress (contract+tests+ignition ✅, 배포 대기) |
+| 3-4 | ApiMarketEscrow v2 evolve (Job 개념, ERC-8183 alias, 하위 호환) | ✅ Done |
 | 5 | shared ABI + types 업데이트 (v2 + 2개 Registry) | 📅 Planned |
 
 ### Week 2 — 백엔드 확장
@@ -47,7 +47,7 @@
 | ApiMarketEscrow (v1, legacy) | `contracts/ApiMarketEscrow.sol` | 기존 457L | `0xDAa04e9BD451F9D27EcEd569303181c71F0A7b27` (Base Sepolia) |
 | TaskTypeRegistry | `contracts/TaskTypeRegistry.sol` + `types/TaskTypeRegistryTypes.sol` | 30/30 passing | ✅ `0xD2ab227417B26f4d8311594C27c59adcA046501F` (Base Sepolia) |
 | SellerRegistry | `contracts/SellerRegistry.sol` + `types/SellerRegistryTypes.sol` | 40/40 passing | ✅ `0xcF36b76b5Da55471D4EBB5349A0653624371BE2c` (Base Sepolia) |
-| ApiMarketEscrow v2 | `contracts/ApiMarketEscrowV2.sol` + `types/ApiMarketEscrowV2Types.sol` + `mocks/MockUSDC.sol` | 34/34 passing | — |
+| ApiMarketEscrow v2 | `contracts/ApiMarketEscrowV2.sol` + `types/ApiMarketEscrowV2Types.sol` + `mocks/MockUSDC.sol` | 34/34 passing | ✅ `0xD4c40710576f582c49e5E6417F6cA2023E30d3aD` (Base Sepolia) |
 
 ---
 
@@ -75,6 +75,12 @@
 
 ### 2026-04-19
 
+- **Week 1 Day 3-4 배포: ApiMarketEscrowV2 → Base Sepolia**
+  - 주소: `0xD4c40710576f582c49e5E6417F6cA2023E30d3aD`
+  - Owner/Gateway: `0xD21dE9470d8A0dbae0dE0b5f705001a6482Db580` (deployer)
+  - USDC: `0x036CbD53842c5426634e7929541eC2318f3dCF7e` (Base Sepolia 공식)
+  - feeRate: 500 bps (5%, v1과 동일)
+  - `scripts/verify-escrow-v2.ts` 추가 (owner/gateway/feeRate/usdc/nextJobId/상수 검증)
 - **Week 1 Day 3-4 (local): ApiMarketEscrowV2 구현 + 테스트 + Ignition 모듈**
   - [contracts/ApiMarketEscrowV2.sol](packages/contracts/contracts/ApiMarketEscrowV2.sol) — Job 구조체 (taskType/inputsHash/responseHash/evidenceURI 추가), `pay` v2 시그니처 + ERC-8183 alias `createJob`/`submit`, `getJob` view, `Ownable2Step` + `ReentrancyGuard` + SafeERC20 적용. taskType==0 경로는 v1 approvedApis 검증 유지 (하위 호환), taskType!=0 경로는 gateway+TaskTypeRegistry off-chain 검증 전제로 approvedApis 우회.
   - [contracts/types/ApiMarketEscrowV2Types.sol](packages/contracts/contracts/types/ApiMarketEscrowV2Types.sol) — `Job` 구조체 라이브러리 (struct 분리 규칙)
