@@ -85,8 +85,10 @@ Run a sample seller in another terminal:
 pnpm --filter @chainlens/sample-sellers dev:defillama # :8082
 ```
 
-See [docs/DEMO.md](docs/DEMO.md) for end-to-end walkthroughs (browser buyer,
-MCP agent, seller onboarding).
+- **Buyers:** [docs/BUYER_GUIDE.md](docs/BUYER_GUIDE.md) — wallet setup,
+  Claude Desktop config, first query, evidence verification.
+- **Demos:** [docs/DEMO.md](docs/DEMO.md) — three end-to-end scenarios
+  (browser buyer, MCP agent, seller onboarding).
 
 ---
 
@@ -94,19 +96,19 @@ MCP agent, seller onboarding).
 
 The [`@chainlens/mcp-tool`](packages/mcp-tool) package exposes three tools
 over Model Context Protocol stdio, so Claude Desktop (and any MCP client)
-can spend USDC on data:
+can spend USDC on data. Install with `npx` — no clone required:
 
 ```jsonc
 // ~/Library/Application Support/Claude/claude_desktop_config.json
 {
   "mcpServers": {
     "chainlens": {
-      "command": "node",
-      "args": ["/absolute/path/to/ChainLens/packages/mcp-tool/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "@chainlens/mcp-tool"],
       "env": {
         "CHAINLENS_API_URL": "https://your-chainlens/api",
         "CHAIN_ID": "84532",
-        "RPC_URL": "https://sepolia.base.org",
+        "RPC_URL": "https://base-sepolia.g.alchemy.com/v2/<YOUR_KEY>",
         "WALLET_PRIVATE_KEY": "0x..."
       }
     }

@@ -75,6 +75,13 @@
 
 ### 2026-04-19
 
+- **Phase B: Buyer 온보딩 가이드 (`docs/BUYER_GUIDE.md`)**
+  - 신규 [docs/BUYER_GUIDE.md](docs/BUYER_GUIDE.md) — 6 스텝: (1) 전용 버리어블 지갑 생성(메인 지갑 재사용 금지), (2) Base Sepolia ETH + USDC 파우셋, (3) Claude Desktop `claude_desktop_config.json` 등록 (npx 형식), (4) 첫 유료 콜 프롬프트 예시 + approve/createJob 두 트랜잭션 설명, (5) `/evidence/[jobId]` 브라우저 해시 매치 + basescan 확인, (6) revoke.cash 로 allowance 취소해 에이전트 차단.
+  - Troubleshooting 섹션: 도구가 안 보일 때(재시작), `CHAIN_ID` 미지원, `TIMEOUT` 폴링, insufficient allowance, 140M gas "exceeds block gas limit" (ABI 불일치 진단).
+  - 하단에 로컬 개발자용 `pnpm dev` 경로 추가 (backend 자체호스팅 + `CHAINLENS_API_URL=http://localhost:3001/api`).
+  - README 갱신: MCP config 예시를 `"command":"node" + /absolute/path` → `"command":"npx" + "-y @chainlens/mcp-tool"`로 교체, Quick start 하단에 Buyer 가이드 링크 추가.
+  - 설계 선택: 보안 포스처를 **지갑 생성 단계에서부터** 강조 — 전용 지갑, 파우셋 한도, allowance revoke — "에이전트에게 줄 돈만 지갑에 넣어라"가 핵심 멘탈 모델. API 키 유출 걱정 없이 spend cap을 ERC-20 balance로 대체하는 것이 ChainLens의 UX 이점.
+
 - **Phase A: npm 퍼블리싱 사전 준비 — `@apimarket/*` → `@chainlens/*` 리네임**
   - 전수 치환: `grep -rl '@apimarket/' | xargs sed -i 's|@apimarket/|@chainlens/|g'` 43개 파일 (package.json 5종, 소스 임포트, Dockerfile, README, 루트 package.json scripts, PROGRESS 기록).
   - `packages/shared/package.json` — `private: true` 제거, `license: MIT`, `repository`, `files: [dist, README.md]`, `prepublishOnly: "pnpm build"`, `publishConfig.access: public` 추가. 외부 퍼블리싱 가능한 라이브러리로 전환.
