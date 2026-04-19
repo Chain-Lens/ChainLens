@@ -36,7 +36,7 @@
 | 1-2 | `/marketplace` 개선 + `/evidence/[jobId]` + `/reputation/[sellerAddress]` + 훅 3개 | ✅ Done |
 | 3-4 | `packages/mcp-tool/` 신규 + discover/request/status 3개 도구 | ✅ Done |
 | 5 | Sample seller 3개 (Blockscout/DeFiLlama/Sourcify) | ✅ Done |
-| 6-7 | 통합·문서·데모 시나리오·영상 | 📅 Planned |
+| 6-7 | 통합·문서·데모 시나리오·영상 | ✅ Done (영상 제외) |
 
 ---
 
@@ -74,6 +74,14 @@
 > 작업 단위(커밋 기준)로 누적 기록. 최신이 위.
 
 ### 2026-04-19
+
+- **Week 3 Day 6-7: 문서 + 데모 시나리오 (Type 2 MVP 완료)**
+  - [README.md](README.md) — v1 중심의 원래 README를 Type 2 Market 관점으로 전면 재작성. v2 배포 주소(ApiMarketEscrowV2/SellerRegistry/TaskTypeRegistry), 6-패키지 모노레포 레이아웃, 초기 5 task type, 보안 포스처 요약, MCP 연결 예시(Claude Desktop config JSON) 포함. 레거시 `pay()` x402 설명은 제거 — v2는 `createJob` 기반이라 혼란 방지.
+  - [docs/DEMO.md](docs/DEMO.md) — 데모 시나리오 3종: **(A) 브라우저 바이어** (marketplace → wallet sign → evidence explorer에서 client-side 해시 매치 확인), **(B) MCP 에이전트** (Claude Desktop에 mcp-tool 등록 → 자연어 프롬프트로 discover/request/status 체이닝), **(C) Seller 온보딩** (sample-sellers Express 앱 → `/api/sellers/register` → seller-tester 자동 검증 → 마켓플레이스 등록). 각 시나리오의 "무엇을 가리킬지" 포인트와 Base Sepolia 예상 타이밍표(전체 ~6-10s) 명시. 추가로 **refund 경로 실패 데모**(injection 필터가 실제로 돈을 돌려보내는지 10초 내 증명) 제공 — 필터가 장식이 아니라 load-bearing임을 보여주는 용도.
+  - 영상/Loom 녹화는 스펙에 있지만 문서 단계에서는 제외 (대본 역할은 DEMO.md가 수행, 실제 녹화는 데모 당일).
+  - 킥스타트 공개 페이지는 별도 마케팅 산출물이라 레포에는 포함하지 않고 README + DEMO.md를 primary artefact로 유지.
+  - `AGENT_API.md`는 v1 레거시 플로우 가이드로 유지 (기존 `ApiMarketEscrow` 배포가 아직 살아있음) — v2 쪽은 README의 MCP 섹션 + `packages/mcp-tool/README.md`가 담당.
+  - **Type 2 MVP 21일치 전체 완료**: contracts 34/34, backend 79/79, mcp-tool 17/17, sample-sellers 18/18. frontend tsc 클린. 모든 Day 체크박스 ✅.
 
 - **Week 3 Day 5: Sample seller 에이전트 3종 + Dockerfile**
   - [packages/sample-sellers/package.json](packages/sample-sellers/package.json) + [tsconfig.json](packages/sample-sellers/tsconfig.json) — 신규 워크스페이스 `@chainlens/sample-sellers`. 래퍼 3종은 한 패키지 안의 별도 엔트리(`dist/blockscout|defillama|sourcify/index.js`) — 3개 패키지로 쪼개면 lib/types/server 중복 발생하고 Dockerfile은 어차피 각각이므로, 패키지 1 × 진입점 3 이 SRP와 배포 유연성을 동시에 만족.
