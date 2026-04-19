@@ -16,7 +16,7 @@
 | 1 | TaskTypeRegistry.sol + 테스트 + Ignition + 배포 + task_type 5개 등록 | ✅ Done |
 | 2 | SellerRegistry.sol (ERC-8004 호환) + 테스트 + 배포 | ✅ Done |
 | 3-4 | ApiMarketEscrow v2 evolve (Job 개념, ERC-8183 alias, 하위 호환) | ✅ Done |
-| 5 | shared ABI + types 업데이트 (v2 + 2개 Registry) | 📅 Planned |
+| 5 | shared ABI + types 업데이트 (v2 + 2개 Registry) | ✅ Done |
 
 ### Week 2 — 백엔드 확장
 
@@ -75,6 +75,14 @@
 
 ### 2026-04-19
 
+- **Week 1 Day 5: shared ABI + 타입 확장 (v2 + 2개 Registry)**
+  - [packages/contracts/scripts/copy-abi.ts](packages/contracts/scripts/copy-abi.ts) — 4개 ABI 배치 복사 (ApiMarketEscrow, ApiMarketEscrowV2, SellerRegistry, TaskTypeRegistry)
+  - [packages/shared/src/abi/](packages/shared/src/abi/) — 4개 JSON + `index.ts` 에서 전부 재수출
+  - [packages/shared/src/constants/contracts.ts](packages/shared/src/constants/contracts.ts) — `CONTRACT_ADDRESSES_V2` / `SELLER_REGISTRY_ADDRESSES` / `TASK_TYPE_REGISTRY_ADDRESSES` 추가 (Base Sepolia 주소 반영)
+  - [packages/shared/src/types/job.ts](packages/shared/src/types/job.ts) — `OnChainJob` + `JobStatus` + `jobStatus()` 헬퍼 (v2 getJob 반환형 매칭)
+  - [packages/shared/src/types/task-type.ts](packages/shared/src/types/task-type.ts) — `OnChainTaskTypeConfig` + `INITIAL_TASK_TYPE_NAMES`
+  - [packages/shared/src/types/seller.ts](packages/shared/src/types/seller.ts) — 기존 `Seller` 유지 + `OnChainSeller` + `REPUTATION_NEUTRAL_BPS`/`REPUTATION_MAX_BPS` 추가
+  - `pnpm build` @ `packages/shared` 성공. 백엔드 pre-existing 타입 에러(`api.service.ts:106`)는 이번 변경과 무관 (stash 후 재현 확인)
 - **Week 1 Day 3-4 배포: ApiMarketEscrowV2 → Base Sepolia**
   - 주소: `0xD4c40710576f582c49e5E6417F6cA2023E30d3aD`
   - Owner/Gateway: `0xD21dE9470d8A0dbae0dE0b5f705001a6482Db580` (deployer)

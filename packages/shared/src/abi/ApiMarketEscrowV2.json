@@ -21,6 +21,44 @@
     "type": "constructor"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableInvalidOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "OwnableUnauthorizedAccount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReentrancyGuardReentrantCall",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "SafeERC20FailedOperation",
+    "type": "error"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -52,7 +90,7 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "seller",
+        "name": "account",
         "type": "address"
       },
       {
@@ -82,6 +120,137 @@
       }
     ],
     "name": "FeeRateUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousGateway",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newGateway",
+        "type": "address"
+      }
+    ],
+    "name": "GatewayUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "buyer",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "seller",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "taskType",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "inputsHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "apiId",
+        "type": "uint256"
+      }
+    ],
+    "name": "JobCreated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "responseHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "evidenceURI",
+        "type": "string"
+      }
+    ],
+    "name": "JobSubmitted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferStarted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
     "type": "event"
   },
   {
@@ -178,6 +347,39 @@
     "type": "event"
   },
   {
+    "inputs": [],
+    "name": "BPS_DIVISOR",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_FEE_RATE_BPS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "acceptOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -220,12 +422,61 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "paymentId",
+        "name": "jobId",
         "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "responseHash",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "string",
+        "name": "evidenceURI",
+        "type": "string"
       }
     ],
     "name": "complete",
     "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "seller",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "taskType",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "inputsHash",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "apiId",
+        "type": "uint256"
+      }
+    ],
+    "name": "createJob",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -259,6 +510,82 @@
     "inputs": [
       {
         "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getJob",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "buyer",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "seller",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "apiId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "taskType",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "inputsHash",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "responseHash",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "string",
+            "name": "evidenceURI",
+            "type": "string"
+          },
+          {
+            "internalType": "uint64",
+            "name": "createdAt",
+            "type": "uint64"
+          },
+          {
+            "internalType": "bool",
+            "name": "completed",
+            "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "refunded",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct ApiMarketEscrowV2Types.Job",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
         "name": "paymentId",
         "type": "uint256"
       }
@@ -273,19 +600,44 @@
             "type": "address"
           },
           {
-            "internalType": "uint256",
-            "name": "apiId",
-            "type": "uint256"
-          },
-          {
             "internalType": "address",
             "name": "seller",
             "type": "address"
           },
           {
             "internalType": "uint256",
+            "name": "apiId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
             "name": "amount",
             "type": "uint256"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "taskType",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "inputsHash",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "responseHash",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "string",
+            "name": "evidenceURI",
+            "type": "string"
+          },
+          {
+            "internalType": "uint64",
+            "name": "createdAt",
+            "type": "uint64"
           },
           {
             "internalType": "bool",
@@ -298,7 +650,7 @@
             "type": "bool"
           }
         ],
-        "internalType": "struct ApiMarketEscrow.Payment",
+        "internalType": "struct ApiMarketEscrowV2Types.Job",
         "name": "",
         "type": "tuple"
       }
@@ -308,7 +660,7 @@
   },
   {
     "inputs": [],
-    "name": "nextPaymentId",
+    "name": "nextJobId",
     "outputs": [
       {
         "internalType": "uint256",
@@ -348,13 +700,23 @@
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "taskType",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "inputsHash",
+        "type": "bytes32"
       }
     ],
     "name": "pay",
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "paymentId",
+        "name": "jobId",
         "type": "uint256"
       }
     ],
@@ -362,44 +724,13 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "payments",
+    "inputs": [],
+    "name": "pendingOwner",
     "outputs": [
       {
         "internalType": "address",
-        "name": "buyer",
+        "name": "",
         "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "apiId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "seller",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "completed",
-        "type": "bool"
-      },
-      {
-        "internalType": "bool",
-        "name": "refunded",
-        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -428,11 +759,18 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "paymentId",
+        "name": "jobId",
         "type": "uint256"
       }
     ],
     "name": "refund",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -472,6 +810,29 @@
       }
     ],
     "name": "setGateway",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "responseHash",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "string",
+        "name": "evidenceURI",
+        "type": "string"
+      }
+    ],
+    "name": "submit",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
