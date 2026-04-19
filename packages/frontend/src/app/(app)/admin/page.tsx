@@ -30,8 +30,8 @@ export default function AdminPage() {
   if (!isConnected) {
     return (
       <div className="max-w-lg mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold mb-4" style={{ color: "var(--text)" }}>Admin Dashboard</h1>
-        <p className="mb-6" style={{ color: "var(--text2)" }}>Connect your admin wallet to continue.</p>
+        <h1 className="mb-4 text-3xl font-bold text-[var(--text)]">Admin Dashboard</h1>
+        <p className="mb-6 text-[var(--text2)]">Connect your admin wallet to continue.</p>
         <div className="flex justify-center">
           <ConnectButton />
         </div>
@@ -43,9 +43,9 @@ export default function AdminPage() {
     return (
       <div className="max-w-lg mx-auto px-4 py-16 text-center">
         <div className="text-5xl mb-4">🚫</div>
-        <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--text)" }}>Access Denied</h1>
-        <p className="mb-1" style={{ color: "var(--text2)" }}>This wallet is not authorized.</p>
-        <p className="text-sm font-mono mt-2" style={{ color: "var(--text3)" }}>{address}</p>
+        <h1 className="mb-2 text-2xl font-bold text-[var(--text)]">Access Denied</h1>
+        <p className="mb-1 text-[var(--text2)]">This wallet is not authorized.</p>
+        <p className="mt-2 font-mono text-sm text-[var(--text3)]">{address}</p>
       </div>
     );
   }
@@ -53,12 +53,12 @@ export default function AdminPage() {
   if (!isAuthenticated) {
     return (
       <div className="max-w-lg mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--text)" }}>Admin Dashboard</h1>
-        <p className="mb-6" style={{ color: "var(--text2)" }}>
+        <h1 className="mb-2 text-3xl font-bold text-[var(--text)]">Admin Dashboard</h1>
+        <p className="mb-6 text-[var(--text2)]">
           Sign the message with your wallet to verify ownership.
         </p>
         {authError && (
-          <p className="text-sm mb-4" style={{ color: "var(--red)" }}>{authError}</p>
+          <p className="mb-4 text-sm text-[var(--red)]">{authError}</p>
         )}
         <button
           onClick={signIn}
@@ -67,7 +67,7 @@ export default function AdminPage() {
         >
           {authLoading ? "Waiting for signature..." : "Sign in with Wallet"}
         </button>
-        <p className="text-xs mt-4 font-mono" style={{ color: "var(--text3)" }}>{address}</p>
+        <p className="mt-4 font-mono text-xs text-[var(--text3)]">{address}</p>
       </div>
     );
   }
@@ -96,45 +96,35 @@ export default function AdminPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold" style={{ color: "var(--text)" }}>Admin Dashboard</h1>
+        <h1 className="text-3xl font-bold text-[var(--text)]">Admin Dashboard</h1>
         <button
           onClick={signOut}
-          className="text-sm transition-colors"
-          style={{ color: "var(--text3)" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text2)")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text3)")}
+          className="text-sm text-[var(--text3)] transition-colors hover:text-[var(--text2)]"
         >
           Sign out
         </button>
       </div>
 
       {/* 탭 */}
-      <div className="flex gap-1 mb-6" style={{ borderBottom: "1px solid var(--border)" }}>
+      <div className="mb-6 flex gap-1 border-b border-[var(--border)]">
         {(["pending", "all"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className="px-4 py-2 text-sm font-medium transition-colors"
-            style={{
-              borderBottom: tab === t ? "2px solid var(--green)" : "2px solid transparent",
-              color: tab === t ? "var(--green)" : "var(--text2)",
-              marginBottom: "-1px",
-            }}
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+              tab === t
+                ? "border-[var(--green)] text-[var(--green)]"
+                : "border-transparent text-[var(--text2)]"
+            }`}
           >
             {t === "pending" ? "Pending Review" : "All APIs"}
             {t === "pending" && pendingApis.length > 0 && (
-              <span
-                className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
-                style={{ background: "rgba(227,179,65,0.2)", color: "#e3b341" }}
-              >
+              <span className="ml-2 rounded-full bg-[rgba(227,179,65,0.2)] px-1.5 py-0.5 text-xs text-[#e3b341]">
                 {pendingApis.length}
               </span>
             )}
             {t === "all" && allApis.length > 0 && (
-              <span
-                className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
-                style={{ background: "var(--bg3)", color: "var(--text2)" }}
-              >
+              <span className="ml-2 rounded-full bg-[var(--bg3)] px-1.5 py-0.5 text-xs text-[var(--text2)]">
                 {allApis.length}
               </span>
             )}
@@ -146,9 +136,9 @@ export default function AdminPage() {
       {tab === "pending" && (
         <>
           {loading && <LoadingSpinner />}
-          {error && <p style={{ color: "var(--red)" }}>{error}</p>}
+          {error && <p className="text-[var(--red)]">{error}</p>}
           {!loading && !error && pendingApis.length === 0 && (
-            <div className="card text-center py-8" style={{ color: "var(--text2)" }}>
+            <div className="card py-8 text-center text-[var(--text2)]">
               No pending APIs to review
             </div>
           )}
@@ -171,15 +161,16 @@ export default function AdminPage() {
         <>
           {allLoading && <LoadingSpinner />}
           {!allLoading && (
-            <div className="card overflow-hidden p-0" style={{ border: "1px solid var(--border)" }}>
+            <div className="card overflow-hidden border-[var(--border)] p-0">
               <table className="w-full text-sm">
-                <thead style={{ background: "var(--bg3)", borderBottom: "1px solid var(--border)" }}>
+                <thead className="border-b border-[var(--border)] bg-[var(--bg3)]">
                   <tr>
                     {["Name", "Category", "Status", "Price", "Calls", "Seller", ""].map((h) => (
                       <th
                         key={h}
-                        className={`px-4 py-3 font-medium text-left ${h === "Price" || h === "Calls" ? "text-right" : ""}`}
-                        style={{ color: "var(--text2)" }}
+                        className={`px-4 py-3 text-left font-medium text-[var(--text2)] ${
+                          h === "Price" || h === "Calls" ? "text-right" : ""
+                        }`}
                       >
                         {h}
                       </th>
@@ -190,30 +181,25 @@ export default function AdminPage() {
                   {allApis.map((api, i) => (
                     <tr
                       key={api.id}
-                      style={{ borderTop: i > 0 ? "1px solid var(--border)" : "none" }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg3)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      className={`${i > 0 ? "border-t border-[var(--border)]" : ""} hover:bg-[var(--bg3)]`}
                     >
-                      <td className="px-4 py-3 font-medium" style={{ color: "var(--text)" }}>{api.name}</td>
-                      <td className="px-4 py-3 capitalize" style={{ color: "var(--text2)" }}>{api.category}</td>
+                      <td className="px-4 py-3 font-medium text-[var(--text)]">{api.name}</td>
+                      <td className="px-4 py-3 capitalize text-[var(--text2)]">{api.category}</td>
                       <td className="px-4 py-3"><StatusBadge status={api.status} /></td>
-                      <td className="px-4 py-3 text-right" style={{ color: "var(--text2)" }}>
+                      <td className="px-4 py-3 text-right text-[var(--text2)]">
                         {formatUnits(BigInt(api.price), 6)} USDC
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold" style={{ color: "var(--green)" }}>
+                      <td className="px-4 py-3 text-right font-semibold text-[var(--green)]">
                         {api._count.payments}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs truncate max-w-[160px]" style={{ color: "var(--text3)" }}>
+                      <td className="max-w-[160px] truncate px-4 py-3 font-mono text-xs text-[var(--text3)]">
                         {api.sellerAddress}
                       </td>
                       <td className="px-4 py-3">
                         <button
                           onClick={() => handleAdminDelete(api.id)}
                           disabled={deletingId === api.id}
-                          className="text-xs transition-colors disabled:opacity-40"
-                          style={{ color: "var(--text3)" }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--red)")}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text3)")}
+                          className="text-xs text-[var(--text3)] transition-colors hover:text-[var(--red)] disabled:opacity-40"
                         >
                           {deletingId === api.id ? "..." : "Delete"}
                         </button>
@@ -223,7 +209,7 @@ export default function AdminPage() {
                 </tbody>
               </table>
               {allApis.length === 0 && (
-                <p className="text-center py-8" style={{ color: "var(--text2)" }}>No APIs registered yet.</p>
+                <p className="py-8 text-center text-[var(--text2)]">No APIs registered yet.</p>
               )}
             </div>
           )}

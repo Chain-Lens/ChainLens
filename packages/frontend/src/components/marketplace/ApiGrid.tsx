@@ -4,7 +4,7 @@ import ApiCard from "./ApiCard";
 export default function ApiGrid({ apis }: { apis: ApiListingPublic[] }) {
   if (apis.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
+      <div className="py-12 text-center text-[var(--text3)]">
         No APIs available yet. Check back later!
       </div>
     );

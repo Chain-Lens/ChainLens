@@ -201,6 +201,51 @@
     box-shadow: var(--shadow);
   }
 
+  .loading-spinner {
+    border: 2px solid var(--border2);
+    border-bottom-color: var(--green);
+  }
+
+  .status-badge-default {
+    background: rgba(139, 148, 158, 0.15);
+    color: #8b949e;
+  }
+
+  .status-badge-pending {
+    background: rgba(210, 153, 34, 0.15);
+    color: #e3b341;
+  }
+
+  .status-badge-approved {
+    background: rgba(63, 185, 80, 0.15);
+    color: #3fb950;
+  }
+
+  .status-badge-rejected {
+    background: rgba(248, 81, 73, 0.15);
+    color: #f85149;
+  }
+
+  .status-badge-revoked {
+    background: rgba(139, 148, 158, 0.15);
+    color: #8b949e;
+  }
+
+  .status-badge-paid {
+    background: rgba(121, 192, 255, 0.15);
+    color: #79c0ff;
+  }
+
+  .status-badge-executing {
+    background: rgba(188, 140, 255, 0.15);
+    color: #bc8cff;
+  }
+
+  .status-badge-refunded {
+    background: rgba(255, 166, 87, 0.15);
+    color: #ffa657;
+  }
+
   .input {
     display: block;
     width: 100%;

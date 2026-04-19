@@ -23,8 +23,8 @@ export default function SellerPage() {
   if (!isConnected) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-        <h1 className="text-3xl font-bold mb-4" style={{ color: "var(--text)" }}>My APIs</h1>
-        <p style={{ color: "var(--text2)" }}>
+        <h1 className="mb-4 text-3xl font-bold text-[var(--text)]">My APIs</h1>
+        <p className="text-[var(--text2)]">
           Connect your wallet to view your registered APIs.
         </p>
       </div>
@@ -51,8 +51,8 @@ export default function SellerPage() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold" style={{ color: "var(--text)" }}>My APIs</h1>
-          <p className="text-sm mt-1 font-mono" style={{ color: "var(--text3)" }}>{address}</p>
+          <h1 className="text-3xl font-bold text-[var(--text)]">My APIs</h1>
+          <p className="mt-1 font-mono text-sm text-[var(--text3)]">{address}</p>
         </div>
         <Link href="/register" className="btn-primary px-4 py-2 text-sm">
           + Register New API
@@ -61,19 +61,19 @@ export default function SellerPage() {
 
       {/* Claim earnings */}
       <div
-        className="card mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-        style={hasPending ? { borderColor: "rgba(63,185,80,0.4)", background: "rgba(63,185,80,0.05)" } : {}}
+        className={`card mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center ${
+          hasPending
+            ? "border-[rgba(63,185,80,0.4)] bg-[rgba(63,185,80,0.05)]"
+            : ""
+        }`}
       >
         <div>
-          <p className="text-sm font-medium" style={{ color: "var(--text2)" }}>Claimable Earnings</p>
-          <p
-            className="text-2xl font-bold mt-1"
-            style={{ color: hasPending ? "var(--green)" : "var(--text3)" }}
-          >
+          <p className="text-sm font-medium text-[var(--text2)]">Claimable Earnings</p>
+          <p className={`mt-1 text-2xl font-bold ${hasPending ? "text-[var(--green)]" : "text-[var(--text3)]"}`}>
             {formatUnits(pendingAmount, 6)} USDC
           </p>
           {isConfirmed && (
-            <p className="text-xs mt-1" style={{ color: "var(--green)" }}>Successfully claimed!</p>
+            <p className="mt-1 text-xs text-[var(--green)]">Successfully claimed!</p>
           )}
         </div>
         <button
@@ -101,12 +101,12 @@ export default function SellerPage() {
       )}
 
       {error && (
-        <div className="card text-center py-8" style={{ color: "var(--red)" }}>{error}</div>
+        <div className="card py-8 text-center text-[var(--red)]">{error}</div>
       )}
 
       {!loading && !error && apis.length === 0 && (
         <div className="card text-center py-12">
-          <p className="mb-4" style={{ color: "var(--text2)" }}>You haven't registered any APIs yet.</p>
+          <p className="mb-4 text-[var(--text2)]">You haven't registered any APIs yet.</p>
           <Link href="/register" className="btn-primary px-4 py-2 text-sm">
             Register Your First API
           </Link>
@@ -125,10 +125,19 @@ export default function SellerPage() {
 }
 
 function StatCard({ label, value, color }: { label: string; value: number; color?: string }) {
+  const valueClass =
+    color === "var(--green)"
+      ? "text-[var(--green)]"
+      : color === "var(--red)"
+        ? "text-[var(--red)]"
+        : color === "#e3b341"
+          ? "text-[#e3b341]"
+          : "text-[var(--text)]";
+
   return (
     <div className="card text-center py-4">
-      <p className="text-2xl font-bold" style={{ color: color ?? "var(--text)" }}>{value}</p>
-      <p className="text-xs mt-1" style={{ color: "var(--text2)" }}>{label}</p>
+      <p className={`text-2xl font-bold ${valueClass}`}>{value}</p>
+      <p className="mt-1 text-xs text-[var(--text2)]">{label}</p>
     </div>
   );
 }
@@ -141,15 +150,14 @@ function ApiRow({ api, onDelete }: { api: SellerApi; onDelete: (id: string) => v
     <div className="card flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <h3 className="font-semibold truncate" style={{ color: "var(--text)" }}>{api.name}</h3>
+          <h3 className="truncate font-semibold text-[var(--text)]">{api.name}</h3>
           <StatusBadge status={api.status} />
         </div>
         <div className="flex items-center gap-3 shrink-0">
           {api.status === "APPROVED" && (
             <Link
               href={`/apis/${api.id}`}
-              className="text-xs font-medium hover:underline whitespace-nowrap"
-              style={{ color: "var(--cyan)" }}
+              className="whitespace-nowrap text-xs font-medium text-[var(--cyan)] hover:underline"
             >
               View →
             </Link>
@@ -157,10 +165,7 @@ function ApiRow({ api, onDelete }: { api: SellerApi; onDelete: (id: string) => v
           {canDelete && (
             <button
               onClick={() => onDelete(api.id)}
-              className="text-xs font-medium whitespace-nowrap transition-colors"
-              style={{ color: "var(--text3)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--red)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text3)")}
+              className="whitespace-nowrap text-xs font-medium text-[var(--text3)] transition-colors hover:text-[var(--red)]"
             >
               Delete
             </button>
@@ -168,30 +173,24 @@ function ApiRow({ api, onDelete }: { api: SellerApi; onDelete: (id: string) => v
         </div>
       </div>
 
-      <p className="text-sm line-clamp-2" style={{ color: "var(--text2)" }}>{api.description}</p>
+      <p className="line-clamp-2 text-sm text-[var(--text2)]">{api.description}</p>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <span
-          className="text-xs font-medium capitalize px-2 py-0.5 rounded"
-          style={{ background: "var(--bg3)", color: "var(--text2)", border: "1px solid var(--border2)" }}
-        >
+        <span className="rounded border border-[var(--border2)] bg-[var(--bg3)] px-2 py-0.5 text-xs font-medium capitalize text-[var(--text2)]">
           {api.category}
         </span>
-        <span className="text-sm font-semibold" style={{ color: "var(--green)" }}>{priceInUsdc} USDC</span>
-        <span className="text-xs" style={{ color: "var(--text3)" }}>{api._count.payments} sales</span>
-        <span className="text-xs" style={{ color: "var(--text3)" }}>
+        <span className="text-sm font-semibold text-[var(--green)]">{priceInUsdc} USDC</span>
+        <span className="text-xs text-[var(--text3)]">{api._count.payments} sales</span>
+        <span className="text-xs text-[var(--text3)]">
           {new Date(api.createdAt).toLocaleDateString()}
         </span>
         {api.status === "PENDING" && (
-          <span className="text-xs font-medium" style={{ color: "#e3b341" }}>Awaiting review</span>
+          <span className="text-xs font-medium text-[#e3b341]">Awaiting review</span>
         )}
       </div>
 
       {api.status === "REJECTED" && (
-        <div
-          className="rounded px-3 py-2 text-xs"
-          style={{ background: "rgba(248,81,73,0.1)", border: "1px solid rgba(248,81,73,0.3)", color: "var(--red)" }}
-        >
+        <div className="rounded border border-[rgba(248,81,73,0.3)] bg-[rgba(248,81,73,0.1)] px-3 py-2 text-xs text-[var(--red)]">
           <span className="font-medium">거절 이유: </span>
           {api.rejectionReason ?? "이유 없음"}
         </div>
