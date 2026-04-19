@@ -10,6 +10,7 @@
     "deploy:testnet": "hardhat ignition deploy ignition/modules/ApiMarketEscrow.ts --network baseSepolia",
     "deploy:task-type-registry": "hardhat ignition deploy ignition/modules/TaskTypeRegistry.ts --network baseSepolia",
     "deploy:seller-registry": "hardhat ignition deploy ignition/modules/SellerRegistry.ts --network baseSepolia",
+    "deploy:escrow-v2": "hardhat ignition deploy ignition/modules/ApiMarketEscrowV2.ts --network baseSepolia",
     "copy-abi": "tsx scripts/copy-abi.ts",
     "clean": "hardhat clean"
   },
