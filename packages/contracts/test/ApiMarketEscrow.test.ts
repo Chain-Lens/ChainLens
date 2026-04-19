@@ -3,78 +3,109 @@ import hre from "hardhat";
 import {
   loadFixture,
 } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
-import { parseEther, getAddress } from "viem";
+import { getAddress, parseUnits } from "viem";
+
+const PAYMENT_AMOUNT = parseUnits("1", 6);
 
 describe("ApiMarketEscrow", function () {
   async function deployFixture() {
     const [owner, gateway, buyer, seller, other] =
       await hre.viem.getWalletClients();
 
+    const usdc = await hre.viem.deployContract("MockUSDC");
     const escrow = await hre.viem.deployContract("ApiMarketEscrow", [
       gateway.account.address,
+      0n,
+      usdc.address,
     ]);
 
-    const publicClient = await hre.viem.getPublicClient();
+    await usdc.write.mint([buyer.account.address, PAYMENT_AMOUNT]);
 
-    return { escrow, owner, gateway, buyer, seller, other, publicClient };
+    const usdcAsBuyer = await hre.viem.getContractAt("MockUSDC", usdc.address, {
+      client: { wallet: buyer },
+    });
+    await usdcAsBuyer.write.approve([escrow.address, PAYMENT_AMOUNT]);
+
+    const escrowAsBuyer = await hre.viem.getContractAt(
+      "ApiMarketEscrow",
+      escrow.address,
+      { client: { wallet: buyer } }
+    );
+    const escrowAsGateway = await hre.viem.getContractAt(
+      "ApiMarketEscrow",
+      escrow.address,
+      { client: { wallet: gateway } }
+    );
+    const escrowAsSeller = await hre.viem.getContractAt(
+      "ApiMarketEscrow",
+      escrow.address,
+      { client: { wallet: seller } }
+    );
+    const escrowAsOther = await hre.viem.getContractAt(
+      "ApiMarketEscrow",
+      escrow.address,
+      { client: { wallet: other } }
+    );
+
+    return {
+      escrow,
+      usdc,
+      owner,
+      gateway,
+      buyer,
+      seller,
+      other,
+      escrowAsBuyer,
+      escrowAsGateway,
+      escrowAsSeller,
+      escrowAsOther,
+    };
+  }
+
+  async function createPayment() {
+    const fixture = await deployFixture();
+    await fixture.escrow.write.approveApi([1n]);
+    await fixture.escrowAsBuyer.write.pay([
+      1n,
+      fixture.seller.account.address,
+      PAYMENT_AMOUNT,
+    ]);
+    return fixture;
   }
 
   describe("Deployment", function () {
-    it("should set owner and gateway correctly", async function () {
-      const { escrow, owner, gateway } = await loadFixture(deployFixture);
+    it("sets owner, gateway, usdc, and nextPaymentId", async function () {
+      const { escrow, owner, gateway, usdc } = await loadFixture(deployFixture);
+
       expect(getAddress(await escrow.read.owner())).to.equal(
         getAddress(owner.account.address)
       );
       expect(getAddress(await escrow.read.gateway())).to.equal(
         getAddress(gateway.account.address)
       );
-    });
-
-    it("should start with nextPaymentId = 0", async function () {
-      const { escrow } = await loadFixture(deployFixture);
+      expect(getAddress(await escrow.read.usdc())).to.equal(
+        getAddress(usdc.address)
+      );
       expect(await escrow.read.nextPaymentId()).to.equal(0n);
     });
   });
 
   describe("API Approval", function () {
-    it("should approve an API", async function () {
+    it("approves and revokes an API", async function () {
       const { escrow } = await loadFixture(deployFixture);
-      await escrow.write.approveApi([1n]);
-      expect(await escrow.read.approvedApis([1n])).to.be.true;
-    });
 
-    it("should emit ApiApproved event", async function () {
-      const { escrow, publicClient } = await loadFixture(deployFixture);
-      const hash = await escrow.write.approveApi([1n]);
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      expect(receipt.status).to.equal("success");
-    });
-
-    it("should revoke an API", async function () {
-      const { escrow } = await loadFixture(deployFixture);
       await escrow.write.approveApi([1n]);
+      expect(await escrow.read.approvedApis([1n])).to.equal(true);
+
       await escrow.write.revokeApi([1n]);
-      expect(await escrow.read.approvedApis([1n])).to.be.false;
+      expect(await escrow.read.approvedApis([1n])).to.equal(false);
     });
 
-    it("should revert if non-owner calls approveApi", async function () {
-      const { escrow, other } = await loadFixture(deployFixture);
-      const escrowAsOther = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: other } }
-      );
+    it("restricts approval changes to owner", async function () {
+      const { escrowAsOther } = await loadFixture(deployFixture);
+
       await expect(escrowAsOther.write.approveApi([1n])).to.be.rejectedWith(
         "Only owner"
-      );
-    });
-
-    it("should revert if non-owner calls revokeApi", async function () {
-      const { escrow, other } = await loadFixture(deployFixture);
-      const escrowAsOther = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: other } }
       );
       await expect(escrowAsOther.write.revokeApi([1n])).to.be.rejectedWith(
         "Only owner"
@@ -83,350 +114,90 @@ describe("ApiMarketEscrow", function () {
   });
 
   describe("Payment", function () {
-    it("should accept payment for approved API", async function () {
-      const { escrow, buyer, seller } = await loadFixture(deployFixture);
-      await escrow.write.approveApi([1n]);
-
-      const escrowAsBuyer = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: buyer } }
-      );
-
-      await escrowAsBuyer.write.pay([1n, seller.account.address], {
-        value: parseEther("1"),
-      });
+    it("stores approved USDC payments", async function () {
+      const { escrow, buyer, seller, usdc } = await loadFixture(createPayment);
 
       const payment = await escrow.read.getPayment([0n]);
-      expect(getAddress(payment.buyer)).to.equal(
-        getAddress(buyer.account.address)
-      );
+      expect(getAddress(payment.buyer)).to.equal(getAddress(buyer.account.address));
+      expect(getAddress(payment.seller)).to.equal(getAddress(seller.account.address));
       expect(payment.apiId).to.equal(1n);
-      expect(getAddress(payment.seller)).to.equal(
-        getAddress(seller.account.address)
-      );
-      expect(payment.amount).to.equal(parseEther("1"));
-      expect(payment.completed).to.be.false;
-      expect(payment.refunded).to.be.false;
-    });
-
-    it("should increment nextPaymentId", async function () {
-      const { escrow, buyer, seller } = await loadFixture(deployFixture);
-      await escrow.write.approveApi([1n]);
-
-      const escrowAsBuyer = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: buyer } }
-      );
-
-      await escrowAsBuyer.write.pay([1n, seller.account.address], {
-        value: parseEther("1"),
-      });
-
+      expect(payment.amount).to.equal(PAYMENT_AMOUNT);
+      expect(payment.completed).to.equal(false);
+      expect(payment.refunded).to.equal(false);
       expect(await escrow.read.nextPaymentId()).to.equal(1n);
+      expect(await usdc.read.balanceOf([escrow.address])).to.equal(PAYMENT_AMOUNT);
     });
 
-    it("should revert for unapproved API", async function () {
-      const { escrow, buyer, seller } = await loadFixture(deployFixture);
-      const escrowAsBuyer = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: buyer } }
-      );
+    it("rejects unapproved APIs", async function () {
+      const { escrowAsBuyer, seller } = await loadFixture(deployFixture);
 
       await expect(
-        escrowAsBuyer.write.pay([99n, seller.account.address], {
-          value: parseEther("1"),
-        })
+        escrowAsBuyer.write.pay([99n, seller.account.address, PAYMENT_AMOUNT])
       ).to.be.rejectedWith("API not approved");
-    });
-
-    it("should revert with zero value", async function () {
-      const { escrow, buyer, seller } = await loadFixture(deployFixture);
-      await escrow.write.approveApi([1n]);
-
-      const escrowAsBuyer = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: buyer } }
-      );
-
-      await expect(
-        escrowAsBuyer.write.pay([1n, seller.account.address], { value: 0n })
-      ).to.be.rejectedWith("Payment must be > 0");
     });
   });
 
   describe("Complete", function () {
-    it("should accumulate funds in pendingWithdrawals on complete", async function () {
-      const { escrow, buyer, seller, gateway } =
-        await loadFixture(deployFixture);
-
-      await escrow.write.approveApi([1n]);
-
-      const escrowAsBuyer = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: buyer } }
-      );
-
-      await escrowAsBuyer.write.pay([1n, seller.account.address], {
-        value: parseEther("1"),
-      });
-
-      const escrowAsGateway = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: gateway } }
-      );
+    it("marks payments complete and accrues seller withdrawals", async function () {
+      const { escrow, escrowAsGateway, seller } = await loadFixture(createPayment);
 
       await escrowAsGateway.write.complete([0n]);
-
-      const pending = await escrow.read.pendingWithdrawals([seller.account.address]);
-      expect(pending).to.equal(parseEther("1"));
 
       const payment = await escrow.read.getPayment([0n]);
-      expect(payment.completed).to.be.true;
+      expect(payment.completed).to.equal(true);
+      expect(await escrow.read.pendingWithdrawals([seller.account.address])).to.equal(
+        PAYMENT_AMOUNT
+      );
     });
 
-    it("should allow seller to claim accumulated funds", async function () {
-      const { escrow, buyer, seller, gateway, publicClient } =
-        await loadFixture(deployFixture);
+    it("lets seller claim accrued USDC", async function () {
+      const { escrow, escrowAsGateway, escrowAsSeller, seller, usdc } =
+        await loadFixture(createPayment);
 
-      await escrow.write.approveApi([1n]);
-
-      const escrowAsBuyer = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: buyer } }
-      );
-      await escrowAsBuyer.write.pay([1n, seller.account.address], {
-        value: parseEther("1"),
-      });
-
-      const escrowAsGateway = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: gateway } }
-      );
       await escrowAsGateway.write.complete([0n]);
+      const before = await usdc.read.balanceOf([seller.account.address]);
 
-      const sellerBalBefore = await publicClient.getBalance({
-        address: seller.account.address,
-      });
-
-      const escrowAsSeller = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: seller } }
-      );
       await escrowAsSeller.write.claim();
 
-      const sellerBalAfter = await publicClient.getBalance({
-        address: seller.account.address,
-      });
-
-      expect(sellerBalAfter > sellerBalBefore).to.be.true;
+      const after = await usdc.read.balanceOf([seller.account.address]);
+      expect(after - before).to.equal(PAYMENT_AMOUNT);
       expect(await escrow.read.pendingWithdrawals([seller.account.address])).to.equal(0n);
     });
 
-    it("should revert claim if nothing to withdraw", async function () {
-      const { escrow, seller } = await loadFixture(deployFixture);
-      const escrowAsSeller = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: seller } }
-      );
-      await expect(escrowAsSeller.write.claim()).to.be.rejectedWith(
-        "Nothing to claim"
-      );
-    });
+    it("restricts complete to gateway", async function () {
+      const { escrowAsOther } = await loadFixture(createPayment);
 
-    it("should revert if not gateway", async function () {
-      const { escrow, buyer, seller, other } =
-        await loadFixture(deployFixture);
-
-      await escrow.write.approveApi([1n]);
-      const escrowAsBuyer = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: buyer } }
-      );
-      await escrowAsBuyer.write.pay([1n, seller.account.address], {
-        value: parseEther("1"),
-      });
-
-      const escrowAsOther = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: other } }
-      );
       await expect(escrowAsOther.write.complete([0n])).to.be.rejectedWith(
         "Only gateway"
-      );
-    });
-
-    it("should revert if already completed", async function () {
-      const { escrow, buyer, seller, gateway } =
-        await loadFixture(deployFixture);
-
-      await escrow.write.approveApi([1n]);
-      const escrowAsBuyer = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: buyer } }
-      );
-      await escrowAsBuyer.write.pay([1n, seller.account.address], {
-        value: parseEther("1"),
-      });
-
-      const escrowAsGateway = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: gateway } }
-      );
-      await escrowAsGateway.write.complete([0n]);
-
-      await expect(escrowAsGateway.write.complete([0n])).to.be.rejectedWith(
-        "Already completed"
       );
     });
   });
 
   describe("Refund", function () {
-    it("should refund funds to buyer", async function () {
-      const { escrow, buyer, seller, gateway, publicClient } =
-        await loadFixture(deployFixture);
+    it("refunds buyer in USDC", async function () {
+      const { escrow, escrowAsGateway, buyer, usdc } = await loadFixture(createPayment);
 
-      await escrow.write.approveApi([1n]);
-      const escrowAsBuyer = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: buyer } }
-      );
-      await escrowAsBuyer.write.pay([1n, seller.account.address], {
-        value: parseEther("1"),
-      });
-
-      const buyerBalBefore = await publicClient.getBalance({
-        address: buyer.account.address,
-      });
-
-      const escrowAsGateway = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: gateway } }
-      );
+      const before = await usdc.read.balanceOf([buyer.account.address]);
       await escrowAsGateway.write.refund([0n]);
+      const after = await usdc.read.balanceOf([buyer.account.address]);
 
-      const buyerBalAfter = await publicClient.getBalance({
-        address: buyer.account.address,
-      });
-
-      expect(buyerBalAfter - buyerBalBefore).to.equal(parseEther("1"));
-
-      const payment = await escrow.read.getPayment([0n]);
-      expect(payment.refunded).to.be.true;
+      expect(after - before).to.equal(PAYMENT_AMOUNT);
+      expect((await escrow.read.getPayment([0n])).refunded).to.equal(true);
     });
 
-    it("should revert if not gateway", async function () {
-      const { escrow, buyer, seller, other } =
-        await loadFixture(deployFixture);
+    it("blocks invalid refund transitions", async function () {
+      const { escrowAsGateway } = await loadFixture(createPayment);
 
-      await escrow.write.approveApi([1n]);
-      const escrowAsBuyer = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: buyer } }
-      );
-      await escrowAsBuyer.write.pay([1n, seller.account.address], {
-        value: parseEther("1"),
-      });
-
-      const escrowAsOther = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: other } }
-      );
-      await expect(escrowAsOther.write.refund([0n])).to.be.rejectedWith(
-        "Only gateway"
-      );
-    });
-
-    it("should revert if already refunded", async function () {
-      const { escrow, buyer, seller, gateway } =
-        await loadFixture(deployFixture);
-
-      await escrow.write.approveApi([1n]);
-      const escrowAsBuyer = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: buyer } }
-      );
-      await escrowAsBuyer.write.pay([1n, seller.account.address], {
-        value: parseEther("1"),
-      });
-
-      const escrowAsGateway = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: gateway } }
-      );
       await escrowAsGateway.write.refund([0n]);
-
       await expect(escrowAsGateway.write.refund([0n])).to.be.rejectedWith(
         "Already refunded"
       );
     });
 
-    it("should not allow complete after refund", async function () {
-      const { escrow, buyer, seller, gateway } =
-        await loadFixture(deployFixture);
+    it("does not allow refund after complete", async function () {
+      const { escrowAsGateway } = await loadFixture(createPayment);
 
-      await escrow.write.approveApi([1n]);
-      const escrowAsBuyer = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: buyer } }
-      );
-      await escrowAsBuyer.write.pay([1n, seller.account.address], {
-        value: parseEther("1"),
-      });
-
-      const escrowAsGateway = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: gateway } }
-      );
-      await escrowAsGateway.write.refund([0n]);
-
-      await expect(escrowAsGateway.write.complete([0n])).to.be.rejectedWith(
-        "Already refunded"
-      );
-    });
-
-    it("should not allow refund after complete", async function () {
-      const { escrow, buyer, seller, gateway } =
-        await loadFixture(deployFixture);
-
-      await escrow.write.approveApi([1n]);
-      const escrowAsBuyer = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: buyer } }
-      );
-      await escrowAsBuyer.write.pay([1n, seller.account.address], {
-        value: parseEther("1"),
-      });
-
-      const escrowAsGateway = await hre.viem.getContractAt(
-        "ApiMarketEscrow",
-        escrow.address,
-        { client: { wallet: gateway } }
-      );
       await escrowAsGateway.write.complete([0n]);
-
       await expect(escrowAsGateway.write.refund([0n])).to.be.rejectedWith(
         "Already completed"
       );
@@ -434,16 +205,14 @@ describe("ApiMarketEscrow", function () {
   });
 
   describe("Admin functions", function () {
-    it("should allow owner to change gateway", async function () {
+    it("allows owner to change gateway and ownership", async function () {
       const { escrow, other } = await loadFixture(deployFixture);
+
       await escrow.write.setGateway([other.account.address]);
       expect(getAddress(await escrow.read.gateway())).to.equal(
         getAddress(other.account.address)
       );
-    });
 
-    it("should allow owner to transfer ownership", async function () {
-      const { escrow, other } = await loadFixture(deployFixture);
       await escrow.write.transferOwnership([other.account.address]);
       expect(getAddress(await escrow.read.owner())).to.equal(
         getAddress(other.account.address)

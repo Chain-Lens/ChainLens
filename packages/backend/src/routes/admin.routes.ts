@@ -9,6 +9,11 @@ const router = Router();
 
 router.use(requireAdmin);
 
+const testApiSchema = z.object({
+  payload: z.record(z.string(), z.unknown()).optional(),
+  method: z.string().trim().min(1).optional(),
+});
+
 // GET /admin/apis - All APIs with call counts
 router.get(
   "/apis",
@@ -50,6 +55,7 @@ router.delete(
 // POST /admin/apis/:id/test - Test seller endpoint
 router.post(
   "/apis/:id/test",
+  validate(testApiSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const api = await (await import("../services/api.service.js")).getById(
@@ -62,9 +68,11 @@ router.post(
       let error: string | null = null;
 
       try {
-        const payload = (req.body as { payload?: unknown })?.payload ?? api.exampleRequest ?? {};
+        const { payload: requestPayload, method: requestMethod } =
+          req.body as z.infer<typeof testApiSchema>;
+        const payload = requestPayload ?? api.exampleRequest ?? {};
         const hasBody = Object.keys(payload as object).length > 0;
-        const method = (req.body as { method?: string })?.method?.toUpperCase() || (hasBody ? "POST" : "GET");
+        const method = requestMethod?.toUpperCase() || (hasBody ? "POST" : "GET");
 
         const fetchOptions: RequestInit = {
           method,

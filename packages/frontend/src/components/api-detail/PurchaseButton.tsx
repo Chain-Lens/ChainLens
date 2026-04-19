@@ -1,14 +1,17 @@
 "use client";
 
-import { useAccount } from "wagmi";
-import { useRouter } from "next/navigation";
-import { usePayment } from "@/hooks/usePayment";
 import { useEffect } from "react";
+import { useAccount } from "wagmi";
+import { usePayment } from "@/hooks/usePayment";
 import type { ApiListingPublic } from "@chainlens/shared";
 
-export default function PurchaseButton({ api }: { api: ApiListingPublic }) {
+type Props = {
+  api: ApiListingPublic;
+  onPurchaseSuccess: (requestId: string) => void;
+};
+
+export default function PurchaseButton({ api, onPurchaseSuccess }: Props) {
   const { address, isConnected } = useAccount();
-  const router = useRouter();
   const {
     prepare,
     pay,
@@ -23,13 +26,13 @@ export default function PurchaseButton({ api }: { api: ApiListingPublic }) {
 
   useEffect(() => {
     if (isConfirmed && prepareData) {
-      router.push(`/requests/${prepareData.requestId}`);
+      onPurchaseSuccess(prepareData.requestId);
     }
-  }, [isConfirmed, prepareData, router]);
+  }, [isConfirmed, onPurchaseSuccess, prepareData]);
 
   if (!isConnected) {
     return (
-      <p className="text-center py-4" style={{ color: "var(--text2)" }}>
+      <p className="py-4 text-center text-[var(--text2)]">
         Connect your wallet to purchase this API
       </p>
     );
@@ -65,7 +68,7 @@ export default function PurchaseButton({ api }: { api: ApiListingPublic }) {
       </button>
 
       {prepareError && (
-        <p className="text-sm text-center" style={{ color: "var(--red)" }}>{prepareError}</p>
+        <p className="text-center text-sm text-[var(--red)]">{prepareError}</p>
       )}
     </div>
   );

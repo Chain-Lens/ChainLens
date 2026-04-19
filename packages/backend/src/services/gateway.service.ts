@@ -5,7 +5,7 @@ import { walletClient, publicClient } from "../config/viem.js";
 import prisma from "../config/prisma.js";
 import * as paymentService from "./payment.service.js";
 import { logger } from "../utils/logger.js";
-import { BadRequestError } from "../utils/errors.js";
+import { AppError, BadRequestError } from "../utils/errors.js";
 
 const EXECUTION_TIMEOUT_MS = 30_000;
 
@@ -60,13 +60,13 @@ export async function execute(requestId: string, agentPayload?: Record<string, u
     }
 
     if (!response.ok) {
-      throw new Error(`Seller API returned ${response.status}`);
+      throw new AppError(`Seller API returned ${response.status}`, 502, "SELLER_API_ERROR");
     }
 
     const result = await response.json();
 
     if (!result || typeof result !== "object") {
-      throw new Error("Invalid response from seller API");
+      throw new AppError("Invalid response from seller API", 502, "SELLER_API_ERROR");
     }
 
     // On-chain complete (V2: jobId, responseHash, evidenceURI)

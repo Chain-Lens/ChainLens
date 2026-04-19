@@ -30,7 +30,7 @@ export function useAdmin() {
     fetchPending();
   }, [fetchPending]);
 
-  async function approve(apiId: string, adminAddress: string, reason?: string) {
+  async function approve(apiId: string, reason?: string) {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001/api"}/admin/apis/${apiId}/approve`,
       {
@@ -48,7 +48,7 @@ export function useAdmin() {
     return res.json();
   }
 
-  async function reject(apiId: string, adminAddress: string, reason?: string) {
+  async function reject(apiId: string, reason?: string) {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001/api"}/admin/apis/${apiId}/reject`,
       {
@@ -65,5 +65,27 @@ export function useAdmin() {
     await fetchPending();
   }
 
-  return { pendingApis, loading, error, approve, reject, refetch: fetchPending };
+  async function testApi(apiId: string, payload?: unknown, method?: string) {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001/api"}/admin/apis/${apiId}/test`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ payload, method }),
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data?.error?.message || "Failed to test API");
+    }
+    return data as {
+      status: number | null;
+      body: unknown;
+      error: string | null;
+      latencyMs: number;
+    };
+  }
+
+  return { pendingApis, loading, error, approve, reject, testApi, refetch: fetchPending };
 }

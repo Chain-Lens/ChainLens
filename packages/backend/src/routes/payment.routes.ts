@@ -7,6 +7,7 @@ import { PaymentStatus } from "@chainlens/shared";
 import { walletClient, publicClient } from "../config/viem.js";
 import { ApiMarketEscrowAbi } from "@chainlens/shared";
 import { env } from "../config/env.js";
+import { BadRequestError, UnauthorizedError } from "../utils/errors.js";
 
 const router = Router();
 
@@ -31,6 +32,10 @@ router.post(
 
 const executeSchema = z.object({
   requestId: z.string().uuid(),
+});
+
+const refundSchema = z.object({
+  buyer: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
 });
 
 // POST /execute - Trigger execution (manual fallback)
@@ -64,31 +69,23 @@ router.get(
 // 허용 조건: PAID 또는 EXECUTING 상태이고 5분 이상 경과, buyer 본인만 가능
 router.post(
   "/requests/:requestId/refund",
+  validate(refundSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const requestId = req.params["requestId"] as string;
-      const { buyer } = req.body as { buyer: string };
-
-      if (!buyer) {
-        res.status(400).json({ error: { message: "buyer address required" } });
-        return;
-      }
+      const { buyer } = req.body as z.infer<typeof refundSchema>;
 
       const request = await paymentService.getRequest(requestId);
 
       // buyer 본인 확인
       if (request.buyer.toLowerCase() !== buyer.toLowerCase()) {
-        res.status(403).json({ error: { message: "Not the buyer of this request" } });
-        return;
+        return next(new UnauthorizedError("Not the buyer of this request"));
       }
 
       // 환불 가능한 상태 확인
       const refundableStatuses = [PaymentStatus.PAID, PaymentStatus.EXECUTING];
       if (!refundableStatuses.includes(request.status as PaymentStatus)) {
-        res.status(400).json({
-          error: { message: `Cannot refund request in ${request.status} status` },
-        });
-        return;
+        return next(new BadRequestError(`Cannot refund request in ${request.status} status`));
       }
 
       // 5분 경과 확인 (PAID/EXECUTING인데 5분 넘으면 stuck으로 간주)
@@ -96,15 +93,11 @@ router.post(
       const elapsed = Date.now() - new Date(request.updatedAt).getTime();
       if (elapsed < TIMEOUT_MS) {
         const remainSec = Math.ceil((TIMEOUT_MS - elapsed) / 1000);
-        res.status(400).json({
-          error: { message: `Please wait ${remainSec}s before requesting refund` },
-        });
-        return;
+        return next(new BadRequestError(`Please wait ${remainSec}s before requesting refund`));
       }
 
       if (request.onChainPaymentId === null) {
-        res.status(400).json({ error: { message: "No on-chain payment ID" } });
-        return;
+        return next(new BadRequestError("No on-chain payment ID"));
       }
 
       // 온체인 refund 호출

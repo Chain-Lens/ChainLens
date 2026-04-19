@@ -33,3 +33,10 @@ coverage/
 
 # Logs
 *.log
+
+# Local-only notes / tool state
+.codex
+caution.md
+
+# TypeScript incremental build cache
+*.tsbuildinfo

@@ -20,7 +20,7 @@ const ADMIN_ADDRESSES = (process.env.NEXT_PUBLIC_ADMIN_ADDRESSES || "")
 export default function AdminPage() {
   const { address, isConnected } = useAccount();
   const { isAuthenticated, signIn, signOut, loading: authLoading, error: authError } = useAdminAuth();
-  const { pendingApis, loading, error, approve, reject } = useAdmin();
+  const { pendingApis, loading, error, approve, reject, testApi } = useAdmin();
   const { apis: allApis, loading: allLoading, refetch: refetchAll } = useAdminAllApis(isAuthenticated);
   const [tab, setTab] = useState<"pending" | "all">("pending");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -73,11 +73,11 @@ export default function AdminPage() {
   }
 
   async function handleApprove(apiId: string, reason?: string) {
-    await approve(apiId, address!, reason);
+    await approve(apiId, reason);
   }
 
   async function handleReject(apiId: string, reason?: string) {
-    await reject(apiId, address!, reason);
+    await reject(apiId, reason);
   }
 
   async function handleAdminDelete(apiId: string) {
@@ -157,9 +157,9 @@ export default function AdminPage() {
               <ApprovalCard
                 key={api.id}
                 api={api}
-                adminAddress={address!}
                 onApprove={handleApprove}
                 onReject={handleReject}
+                onRunTest={testApi}
               />
             ))}
           </div>

@@ -1,5 +1,6 @@
 import Ajv, { type ValidateFunction } from "ajv";
 import addFormats from "ajv-formats";
+import { AppError } from "../utils/errors.js";
 
 const ajv = new Ajv({ strict: true, allErrors: true });
 addFormats(ajv);
@@ -55,7 +56,11 @@ async function fetchSchema(uri: string): Promise<object> {
     : uri;
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`schema fetch failed: ${uri} -> HTTP ${response.status}`);
+    throw new AppError(
+      `schema fetch failed: ${uri} -> HTTP ${response.status}`,
+      502,
+      "SCHEMA_FETCH_FAILED"
+    );
   }
   return (await response.json()) as object;
 }

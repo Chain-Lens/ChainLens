@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-interface IERC20 {
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
-    function transfer(address to, uint256 amount) external returns (bool);
-}
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract ApiMarketEscrow {
+contract ApiMarketEscrow is ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
     struct Payment {
         address buyer;
         uint256 apiId;
@@ -48,6 +49,9 @@ contract ApiMarketEscrow {
     );
     event Claimed(address indexed seller, uint256 amount);
     event FeeRateUpdated(uint256 oldRate, uint256 newRate);
+    event GatewayUpdated(address indexed previousGateway, address indexed newGateway);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event ApiApprovalUpdated(uint256 indexed apiId, bool approved);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner");
@@ -65,15 +69,17 @@ contract ApiMarketEscrow {
         gateway = _gateway;
         feeRate = _feeRate;
         usdc = IERC20(_usdc);
+        emit GatewayUpdated(address(0), _gateway);
+        emit OwnershipTransferred(address(0), msg.sender);
     }
 
     function approveApi(uint256 apiId) external onlyOwner {
-        approvedApis[apiId] = true;
+        _setApiApproval(apiId, true);
         emit ApiApproved(apiId);
     }
 
     function revokeApi(uint256 apiId) external onlyOwner {
-        approvedApis[apiId] = false;
+        _setApiApproval(apiId, false);
         emit ApiRevoked(apiId);
     }
 
@@ -81,12 +87,12 @@ contract ApiMarketEscrow {
         uint256 apiId,
         address seller,
         uint256 amount
-    ) external returns (uint256 paymentId) {
+    ) external nonReentrant returns (uint256 paymentId) {
         require(approvedApis[apiId], "API not approved");
         require(amount > 0, "Payment must be > 0");
         require(seller != address(0), "Invalid seller");
 
-        require(usdc.transferFrom(msg.sender, address(this), amount), "USDC transfer failed");
+        usdc.safeTransferFrom(msg.sender, address(this), amount);
 
         paymentId = nextPaymentId++;
         payments[paymentId] = Payment({
@@ -120,23 +126,23 @@ contract ApiMarketEscrow {
         emit PaymentCompleted(paymentId, p.seller, sellerAmount, fee);
     }
 
-    function refund(uint256 paymentId) external onlyGateway {
+    function refund(uint256 paymentId) external onlyGateway nonReentrant {
         Payment storage p = payments[paymentId];
         require(p.buyer != address(0), "Payment not found");
         require(!p.completed, "Already completed");
         require(!p.refunded, "Already refunded");
 
         p.refunded = true;
-        require(usdc.transfer(p.buyer, p.amount), "USDC refund failed");
+        usdc.safeTransfer(p.buyer, p.amount);
 
         emit PaymentRefunded(paymentId, p.buyer, p.amount);
     }
 
-    function claim() external {
+    function claim() external nonReentrant {
         uint256 amount = pendingWithdrawals[msg.sender];
         require(amount > 0, "Nothing to claim");
         pendingWithdrawals[msg.sender] = 0;
-        require(usdc.transfer(msg.sender, amount), "USDC claim failed");
+        usdc.safeTransfer(msg.sender, amount);
         emit Claimed(msg.sender, amount);
     }
 
@@ -153,11 +159,20 @@ contract ApiMarketEscrow {
     }
 
     function setGateway(address _gateway) external onlyOwner {
+        address previousGateway = gateway;
         gateway = _gateway;
+        emit GatewayUpdated(previousGateway, _gateway);
     }
 
     function transferOwnership(address newOwner) external onlyOwner {
         require(newOwner != address(0), "Invalid address");
+        address previousOwner = owner;
         owner = newOwner;
+        emit OwnershipTransferred(previousOwner, newOwner);
+    }
+
+    function _setApiApproval(uint256 apiId, bool approved) internal {
+        approvedApis[apiId] = approved;
+        emit ApiApprovalUpdated(apiId, approved);
     }
 }

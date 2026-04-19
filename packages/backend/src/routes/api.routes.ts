@@ -49,6 +49,10 @@ const registerSchema = z.object({
   exampleResponse: z.unknown().optional(),
 });
 
+const deleteSchema = z.object({
+  sellerAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+});
+
 // GET /apis/seller/:address - List APIs by seller address
 router.get(
   "/seller/:address",
@@ -70,13 +74,10 @@ router.get(
 // DELETE /apis/:id - Delete API (seller only, approved or rejected)
 router.delete(
   "/:id",
+  validate(deleteSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { sellerAddress } = req.body as { sellerAddress: string };
-      if (!sellerAddress) {
-        res.status(400).json({ error: { message: "sellerAddress required" } });
-        return;
-      }
+      const { sellerAddress } = req.body as z.infer<typeof deleteSchema>;
       const result = await apiService.deleteApi(req.params.id as string, sellerAddress);
       res.json(result);
     } catch (err) {
@@ -91,7 +92,7 @@ router.post(
   validate(registerSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const api = await apiService.register(req.body);
+      const api = await apiService.register(req.body as z.infer<typeof registerSchema>);
       res.status(201).json(api);
     } catch (err) {
       next(err);

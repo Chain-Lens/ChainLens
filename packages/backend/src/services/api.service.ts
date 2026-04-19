@@ -1,6 +1,6 @@
 import prisma from "../config/prisma.js";
 import { ApiStatus } from "@chainlens/shared";
-import { NotFoundError } from "../utils/errors.js";
+import { BadRequestError, NotFoundError } from "../utils/errors.js";
 
 export async function listApproved(filters?: {
   category?: string;
@@ -121,7 +121,7 @@ export async function deleteApi(id: string, sellerAddress: string) {
     await prisma.apiListing.delete({ where: { id } });
     return { success: true };
   }
-  throw new Error(`Cannot delete API in ${api.status} status`);
+  throw new BadRequestError(`Cannot delete API in ${api.status} status`);
 }
 
 export async function getNextOnChainId(): Promise<number> {
