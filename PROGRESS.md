@@ -75,6 +75,18 @@
 
 ### 2026-04-19
 
+- **Phase C: Seller CLI 스캐폴드·배포·등록 자동화 + Agent Skill**
+  - 신규 워크스페이스 [packages/create-seller](packages/create-seller) — `@chainlens/create-seller`. `bin: create-chainlens-seller / chainlens-seller`, `files: [dist, README.md, SKILL.md]`, `publishConfig.access: public`. 의존성 없음 (표준 라이브러리만으로 구현해 `npx` 콜드스타트 부담 최소화).
+  - [src/cli.ts](packages/create-seller/src/cli.ts) — 4 명령 디스패처: `init / deploy / register / status` + `--help`. 각 명령 모듈은 DI 패턴 (deps 인자 받는 pure `run*` + `parse*Args` 순수 함수 + CLI 엔트리 래퍼) — caution.md "고수준 모듈 안에서 new 저수준구현체 금지"에 맞춰 fetch/spawn/fs를 전부 주입식으로 받아 테스트가 네트워크·프로세스 없이 실행.
+  - **`init`** ([src/commands/init.ts](packages/create-seller/src/commands/init.ts)) — `src/templates/basic/` 10개 파일을 복사+placeholder 치환 (`{{SELLER_NAME}}`/`{{TASK_TYPE}}`/`{{PORT}}`). `.tmpl` 확장자 strip, dir 존재 시 `--force` 요구. 템플릿은 독립 Express 앱 (workspace 의존성 0개 — `express`만 dep), Vercel serverless entry (`api/index.ts`) + `vercel.json` 포함해 `vercel --prod` 바로 가능. [scripts/copy-templates.mjs](packages/create-seller/scripts/copy-templates.mjs)가 tsc 후 `src/templates` → `dist/templates` 복사 (tsc는 non-ts 파일 미복사).
+  - **`deploy`** ([src/commands/deploy.ts](packages/create-seller/src/commands/deploy.ts)) — `vercel --prod --yes` spawn, stdout에서 `https://*.vercel.app` 정규식 추출, `.chainlens-deploy.json`에 `{url, deployedAt}` 저장. 사전 체크: `vercel --version` 성공 + cwd에 `package.json` 존재. 실패 시 `npm i -g vercel && vercel login` 안내 (**사용자 대신 login 시도 금지** — SKILL.md에 명시).
+  - **`register`** ([src/commands/register.ts](packages/create-seller/src/commands/register.ts)) — `POST /api/apis/register`. `parsePriceToWei("0.05")` → `"50000"` USDC 6-decimals 변환 (음수/지수/초과 소수자리 거절). `--endpoint` 생략 시 `readDeployState(cwd)`로 `.chainlens-deploy.json`에서 fallback. `$CHAINLENS_API_URL` env fallback + trailing slash 정규화. 백엔드 스키마 (`registerSchema`)와 매핑: `category ← taskType`, `price ← priceUsdcWei` (wei string).
+  - **`status`** ([src/commands/status.ts](packages/create-seller/src/commands/status.ts)) — `GET /api/reputation/:address` + 배포된 `/health` ping. healthUrl은 `.chainlens-deploy.json`에서 자동 파생, 없으면 skip. reputation 404(`seller_not_registered`)도 throw 아닌 에러 객체로 반환해 "아직 승인 전"을 정상 상태로 구분.
+  - [SKILL.md](packages/create-seller/SKILL.md) — IDE 에이전트용 onboarding 스킬 계약. **언제 invoke** (유저 발화 패턴), **사전 확인 5종** (task type / wallet / price / gateway / vercel 로그인), **4-명령 순서**, **비밀·안전 3원칙** (private key를 seller 프로젝트에 넣지 말 것 / `vercel login` 대리 금지 / wallet 주소 추측 금지), **Troubleshooting 6 증상** 매트릭스. `init` 후 handler 자동 구현 금지 규칙 명시 — 각 task type이 gateway에서 JSON schema로 강제되므로 잘못 추측하면 자동 refund만 나오기 때문.
+  - 테스트 45/45 — init 9 (arg parsing, placeholder 치환, overwrite 방지) + deploy 10 (URL 추출, state 파일 쓰기/읽기, CLI 미설치/프로젝트 아님/비영 exit/URL 파싱 실패) + register 15 (parsePriceToWei 경계, parseRegisterArgs endpoint fallback/env/basename 기본값, runRegister POST body 검증 + 에러 surface) + status 11 (parseStatusArgs + fetchReputation 200/404/URL + fetchHealth JSON/네트워크에러 + runStatus 섹션 출력).
+  - 루트 [README.md](README.md) 문서 섹션에 "Sellers" 행 추가 — create-seller 링크 + SKILL.md 언급.
+  - **전체 159/159 pass** (create-seller 45 + sample-sellers 18 + mcp-tool 17 + backend 79). 모든 패키지 `tsc --noEmit` 클린.
+
 - **Phase B: Buyer 온보딩 가이드 (`docs/BUYER_GUIDE.md`)**
   - 신규 [docs/BUYER_GUIDE.md](docs/BUYER_GUIDE.md) — 6 스텝: (1) 전용 버리어블 지갑 생성(메인 지갑 재사용 금지), (2) Base Sepolia ETH + USDC 파우셋, (3) Claude Desktop `claude_desktop_config.json` 등록 (npx 형식), (4) 첫 유료 콜 프롬프트 예시 + approve/createJob 두 트랜잭션 설명, (5) `/evidence/[jobId]` 브라우저 해시 매치 + basescan 확인, (6) revoke.cash 로 allowance 취소해 에이전트 차단.
   - Troubleshooting 섹션: 도구가 안 보일 때(재시작), `CHAIN_ID` 미지원, `TIMEOUT` 폴링, insufficient allowance, 140M gas "exceeds block gas limit" (ABI 불일치 진단).

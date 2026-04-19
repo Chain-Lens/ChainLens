@@ -87,6 +87,10 @@ pnpm --filter @chainlens/sample-sellers dev:defillama # :8082
 
 - **Buyers:** [docs/BUYER_GUIDE.md](docs/BUYER_GUIDE.md) — wallet setup,
   Claude Desktop config, first query, evidence verification.
+- **Sellers:** [packages/create-seller](packages/create-seller) +
+  [SKILL.md](packages/create-seller/SKILL.md) — `npx @chainlens/create-seller init`,
+  deploy, register, monitor. An IDE agent (Claude Code, Cursor) can
+  drive the whole flow from the SKILL.md.
 - **Demos:** [docs/DEMO.md](docs/DEMO.md) — three end-to-end scenarios
   (browser buyer, MCP agent, seller onboarding).
 

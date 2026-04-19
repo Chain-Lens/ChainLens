@@ -1,0 +1,36 @@
+# {{SELLER_NAME}}
+
+A [ChainLens](https://github.com/lejuho/ChainLens) seller for
+`{{TASK_TYPE}}`.
+
+## Develop
+
+```bash
+pnpm install
+pnpm dev                 # http://localhost:{{PORT}}
+curl http://localhost:{{PORT}}/health
+```
+
+## Implement
+
+Edit `src/handler.ts` and return a JSON object matching the
+`{{TASK_TYPE}}` schema. Schema lives in `@chainlens/shared/task-types`.
+
+## Deploy
+
+```bash
+npx @chainlens/create-seller deploy
+```
+
+This wraps `vercel --prod`. Requires `vercel login` once.
+
+## Register
+
+After deploy succeeds, register the URL with the gateway:
+
+```bash
+npx @chainlens/create-seller register \
+  --task-type {{TASK_TYPE}} \
+  --price 0.05 \
+  --wallet 0xYourPayoutAddress
+```
