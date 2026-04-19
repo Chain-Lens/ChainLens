@@ -1,4 +1,5 @@
-import { PaymentStatus, ApiMarketEscrowAbi } from "@apimarket/shared";
+import { PaymentStatus, ApiMarketEscrowV2Abi } from "@apimarket/shared";
+import { keccak256, stringToBytes } from "viem";
 import { env } from "../config/env.js";
 import { walletClient, publicClient } from "../config/viem.js";
 import prisma from "../config/prisma.js";
@@ -68,12 +69,13 @@ export async function execute(requestId: string, agentPayload?: Record<string, u
       throw new Error("Invalid response from seller API");
     }
 
-    // On-chain complete
+    // On-chain complete (V2: jobId, responseHash, evidenceURI)
+    const responseHash = keccak256(stringToBytes(JSON.stringify(result)));
     const hash = await walletClient.writeContract({
       address: env.CONTRACT_ADDRESS as `0x${string}`,
-      abi: ApiMarketEscrowAbi as readonly unknown[],
+      abi: ApiMarketEscrowV2Abi as readonly unknown[],
       functionName: "complete",
-      args: [BigInt(request.onChainPaymentId)],
+      args: [BigInt(request.onChainPaymentId), responseHash, ""],
     });
 
     await publicClient.waitForTransactionReceipt({ hash });
@@ -92,7 +94,7 @@ export async function execute(requestId: string, agentPayload?: Record<string, u
     try {
       const hash = await walletClient.writeContract({
         address: env.CONTRACT_ADDRESS as `0x${string}`,
-        abi: ApiMarketEscrowAbi as readonly unknown[],
+        abi: ApiMarketEscrowV2Abi as readonly unknown[],
         functionName: "refund",
         args: [BigInt(request.onChainPaymentId!)],
       });

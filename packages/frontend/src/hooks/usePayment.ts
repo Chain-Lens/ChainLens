@@ -25,13 +25,18 @@ const payAbi = [
       { name: "apiId", type: "uint256" },
       { name: "seller", type: "address" },
       { name: "amount", type: "uint256" },
+      { name: "taskType", type: "bytes32" },
+      { name: "inputsHash", type: "bytes32" },
     ],
     name: "pay",
-    outputs: [{ name: "paymentId", type: "uint256" }],
+    outputs: [{ name: "jobId", type: "uint256" }],
     stateMutability: "nonpayable",
     type: "function",
   },
 ] as const;
+
+const ZERO_BYTES32 =
+  "0x0000000000000000000000000000000000000000000000000000000000000000" as const;
 
 export type PaymentStep = "idle" | "approving" | "paying" | "confirmed";
 
@@ -72,6 +77,8 @@ export function usePayment() {
           BigInt(prepareData.onChainApiId),
           prepareData.seller as `0x${string}`,
           BigInt(prepareData.amount),
+          ZERO_BYTES32,
+          ZERO_BYTES32,
         ],
       });
     }
