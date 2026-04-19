@@ -5,6 +5,7 @@ import adminRoutes from "./admin.routes.js";
 import authRoutes from "./auth.routes.js";
 import x402Routes from "./x402.routes.js";
 import executeRoutes from "./execute.routes.js";
+import evidenceRoutes from "./evidence.routes.js";
 
 const router = Router();
 
@@ -14,6 +15,7 @@ router.use("/admin", adminRoutes);
 router.use("/auth", authRoutes);
 router.use("/x402", x402Routes);
 router.use("/execute", executeRoutes);
+router.use("/evidence", evidenceRoutes);
 
 // Health check
 router.get("/health", (_req, res) => {

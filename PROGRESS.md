@@ -25,7 +25,7 @@
 | 1 | schema-validator (ajv) + injection-filter (OWASP) | ✅ Done |
 | 2 | seller-tester 자동 API 테스트 서비스 | ✅ Done |
 | 3 | Gateway 확장 (validation + responseHash/evidenceURI + reputation) | ✅ Done |
-| 4 | Evidence 저장 (Phase 1: DB) + `/api/evidence/:jobId` | 📅 Planned |
+| 4 | Evidence 저장 (Phase 1: DB) + `/api/evidence/:jobId` | ✅ Done |
 | 5 | Prisma 마이그레이션 (Job, SellerProfile, ApiTestResult) + reputation 엔드포인트 | 📅 Planned |
 | 6-7 | Event listener 확장 + E2E 테스트 | 📅 Planned |
 
@@ -74,6 +74,16 @@
 > 작업 단위(커밋 기준)로 누적 기록. 최신이 위.
 
 ### 2026-04-19
+
+- **Week 2 Day 4: Evidence 저장 Phase 1 (DB) + `/api/evidence/:jobId`**
+  - [packages/backend/prisma/schema.prisma](packages/backend/prisma/schema.prisma) — `Job` 모델 + `JobStatus` enum 추가 (`onchainJobId BigInt @unique`, `amount Decimal(18,6)`, `inputs/response Json?`, `inputsHash/responseHash/evidenceURI/errorReason`, `buyer/seller/taskType/status` 인덱스). `pnpm prisma generate`로 타입 재생성. `adminActions` pre-existing 타입 에러도 재생성으로 해결.
+  - [packages/backend/src/config/env.ts](packages/backend/src/config/env.ts) + [.env.example](packages/backend/.env.example) — `PLATFORM_URL` 추가 (기본값 `http://localhost:3001`). `buildEvidenceURI()`의 베이스.
+  - [packages/backend/src/services/evidence.service.ts](packages/backend/src/services/evidence.service.ts) — pure 레이어: `buildEvidenceURI(jobId, platformUrl)`(trailing slash 정규화), `EvidenceStore` 인터페이스 (create/complete/findByOnchainId), `EvidenceView` 직렬화 친화 타입 (BigInt은 string), 3개 함수 `recordJobPaid`/`recordJobCompletion`/`getEvidence`가 store를 DI로 받음. prisma 런타임 import 전혀 없음 → 테스트에서 DATABASE_URL 없이 로드 가능.
+  - [packages/backend/src/services/evidence-store.ts](packages/backend/src/services/evidence-store.ts) — prisma 기반 `EvidenceStore` 구현 전용 파일 (static `import prisma`). evidence.service.ts와 분리해서 SRP 유지.
+  - [packages/backend/src/services/evidence.service.test.ts](packages/backend/src/services/evidence.service.test.ts) — 8 케이스 (buildEvidenceURI 경로 정규화 2, recordJobPaid 기본/override 상태 2, recordJobCompletion COMPLETED/REFUNDED/FAILED 2, getEvidence null/hit 2). fake store로 DB 없이 실행.
+  - [packages/backend/src/routes/evidence.routes.ts](packages/backend/src/routes/evidence.routes.ts) — `GET /api/evidence/:jobId`. 숫자 정규식 검증 (uint256 무제한 허용), BigInt 변환, `{404: evidence_not_found, 400: invalid_job_id}`.
+  - [packages/backend/src/routes/evidence.routes.test.ts](packages/backend/src/routes/evidence.routes.test.ts) — 4 케이스 (400/404/200/큰 uint256 허용). express 5 앱을 랜덤 포트에서 띄우고 fetch로 검증. prisma 연결 없이 fake store로 통합 테스트.
+  - 전체 51/51 통과, `tsc --noEmit` 클린.
 
 - **Week 2 Day 3: Gateway 확장 (validation + responseHash/evidenceURI + reputation)**
   - [packages/backend/src/services/task-type.service.ts](packages/backend/src/services/task-type.service.ts) — `getTaskTypeConfigById(bytes32)` 추가 (Gateway는 on-chain Job 구조체에서 이미 bytes32 id를 가지므로 이름 재계산 없이 직접 조회). `getTaskTypeConfig(name)`은 이 함수로 위임 리팩터링.

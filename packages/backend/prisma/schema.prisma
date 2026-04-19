@@ -23,6 +23,38 @@ enum PaymentStatus {
   FAILED
 }
 
+enum JobStatus {
+  PENDING
+  PAID
+  COMPLETED
+  REFUNDED
+  FAILED
+}
+
+model Job {
+  id               Int       @id @default(autoincrement())
+  onchainJobId     BigInt    @unique
+  buyer            String
+  seller           String
+  apiId            BigInt
+  taskType         String?
+  amount           Decimal   @db.Decimal(18, 6)
+  inputs           Json?
+  inputsHash       String
+  response         Json?
+  responseHash     String?
+  evidenceURI      String?
+  status           JobStatus
+  errorReason      String?
+  createdAt        DateTime  @default(now())
+  completedAt      DateTime?
+
+  @@index([buyer])
+  @@index([seller])
+  @@index([taskType])
+  @@index([status])
+}
+
 model ApiListing {
   id             String    @id @default(uuid())
   onChainId      Int?      @unique

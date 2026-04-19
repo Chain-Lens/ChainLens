@@ -12,6 +12,7 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
   ADMIN_ADDRESSES: z.string().default(""),
   JWT_SECRET: z.string().min(32),
+  PLATFORM_URL: z.string().url().default("http://localhost:3001"),
 });
 
 export const env = envSchema.parse(process.env);
