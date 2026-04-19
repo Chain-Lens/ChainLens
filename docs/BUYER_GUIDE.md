@@ -20,6 +20,17 @@ The stack:
 
 ## 1. Install the MCP tool (read-only, 3 min)
 
+The ChainLens MCP tool runs as a background process that your **MCP client**
+(Claude Desktop, Claude Code, Cursor, …) spawns over stdio. Pick whichever
+client you use below.
+
+> ⚠ **Do not run `npx -y @chain-lens/mcp-tool` directly in a terminal.**
+> It is a stdio MCP server — with no client on the other end it just sits
+> there waiting for protocol messages on stdin and looks frozen. That is
+> expected. Register it with your client instead.
+
+### 1a. Claude Desktop
+
 Claude Desktop reads a JSON config at:
 
 - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -35,7 +46,7 @@ Open (or create) that file and add the `chain-lens` server:
       "command": "npx",
       "args": ["-y", "@chain-lens/mcp-tool"],
       "env": {
-        "CHAIN_LENS_API_URL": "https://your-chain-lens-host/api",
+        "CHAIN_LENS_API_URL": "https://chainlens.pelicanlab.dev/api",
         "CHAIN_ID": "84532",
         "RPC_URL": "https://sepolia.base.org"
       }
@@ -44,13 +55,40 @@ Open (or create) that file and add the `chain-lens` server:
 }
 ```
 
+Fully quit Claude Desktop (Cmd+Q on macOS — closing the window is not
+enough) and relaunch.
+
+### 1b. Claude Code
+
+Register the server once with the CLI:
+
+```bash
+claude mcp add chain-lens \
+  -s user \
+  -e CHAIN_LENS_API_URL=https://chainlens.pelicanlab.dev/api \
+  -e CHAIN_ID=84532 \
+  -e RPC_URL=https://sepolia.base.org \
+  -- npx -y @chain-lens/mcp-tool
+```
+
+`-s user` makes it available in every project on this machine. Use
+`-s local` for just the current repo, or `-s project` to commit the
+config to `./.mcp.json` and share it with teammates (**never use
+`project` if you plan to add `WALLET_PRIVATE_KEY` later** — it will be
+committed).
+
+Verify with `claude mcp list`, restart Claude Code, then type `/mcp`
+inside a session to see the connection and tool list.
+
+### Field reference
+
 | Field | What to put |
 | --- | --- |
-| `CHAIN_LENS_API_URL` | Your ChainLens gateway. Use `http://localhost:3001/api` if you're running the backend locally. |
+| `CHAIN_LENS_API_URL` | Public MVP: `https://chainlens.pelicanlab.dev/api`. Use `http://localhost:3001/api` if you're running the backend locally. |
 | `CHAIN_ID` | `84532` (Base Sepolia). `8453` for Base Mainnet (when addresses are published). |
 | `RPC_URL` | Public Base Sepolia RPC is fine for light use. If the agent gets throttled, swap in an [Alchemy](https://alchemy.com) or [Infura](https://infura.io) URL. |
 
-Restart Claude Desktop. Two tools appear in the tool menu:
+After restart either client shows two tools:
 
 - `chain-lens.discover` — list sellers for a task type
 - `chain-lens.status` — look up evidence for a past job
@@ -93,7 +131,7 @@ Verify both balances on [sepolia.basescan.org](https://sepolia.basescan.org).
 
 ### 3c. Add `WALLET_PRIVATE_KEY` to the MCP config
 
-Extend the `env` block from step 1:
+**Claude Desktop** — extend the `env` block from step 1a:
 
 ```jsonc
 {
@@ -102,7 +140,7 @@ Extend the `env` block from step 1:
       "command": "npx",
       "args": ["-y", "@chain-lens/mcp-tool"],
       "env": {
-        "CHAIN_LENS_API_URL": "https://your-chain-lens-host/api",
+        "CHAIN_LENS_API_URL": "https://chainlens.pelicanlab.dev/api",
         "CHAIN_ID": "84532",
         "RPC_URL": "https://sepolia.base.org",
         "WALLET_PRIVATE_KEY": "0x<throwaway-testnet-key>"
@@ -112,7 +150,26 @@ Extend the `env` block from step 1:
 }
 ```
 
-Restart Claude Desktop. `chain-lens.request` now appears alongside the two
+**Claude Code** — re-register with the extra env:
+
+```bash
+claude mcp remove chain-lens
+claude mcp add chain-lens \
+  -s user \
+  -e CHAIN_LENS_API_URL=https://chainlens.pelicanlab.dev/api \
+  -e CHAIN_ID=84532 \
+  -e RPC_URL=https://sepolia.base.org \
+  -e WALLET_PRIVATE_KEY=0x<throwaway-testnet-key> \
+  -- npx -y @chain-lens/mcp-tool
+```
+
+> ⚠ **Never put `WALLET_PRIVATE_KEY` in a `project`-scoped `.mcp.json`** —
+> that file is committed to git. Stick with `-s user` or `-s local` for
+> any config that contains keys. Safer still: export the key in your
+> shell and reference it as `"WALLET_PRIVATE_KEY": "${WALLET_PRIVATE_KEY}"`
+> so the literal never hits disk.
+
+Restart the client. `chain-lens.request` now appears alongside the two
 read-only tools.
 
 When the MCP tool starts, it prints a stderr warning that
@@ -146,10 +203,11 @@ Amount `50000` is USDC with 6 decimals, i.e. **0.05 USDC** per call.
 
 Two independent checks:
 
-- **On the web:** Open `https://your-chain-lens-host/evidence/<jobId>`.
-  The page recomputes `keccak256(JSON.stringify(response))` in your
-  browser and shows a green banner when it matches what the seller
-  committed on-chain. No gateway trust required.
+- **On the web:** Open `https://chainlens.pelicanlab.dev/evidence/<jobId>`
+  (or your self-hosted gateway's equivalent). The page recomputes
+  `keccak256(JSON.stringify(response))` in your browser and shows a
+  green banner when it matches what the seller committed on-chain.
+  No gateway trust required.
 - **On-chain:** The `createJob` transaction appears on
   [sepolia.basescan.org](https://sepolia.basescan.org) under your
   wallet's tx list. Decoding reveals the `jobId` and the escrowed 0.05
@@ -175,11 +233,17 @@ prompt-injection filter), the gateway calls `refund(jobId)` and your
 
 ## Troubleshooting
 
-**Tools don't appear in Claude Desktop.**
-Claude only reads the config on startup. Fully quit (not just close the
-window) and relaunch. On macOS: Cmd+Q. If still missing, run the command
-manually in a terminal — `npx -y @chain-lens/mcp-tool` — and check the
-error.
+**I ran `npx -y @chain-lens/mcp-tool` in a terminal and nothing happens.**
+Expected. The MCP tool is a stdio server; with no MCP client on the
+other end it is just sitting there waiting for protocol messages on
+stdin. Ctrl+C and register it with your client (Claude Desktop config
+or `claude mcp add` for Claude Code) — see step 1.
+
+**Tools don't appear in Claude Desktop / Claude Code.**
+Clients only read MCP config on startup. Fully quit (not just close the
+window) and relaunch. On macOS: Cmd+Q. For Claude Code, `claude mcp
+list` should show the server; inside a session, `/mcp` shows live
+connection status and any spawn errors.
 
 **"No ApiMarketEscrowV2 deployed for chainId …"**
 You set `CHAIN_ID` to something other than `84532` (Base Sepolia) or

@@ -10,8 +10,8 @@ function baseDeps(overrides: { cwd?: string; env?: NodeJS.ProcessEnv; deployStat
   };
 }
 
-test("parseStatusArgs: --wallet required", async () => {
-  await assert.rejects(parseStatusArgs([], baseDeps()), /--wallet is required/);
+test("parseStatusArgs: rejects when neither --wallet nor env is set", async () => {
+  await assert.rejects(parseStatusArgs([], baseDeps()), /payout address required/);
 });
 
 test("parseStatusArgs: rejects bad wallet", async () => {
@@ -19,6 +19,23 @@ test("parseStatusArgs: rejects bad wallet", async () => {
     parseStatusArgs(["--wallet", "0xNOT"], baseDeps()),
     /not a 0x-prefixed/,
   );
+});
+
+test("parseStatusArgs: --wallet falls back to CHAIN_LENS_PAYOUT_ADDRESS env", async () => {
+  const addr = "0x" + "b".repeat(40);
+  const opts = await parseStatusArgs(
+    [],
+    baseDeps({ env: { CHAIN_LENS_PAYOUT_ADDRESS: addr } as NodeJS.ProcessEnv }),
+  );
+  assert.equal(opts.sellerAddress, addr);
+});
+
+test("parseStatusArgs: gateway defaults to public MVP when no flag/env", async () => {
+  const opts = await parseStatusArgs(
+    ["--wallet", "0x".padEnd(42, "a")],
+    baseDeps(),
+  );
+  assert.equal(opts.gatewayUrl, "https://chainlens.pelicanlab.dev/api");
 });
 
 test("parseStatusArgs: env CHAIN_LENS_API_URL fallback + trailing slash strip", async () => {
@@ -59,6 +76,29 @@ test("fetchReputation: surfaces error body on 404", async () => {
     { fetch: fakeFetch },
   );
   assert.deepEqual(r, { error: "seller_not_registered", status: 404 });
+});
+
+test("fetchReputation: flattens nested error object instead of [object Object]", async () => {
+  const fakeFetch: typeof fetch = async () =>
+    new Response(
+      JSON.stringify({ error: { message: "Internal failure", detail: "db connection" } }),
+      { status: 500 },
+    );
+  const r = await fetchReputation(
+    { sellerAddress: "0x".padEnd(42, "a"), gatewayUrl: "http://x/api" },
+    { fetch: fakeFetch },
+  );
+  assert.equal((r as { error: string }).error, "Internal failure");
+});
+
+test("fetchReputation: falls back to JSON.stringify when no message field", async () => {
+  const fakeFetch: typeof fetch = async () =>
+    new Response(JSON.stringify({ foo: "bar", baz: 1 }), { status: 502 });
+  const r = await fetchReputation(
+    { sellerAddress: "0x".padEnd(42, "a"), gatewayUrl: "http://x/api" },
+    { fetch: fakeFetch },
+  );
+  assert.equal((r as { error: string }).error, '{"foo":"bar","baz":1}');
 });
 
 test("fetchReputation: hits the correct URL", async () => {

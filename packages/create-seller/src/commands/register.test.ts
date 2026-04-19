@@ -86,6 +86,40 @@ test("parseRegisterArgs: rejects bad wallet", async () => {
   );
 });
 
+test("parseRegisterArgs: --wallet falls back to CHAIN_LENS_PAYOUT_ADDRESS env", async () => {
+  const addr = "0x" + "a".repeat(40);
+  const opts = await parseRegisterArgs(
+    ["--task-type", "defillama_tvl", "--price", "0.05", "--endpoint", "https://x.vercel.app"],
+    await baseDeps({
+      env: { CHAIN_LENS_PAYOUT_ADDRESS: addr } as NodeJS.ProcessEnv,
+    }),
+  );
+  assert.equal(opts.sellerAddress, addr);
+});
+
+test("parseRegisterArgs: rejects when neither --wallet nor env is set", async () => {
+  await assert.rejects(
+    parseRegisterArgs(
+      ["--task-type", "defillama_tvl", "--price", "0.05", "--endpoint", "https://x.vercel.app"],
+      await baseDeps(),
+    ),
+    /payout address required[\s\S]*NOT a private key/,
+  );
+});
+
+test("parseRegisterArgs: gateway defaults to public MVP when no flag/env", async () => {
+  const opts = await parseRegisterArgs(
+    [
+      "--task-type", "defillama_tvl",
+      "--price", "0.05",
+      "--wallet", "0x".padEnd(42, "a"),
+      "--endpoint", "https://x.vercel.app",
+    ],
+    await baseDeps(),
+  );
+  assert.equal(opts.gatewayUrl, "https://chainlens.pelicanlab.dev/api");
+});
+
 test("parseRegisterArgs: rejects missing task type", async () => {
   await assert.rejects(
     parseRegisterArgs(["--price", "0.05", "--wallet", "0x".padEnd(42, "a")], await baseDeps()),

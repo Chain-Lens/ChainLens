@@ -43,6 +43,7 @@ test("runDeploy: writes state file with extracted URL on success", async () => {
     runCommand: async (cmd, args): Promise<SpawnResult> => {
       calls.push({ cmd, args });
       if (args[0] === "--version") return { code: 0, stdout: "34.0.0\n", stderr: "" };
+      if (args[0] === "whoami") return { code: 0, stdout: "jane\n", stderr: "" };
       return {
         code: 0,
         stdout: "Production: https://my-seller-abc.vercel.app\n",
@@ -56,7 +57,8 @@ test("runDeploy: writes state file with extracted URL on success", async () => {
   assert.equal(result.statePath, "/tmp/fake-seller/.chain-lens-deploy.json");
 
   assert.deepEqual(calls[0], { cmd: "vercel", args: ["--version"] });
-  assert.deepEqual(calls[1], { cmd: "vercel", args: ["--prod", "--yes"] });
+  assert.deepEqual(calls[1], { cmd: "vercel", args: ["whoami"] });
+  assert.deepEqual(calls[2], { cmd: "vercel", args: ["--prod", "--yes"] });
 
   const writes = (deps as unknown as { _writes: Array<{ path: string; content: string }> })._writes;
   assert.equal(writes.length, 1);
@@ -74,11 +76,23 @@ test("runDeploy: throws if vercel CLI missing", async () => {
   await assert.rejects(runDeploy(deps), /vercel CLI not found/);
 });
 
+test("runDeploy: throws if vercel is not logged in", async () => {
+  const deps = fakeDeps({
+    cwd: "/tmp/fake-seller",
+    runCommand: async (_cmd, args): Promise<SpawnResult> => {
+      if (args[0] === "--version") return { code: 0, stdout: "34\n", stderr: "" };
+      if (args[0] === "whoami") return { code: 1, stdout: "", stderr: "Not authenticated" };
+      return { code: 0, stdout: "", stderr: "" };
+    },
+  });
+  await assert.rejects(runDeploy(deps), /vercel is not logged in/);
+});
+
 test("runDeploy: throws if not in a project", async () => {
   const deps = fakeDeps({
     cwd: "/tmp/fake-seller",
     runCommand: async (_cmd, args) =>
-      args[0] === "--version" ? { code: 0, stdout: "34\n", stderr: "" } : { code: 0, stdout: "", stderr: "" },
+      args[0] === "--version" ? { code: 0, stdout: "34\n", stderr: "" } : { code: 0, stdout: "jane\n", stderr: "" },
     readFile: async () => {
       throw new Error("ENOENT");
     },
@@ -91,7 +105,8 @@ test("runDeploy: throws if vercel exits non-zero", async () => {
     cwd: "/tmp/fake-seller",
     runCommand: async (_cmd, args): Promise<SpawnResult> => {
       if (args[0] === "--version") return { code: 0, stdout: "34\n", stderr: "" };
-      return { code: 1, stdout: "", stderr: "Not logged in" };
+      if (args[0] === "whoami") return { code: 0, stdout: "jane\n", stderr: "" };
+      return { code: 1, stdout: "", stderr: "deploy boom" };
     },
   });
   await assert.rejects(runDeploy(deps), /vercel exited with code 1/);
@@ -102,6 +117,7 @@ test("runDeploy: throws if URL not parseable from output", async () => {
     cwd: "/tmp/fake-seller",
     runCommand: async (_cmd, args): Promise<SpawnResult> => {
       if (args[0] === "--version") return { code: 0, stdout: "34\n", stderr: "" };
+      if (args[0] === "whoami") return { code: 0, stdout: "jane\n", stderr: "" };
       return { code: 0, stdout: "weird success\n", stderr: "" };
     },
   });

@@ -1,6 +1,6 @@
 {
   "name": "@chain-lens/create-seller",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Scaffold, deploy, and register a ChainLens seller (data wrapper) from a single CLI.",
   "license": "MIT",
   "repository": {

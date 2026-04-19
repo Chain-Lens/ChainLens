@@ -33,6 +33,7 @@ export function extractDeploymentUrl(output: string): string | null {
 
 export async function runDeploy(deps: DeployDeps): Promise<DeployResult> {
   await assertVercelPresent(deps);
+  await assertVercelLoggedIn(deps);
   await assertInsideProject(deps);
 
   deps.stdout("Deploying to Vercel (production)…\n");
@@ -66,6 +67,15 @@ async function assertVercelPresent(deps: DeployDeps): Promise<void> {
   } catch {
     throw new Error(
       `vercel CLI not found. Install with \`npm i -g vercel\` and run \`vercel login\`, then retry.`,
+    );
+  }
+}
+
+async function assertVercelLoggedIn(deps: DeployDeps): Promise<void> {
+  const r = await deps.runCommand("vercel", ["whoami"], { cwd: deps.cwd });
+  if (r.code !== 0) {
+    throw new Error(
+      `vercel is not logged in. Run \`vercel login\` in this shell, then retry \`chain-lens-seller deploy\`.`,
     );
   }
 }

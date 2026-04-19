@@ -29,16 +29,22 @@ const VALID_TASK_TYPES = new Set([
 
 const USDC_DECIMALS = 6;
 
+export const DEFAULT_PUBLIC_GATEWAY = "https://chainlens.pelicanlab.dev/api";
+
 const REGISTER_HELP = `chain-lens-seller register [options]
 
 Options:
   --task-type <id>      Task type (required unless set in package.json).
   --price <usdc>        Price per call in USDC (e.g. 0.05). Required.
-  --wallet <0x...>      Payout address (required).
+  --wallet <0x...>      Payout PUBLIC address (0x-prefixed, 20 bytes).
+                        NEVER pass a private key here — this value is
+                        registered on-chain and receives USDC payouts.
+                        Falls back to \$CHAIN_LENS_PAYOUT_ADDRESS.
   --name <string>       Listing name (default: directory basename).
   --description <text>  Listing description.
   --endpoint <url>      Seller URL (default: read from .chain-lens-deploy.json).
-  --gateway <url>       Backend URL (default: \$CHAIN_LENS_API_URL or http://localhost:3001/api).
+  --gateway <url>       Backend URL. Falls back to \$CHAIN_LENS_API_URL,
+                        then ${DEFAULT_PUBLIC_GATEWAY}.
 
 Valid task types:
   blockscout_contract_source, blockscout_tx_info, defillama_tvl,
@@ -98,9 +104,18 @@ export async function parseRegisterArgs(
     );
   }
   if (!price) throw new Error(`register: --price is required`);
-  if (!wallet) throw new Error(`register: --wallet is required`);
+  if (!wallet) wallet = deps.env.CHAIN_LENS_PAYOUT_ADDRESS ?? null;
+  if (!wallet) {
+    throw new Error(
+      `register: payout address required. Pass --wallet 0x... or set $CHAIN_LENS_PAYOUT_ADDRESS.\n` +
+        `NOTE: this is your PUBLIC wallet address (the one that receives USDC), NOT a private key.\n\n${REGISTER_HELP}`,
+    );
+  }
   if (!/^0x[a-fA-F0-9]{40}$/.test(wallet)) {
-    throw new Error(`register: --wallet "${wallet}" is not a 0x-prefixed 20-byte address`);
+    throw new Error(
+      `register: wallet "${wallet}" is not a 0x-prefixed 20-byte address. ` +
+        `This must be a PUBLIC address (starts with 0x, 42 chars total) — never a private key.`,
+    );
   }
 
   const priceUsdcWei = parsePriceToWei(price);
@@ -124,7 +139,7 @@ export async function parseRegisterArgs(
   if (!description) description = `ChainLens seller for ${taskType}`;
 
   gatewayUrl = normalizeGatewayUrl(
-    gatewayUrl ?? deps.env.CHAIN_LENS_API_URL ?? "http://localhost:3001/api",
+    gatewayUrl ?? deps.env.CHAIN_LENS_API_URL ?? DEFAULT_PUBLIC_GATEWAY,
   );
 
   return {
@@ -155,11 +170,20 @@ export async function runRegister(
     `Registering ${opts.name}\n  task=${opts.taskType} price=${opts.priceUsdcWei} wei (USDC)\n  endpoint=${opts.endpoint}\n  gateway=${opts.gatewayUrl}\n`,
   );
 
-  const res = await deps.fetch(`${opts.gatewayUrl}/apis/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  const url = `${opts.gatewayUrl}/apis/register`;
+  let res: Response;
+  try {
+    res = await deps.fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    throw new Error(
+      `register: could not reach gateway at ${url}. Check --gateway / $CHAIN_LENS_API_URL and your network.`,
+      { cause: err },
+    );
+  }
 
   const text = await res.text();
   let parsed: unknown;

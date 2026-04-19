@@ -1,4 +1,5 @@
 import { readDeployState } from "./deploy.js";
+import { DEFAULT_PUBLIC_GATEWAY } from "./register.js";
 
 export interface StatusOptions {
   sellerAddress: string;
@@ -32,8 +33,10 @@ export interface HealthView {
 const STATUS_HELP = `chain-lens-seller status [options]
 
 Options:
-  --wallet <0x...>   Seller payout address (required).
-  --gateway <url>    Backend URL (default: \$CHAIN_LENS_API_URL or http://localhost:3001/api).
+  --wallet <0x...>   Seller payout PUBLIC address. Falls back to
+                     \$CHAIN_LENS_PAYOUT_ADDRESS. Never a private key.
+  --gateway <url>    Backend URL. Falls back to \$CHAIN_LENS_API_URL,
+                     then ${DEFAULT_PUBLIC_GATEWAY}.
 
 Reports on-chain reputation (jobsCompleted / jobsFailed / totalEarnings)
 plus a liveness check against the deployed /health endpoint if a
@@ -42,6 +45,20 @@ plus a liveness check against the deployed /health endpoint if a
 
 function normalize(raw: string): string {
   return raw.replace(/\/+$/, "");
+}
+
+function extractErrorMessage(body: unknown, fallback: string): string {
+  if (typeof body === "string" && body.length > 0) return body;
+  if (typeof body !== "object" || body === null) return fallback;
+  const rec = body as Record<string, unknown>;
+  const candidate = rec.error ?? rec.message ?? rec.detail;
+  if (typeof candidate === "string") return candidate;
+  if (candidate && typeof candidate === "object") {
+    const nested = candidate as Record<string, unknown>;
+    if (typeof nested.message === "string") return nested.message;
+    return JSON.stringify(candidate);
+  }
+  return JSON.stringify(body);
 }
 
 export async function parseStatusArgs(
@@ -59,13 +76,18 @@ export async function parseStatusArgs(
     else throw new Error(`status: unexpected argument "${arg}"\n\n${STATUS_HELP}`);
   }
 
-  if (!wallet) throw new Error(`status: --wallet is required\n\n${STATUS_HELP}`);
+  if (!wallet) wallet = deps.env.CHAIN_LENS_PAYOUT_ADDRESS ?? null;
+  if (!wallet) {
+    throw new Error(
+      `status: payout address required. Pass --wallet 0x... or set $CHAIN_LENS_PAYOUT_ADDRESS.\n\n${STATUS_HELP}`,
+    );
+  }
   if (!/^0x[a-fA-F0-9]{40}$/.test(wallet)) {
-    throw new Error(`status: --wallet "${wallet}" is not a 0x-prefixed 20-byte address`);
+    throw new Error(`status: wallet "${wallet}" is not a 0x-prefixed 20-byte address`);
   }
 
   const gatewayUrl = normalize(
-    gateway ?? deps.env.CHAIN_LENS_API_URL ?? "http://localhost:3001/api",
+    gateway ?? deps.env.CHAIN_LENS_API_URL ?? DEFAULT_PUBLIC_GATEWAY,
   );
   const deployState = await deps.readDeployState(deps.cwd);
   const healthUrl = deployState ? `${normalize(deployState.url)}/health` : null;
@@ -86,12 +108,7 @@ export async function fetchReputation(
     body = text;
   }
   if (!res.ok) {
-    const msg =
-      typeof body === "object" && body !== null && "error" in body
-        ? String((body as { error: unknown }).error)
-        : typeof body === "string"
-          ? body
-          : res.statusText;
+    const msg = extractErrorMessage(body, res.statusText);
     return { error: msg, status: res.status };
   }
   return body as ReputationView;
@@ -123,7 +140,8 @@ export async function runStatus(
 
   const reputation = await fetchReputation(opts, deps);
   if ("error" in reputation) {
-    deps.stdout(`Reputation: ${reputation.error}\n`);
+    const status = "status" in reputation && reputation.status ? ` (${reputation.status})` : "";
+    deps.stdout(`Reputation: ${reputation.error}${status}\n`);
   } else {
     deps.stdout(
       `Reputation\n` +

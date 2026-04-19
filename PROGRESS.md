@@ -75,6 +75,23 @@
 
 ### 2026-04-20
 
+- **`@chain-lens/create-seller` 0.0.3 — 첫 실행 사용자 실패 경로 전면 대응**
+  - `deploy`에 `vercel whoami` 사전 체크 추가 — 미로그인 상태에서 `vercel --prod --yes`가 애매한 에러로 죽는 대신 `vercel login` 안내 메시지로 즉시 중단. 테스트 1개 추가 (11/11 pass).
+  - `register` / `status` 양쪽에 `$CHAIN_LENS_PAYOUT_ADDRESS` env fallback + `$CHAIN_LENS_API_URL` 미설정 시 공개 MVP(`https://chainlens.pelicanlab.dev/api`) 자동 기본값. help 텍스트에 "공개 지갑 주소, 개인키 아님" 명시적 경고 — mcp-tool의 `WALLET_PRIVATE_KEY` 평문 재앙이 seller 플로우에 반복되지 않게 차단.
+  - **도메인 오타 수정**: 전체 5개 파일에서 `chainlens.pelican.dev` → `chainlens.pelicanlab.dev`. 첫 유저가 `fetch failed`로 막혔던 원인.
+  - **에러 체인 노출**: `src/index.ts`에 `err.cause`를 최대 6단계까지 walk하는 `formatErrorChain` 추가. Node fetch가 실제 원인을 `.cause`에 숨겨서 "fetch failed" 한 줄만 찍히던 문제 해결. `register`는 네트워크 실패 시 gateway URL을 msg에 포함하며 원본을 `cause`로 래핑.
+  - **`[object Object]` 버그 수정** (status): gateway 에러 바디가 중첩 객체(`{error: {message, detail}}`)일 때 `String()` 떨어뜨려서 불투명했던 출력을 평탄화. `extractErrorMessage` helper: string → `.error/.message/.detail` → 중첩 `.message` → `JSON.stringify` fallback. HTTP status code도 같이 출력. 테스트 2개 추가.
+  - **템플릿 Vercel 빌드 실패 수정** (TS6059): 기존 0.0.2 템플릿의 `tsconfig.json`이 `rootDir: "src"`를 두고 `include: ["src", "api"]`를 같이 줘서 Vercel 빌드에서 "not under rootDir" 에러. `rootDir` 제거 + `package.json.tmpl`의 `start`를 `node dist/src/index.js`로 정정. 기존 0.0.2로 스캐폴드 된 사용자는 수동 패치 안내만 가능.
+  - **Vercel Deployment Protection 문서화**: 신규 Vercel 프로젝트 기본값이 "Vercel Authentication = enabled"라 모든 요청이 401로 막힘 → gateway `/health` 프로브 실패 → 셀러 영원히 `PENDING`, 모든 바이어 호출 자동 refund. 코드로 자동화 불가(대시보드 설정) → README 퀵스타트 3a 단계 + 전용 섹션 + Troubleshooting 표, SKILL.md 배포 단계 인라인 경고 + Troubleshooting 표 모두 추가.
+  - 테스트 46 → 53개, 전부 pass. 빌드 클린. 다음 publish 준비 완료.
+
+- **MCP 버이어 온보딩 UX 보강 — 직접 실행 시 hang 경고 + Claude Code 통합 (`mcp-tool` README, `BUYER_GUIDE.md`)**
+  - 사용자가 `npx -y @chain-lens/mcp-tool`을 터미널에서 그대로 돌려서 "아무것도 안 한다"는 첫 실패 시나리오 대응. 이건 stdio MCP 서버라 클라이언트가 stdin에 프로토콜 메시지를 써야만 동작 — 사람이 직접 invoke하는 CLI가 아님. `mcp-tool/README.md` Install 섹션 상단에 경고 콜아웃 추가 + Troubleshooting 표 1행에 동일 증상/원인/해결 등재.
+  - Claude Code 통합을 일등급으로 편입. 기존 README/BUYER_GUIDE는 Claude Desktop만 다뤘는데 Claude Code는 MCP 프로토콜이 동일해 같은 서버가 그대로 붙음. `claude mcp add` 원라인 + `.mcp.json` 수동 편집 두 경로 모두 문서화. 스코프(`-s user/project/local`) 설명 + **`-s project`에는 `WALLET_PRIVATE_KEY` 절대 금지** 경고 (프로젝트 `.mcp.json`은 git에 커밋됨).
+  - `BUYER_GUIDE.md` 1단계를 "1a Claude Desktop / 1b Claude Code"로 분리, 3c(유료 활성화)도 두 클라이언트 모두 다루도록 확장. 안전 대안으로 shell env export + `"${WALLET_PRIVATE_KEY}"` 참조 패턴 명시 — 키 평문 on-disk 최소화.
+  - 기본 게이트웨이 예시도 플레이스홀더(`your-chain-lens-host`) → 실제 MVP (`https://chainlens.pelicanlab.dev/api`)로 교체. Troubleshooting에 "직접 실행 시 멈춤" + Claude Code 재시작 경로 추가.
+  - 코드 변경 없음 (문서 전용) → 버전 bump 불필요. 다음 mcp-tool publish 때 같이 올라감.
+
 - **보안 패치: `WALLET_PRIVATE_KEY` 평문 저장 패턴 디에mphsize + stderr 경고 (`mcp-tool` 0.0.3)**
   - `WALLET_PRIVATE_KEY`를 `claude_desktop_config.json`에 평문으로 두는 패턴은 백업·sync·기타 앱 노출 + MCP 서버가 사용자 동의 없이 임의 tx 서명 가능 → 명시적 보안 위험.
   - `mcp-tool/README.md`와 `docs/BUYER_GUIDE.md`의 기본(권장) 설정에서 `WALLET_PRIVATE_KEY` 제거 — 기본은 read-only(discover+status)로 안내. 유료 `request`는 별도 "Wallet / signing" 섹션으로 분리, 테스트넷 throwaway 지갑 전용 명시.
