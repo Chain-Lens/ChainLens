@@ -8,6 +8,7 @@ import executeRoutes from "./execute.routes.js";
 import evidenceRoutes from "./evidence.routes.js";
 import reputationRoutes from "./reputation.routes.js";
 import jobsRoutes from "./jobs.routes.js";
+import sellersRoutes from "./sellers.routes.js";
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.use("/execute", executeRoutes);
 router.use("/evidence", evidenceRoutes);
 router.use("/reputation", reputationRoutes);
 router.use("/jobs", jobsRoutes);
+router.use("/sellers", sellersRoutes);
 
 // Health check
 router.get("/health", (_req, res) => {

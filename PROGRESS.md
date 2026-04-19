@@ -34,7 +34,7 @@
 | Day | 작업 | Status |
 |-----|------|--------|
 | 1-2 | `/marketplace` 개선 + `/evidence/[jobId]` + `/reputation/[sellerAddress]` + 훅 3개 | ✅ Done |
-| 3-4 | `packages/mcp-tool/` 신규 + discover/request/status 3개 도구 | 📅 Planned |
+| 3-4 | `packages/mcp-tool/` 신규 + discover/request/status 3개 도구 | ✅ Done |
 | 5 | Sample seller 3개 (Blockscout/DeFiLlama/Sourcify) | 📅 Planned |
 | 6-7 | 통합·문서·데모 시나리오·영상 | 📅 Planned |
 
@@ -74,6 +74,23 @@
 > 작업 단위(커밋 기준)로 누적 기록. 최신이 위.
 
 ### 2026-04-19
+
+- **Week 3 Day 3-4: MCP Tool 패키지 (discover / request / status) + `/api/sellers` 백엔드**
+  - [packages/backend/src/services/sellers.service.ts](packages/backend/src/services/sellers.service.ts) — pure 페이지네이션 레이어. `SELLERS_DEFAULT_LIMIT=20`, `SELLERS_MAX_LIMIT=100`, `normalizeSellerFilter`가 `activeOnly`를 **기본 true** (마켓플레이스 UX상 미사용 seller 노출 제한이 합리적 기본), limit `Math.floor` + [1,100] 클램프, negative offset 클램프. `listSellers(filter, store)`는 `SellersStore`에 위임 — prisma 런타임 import 없음 → 유닛 테스트 DB 없이 실행.
+  - [packages/backend/src/services/sellers-store.ts](packages/backend/src/services/sellers-store.ts) — prisma 기반 `prismaSellersStore`. `whereFrom(filter)`이 `taskType` 필터를 `capabilities: { array_contains: taskType }` JSON 쿼리로 변환 (`Prisma.JsonFilter<"SellerProfile">` 캐스트 필요 — `InputJsonValue`로 캐스트하면 where 필드 할당 오류). `findMany`+`count`를 `Promise.all`로 병렬 실행, `orderBy: updatedAt desc`, Decimal/DateTime을 string 직렬화해서 `SellerView`로 변환.
+  - [packages/backend/src/routes/sellers.routes.ts](packages/backend/src/routes/sellers.routes.ts) — `GET /api/sellers`. Zod `safeParse`로 쿼리 검증 (task_type, active_only 'true'/'false' → boolean transform, limit/offset coerce.number). 실패 시 `{400: invalid_query, details: flatten()}`.
+  - [packages/backend/src/routes/index.ts](packages/backend/src/routes/index.ts) — `/sellers` 마운트.
+  - [packages/backend/src/services/sellers.service.test.ts](packages/backend/src/services/sellers.service.test.ts) — 6 케이스 (activeOnly 기본/명시 false / limit·offset 클램프 / taskType 패스스루 / listSellers가 정규화 필터로 store 호출).
+  - [packages/mcp-tool/package.json](packages/mcp-tool/package.json) + [packages/mcp-tool/tsconfig.json](packages/mcp-tool/tsconfig.json) + [packages/mcp-tool/README.md](packages/mcp-tool/README.md) — 신규 워크스페이스 패키지 `@chainlens/mcp-tool`, `bin: chainlens-mcp` 바이너리. `@modelcontextprotocol/sdk` + `viem` + `@apimarket/shared` + `@types/node` 의존.
+  - [packages/mcp-tool/src/config.ts](packages/mcp-tool/src/config.ts) — env → `McpConfig`. `CHAINLENS_API_URL` 트레일링 슬래시 제거, `CHAIN_ID` 정수 검증, `WALLET_PRIVATE_KEY` 0x64hex 정규식 검증 (실패 시 fail-fast). `WALLET_PRIVATE_KEY`가 없으면 request 툴 비활성화, discover/status는 여전히 사용 가능.
+  - [packages/mcp-tool/src/tools/discover.ts](packages/mcp-tool/src/tools/discover.ts) — `chainlens.discover` pure 핸들러. `URLSearchParams`로 `task_type / limit / offset / active_only` 쿼리 빌드, 필터 없으면 `?` 자체를 붙이지 않음. 백엔드 non-ok는 명시적 `Error` throw.
+  - [packages/mcp-tool/src/tools/status.ts](packages/mcp-tool/src/tools/status.ts) — `chainlens.status` pure 핸들러. `job_id` bigint/number/string 모두 수용, decimal 정규식 검증, 404 시 `{found:false}` (예외 아님 — "존재하지 않음"은 정상 응답).
+  - [packages/mcp-tool/src/tools/request.ts](packages/mcp-tool/src/tools/request.ts) — `chainlens.request` DI-pure 핸들러. 4단계: (1) USDC approve → (2) `createJob(seller, taskType, amount, inputsHash, apiId)` → (3) receipt의 `JobCreated` 이벤트 `topics[1]` (indexed jobId)에서 jobId 파싱 → (4) `GET /api/evidence/:jobId` 폴링 (deadline 기반 loop, terminal set `{COMPLETED, REFUNDED, FAILED}`). 404는 "아직 미기록"으로 간주하고 계속 폴링. 타임아웃 시 `status: "TIMEOUT"` + 마지막 evidence 반환. `keccak256`/`taskTypeId`/`inputsHash`/`wait`을 모두 DI로 받아 테스트가 viem 없이 실행 가능.
+  - [packages/mcp-tool/src/server.ts](packages/mcp-tool/src/server.ts) — `@modelcontextprotocol/sdk` `Server` 인스턴스 조립. `ListToolsRequestSchema` / `CallToolRequestSchema` 핸들러 등록, request 툴은 deps.request 없으면 목록에서 제외 + 호출 시 명시적 에러. 결과는 `content:[{type:"text",text:JSON.stringify(...)}]`로 반환하되 **custom replacer로 BigInt → string** (MCP 클라이언트는 JSON만 이해). 핸들러 내부 throw는 `isError:true` + 메시지로 래핑해 stdio 연결이 끊기지 않도록 격리.
+  - [packages/mcp-tool/src/index.ts](packages/mcp-tool/src/index.ts) — 프로덕션 wiring. `chainFor(chainId)`로 baseSepolia/baseMainnet 선택, 미배포 체인에 대해 fail-fast throw, `bytes32FromName = keccak256(utf8(name))`(게이트웨이 인코딩과 일치), `canonicalInputsHash`는 **키 정렬 stable stringify** 후 keccak256 (buyer·gateway inputs hash 불일치 방지). `WALLET_PRIVATE_KEY` 부재 시 request deps 자체를 `undefined`로 넘겨 read-only 모드.
+  - 테스트: [config.test.ts](packages/mcp-tool/src/config.test.ts) 5 / [discover.test.ts](packages/mcp-tool/src/tools/discover.test.ts) 4 / [status.test.ts](packages/mcp-tool/src/tools/status.test.ts) 4 / [request.test.ts](packages/mcp-tool/src/tools/request.test.ts) 4. Fake `fetch`가 URL을 기록하고, fake publicClient/walletClient가 writeContract 호출을 기록한 뒤 JobCreated 로그를 합성 → on-chain/RPC 없이 4단계 플로우 전체 검증.
+  - **MCP 17/17 pass, 백엔드 79/79 pass, 양쪽 `tsc --noEmit` 클린**. Claude Desktop 예시 config은 README에 포함.
+  - 미구현(의도): `@modelcontextprotocol/sdk` peer 경고(valtio/react 19) 및 `zod 4` vs `abitype` peer는 viem 내부 이슈 — 실제 런타임에 영향 없어 보류.
 
 - **Week 3 Day 1-2: Evidence Explorer + Reputation Views + 훅 3종**
   - [packages/frontend/src/hooks/useJob.ts](packages/frontend/src/hooks/useJob.ts) — `GET /api/evidence/:jobId`를 래핑. jobId는 `string | bigint | undefined` 수용 (언마운트/누락 시 로딩만 해제하고 요청은 보내지 않음). `cancelled` 플래그로 리랜더 중 응답 폐기. 프론트엔드 내부 `JobEvidence` 타입은 백엔드 `EvidenceView`와 1:1 (string 직렬화 포함).

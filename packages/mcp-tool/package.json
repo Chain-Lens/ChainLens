@@ -1,0 +1,30 @@
+{
+  "name": "@chainlens/mcp-tool",
+  "version": "0.1.0",
+  "description": "ChainLens MCP tool — discover sellers, request data, check job status from Claude Desktop and other MCP clients.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "chainlens-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "tsx --test 'src/**/*.test.ts'",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@apimarket/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
