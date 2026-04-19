@@ -13,7 +13,7 @@
 
 | Day | 작업 | Status |
 |-----|------|--------|
-| 1 | TaskTypeRegistry.sol + 테스트 + Ignition + 배포 + task_type 5개 등록 | 🔄 로컬 완료, 배포 대기 |
+| 1 | TaskTypeRegistry.sol + 테스트 + Ignition + 배포 + task_type 5개 등록 | ✅ Done |
 | 2 | SellerRegistry.sol (ERC-8004 호환) + 테스트 + 배포 | 📅 Planned |
 | 3-4 | ApiMarketEscrow v2 evolve (Job 개념, ERC-8183 alias, 하위 호환) | 📅 Planned |
 | 5 | shared ABI + types 업데이트 (v2 + 2개 Registry) | 📅 Planned |
@@ -45,7 +45,7 @@
 | Contract | File | Tests | Deployed |
 |----------|------|-------|----------|
 | ApiMarketEscrow (v1, legacy) | `contracts/ApiMarketEscrow.sol` | 기존 457L | `0xDAa04e9BD451F9D27EcEd569303181c71F0A7b27` (Base Sepolia) |
-| TaskTypeRegistry | `contracts/TaskTypeRegistry.sol` + `types/TaskTypeRegistryTypes.sol` | 30/30 passing | ⏳ 미배포 |
+| TaskTypeRegistry | `contracts/TaskTypeRegistry.sol` + `types/TaskTypeRegistryTypes.sol` | 30/30 passing | ✅ `0xD2ab227417B26f4d8311594C27c59adcA046501F` (Base Sepolia) |
 | SellerRegistry | TBD | — | — |
 | ApiMarketEscrow v2 | TBD | — | — |
 
@@ -75,6 +75,11 @@
 
 ### 2026-04-19
 
+- **Week 1 Day 1 배포: TaskTypeRegistry → Base Sepolia**
+  - 주소: `0xD2ab227417B26f4d8311594C27c59adcA046501F`
+  - Owner: `0xD21dE9470d8A0dbae0dE0b5f705001a6482Db580` (deployer)
+  - 5개 task_type 모두 `isEnabled=true`로 등록 확인 (on-chain read 검증)
+  - 총 가스 ≈ 0.00001 ETH (1 deploy + 5 register)
 - **Week 1 Day 1 (local): TaskTypeRegistry 구현 + 테스트 + Ignition 모듈**
   - [contracts/TaskTypeRegistry.sol](packages/contracts/contracts/TaskTypeRegistry.sol) — OZ `Ownable2Step` 상속, require-string 검증, 3 이벤트
   - [contracts/types/TaskTypeRegistryTypes.sol](packages/contracts/contracts/types/TaskTypeRegistryTypes.sol) — `TaskTypeConfig` 구조체 라이브러리 (caution.md 규칙 준수)
