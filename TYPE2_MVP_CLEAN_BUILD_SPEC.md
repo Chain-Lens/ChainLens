@@ -772,7 +772,7 @@ packages/mcp-tool/
 ```typescript
 // packages/mcp-tool/src/tools/discover.ts
 export const discoverTool = {
-  name: 'chainlens.discover',
+  name: 'chain-lens.discover',
   description: 'Find sellers for a task type',
   inputSchema: {
     type: 'object',
@@ -790,7 +790,7 @@ export const discoverTool = {
 
 // packages/mcp-tool/src/tools/request.ts
 export const requestTool = {
-  name: 'chainlens.request',
+  name: 'chain-lens.request',
   description: 'Request data through ChainLens (requires wallet)',
   inputSchema: {
     type: 'object',
@@ -813,7 +813,7 @@ export const requestTool = {
 
 // packages/mcp-tool/src/tools/status.ts
 export const statusTool = {
-  name: 'chainlens.status',
+  name: 'chain-lens.status',
   description: 'Check job status',
   inputSchema: {
     type: 'object',
@@ -832,11 +832,11 @@ export const statusTool = {
 ```json
 {
   "mcpServers": {
-    "chainlens": {
+    "chain-lens": {
       "command": "npx",
-      "args": ["@chainlens/mcp-tool"],
+      "args": ["@chain-lens/mcp-tool"],
       "env": {
-        "CHAINLENS_API_URL": "https://monapi.pelicanlab.dev/api",
+        "CHAIN_LENS_API_URL": "https://monapi.pelicanlab.dev/api",
         "WALLET_PRIVATE_KEY": "..."
       }
     }
@@ -1051,7 +1051,7 @@ PINATA_JWT=                               # Phase 2
 
 ## 13. 이 명세와 v4 설계의 관계
 
-이 명세는 **v4 설계 (`chainlens-modified-plan.md`)의 Type 2 부분 Phase 1 구현**.
+이 명세는 **v4 설계 (`chain-lens-modified-plan.md`)의 Type 2 부분 Phase 1 구현**.
 
 v4의 다음 요소들은 **Phase 2+로 이관**:
 - UMA Challenge Window

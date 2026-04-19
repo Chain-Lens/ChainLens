@@ -3,7 +3,7 @@ import { deployCommand } from "./commands/deploy.js";
 import { registerCommand } from "./commands/register.js";
 import { statusCommand } from "./commands/status.js";
 
-const HELP = `chainlens-seller <command> [options]
+const HELP = `chain-lens-seller <command> [options]
 
 Commands:
   init <name>        Scaffold a new seller project from a template.
@@ -11,7 +11,7 @@ Commands:
   register           Register the deployed seller with the ChainLens gateway.
   status [--seller]  Show on-chain reputation / job counters for this seller.
 
-Run \`chainlens-seller <command> --help\` for command-specific flags.
+Run \`chain-lens-seller <command> --help\` for command-specific flags.
 `;
 
 export async function runCli(argv: string[]): Promise<void> {

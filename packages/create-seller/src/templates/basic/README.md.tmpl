@@ -14,12 +14,12 @@ curl http://localhost:{{PORT}}/health
 ## Implement
 
 Edit `src/handler.ts` and return a JSON object matching the
-`{{TASK_TYPE}}` schema. Schema lives in `@chainlens/shared/task-types`.
+`{{TASK_TYPE}}` schema. Schema lives in `@chain-lens/shared/task-types`.
 
 ## Deploy
 
 ```bash
-npx @chainlens/create-seller deploy
+npx @chain-lens/create-seller deploy
 ```
 
 This wraps `vercel --prod`. Requires `vercel login` once.
@@ -29,7 +29,7 @@ This wraps `vercel --prod`. Requires `vercel login` once.
 After deploy succeeds, register the URL with the gateway:
 
 ```bash
-npx @chainlens/create-seller register \
+npx @chain-lens/create-seller register \
   --task-type {{TASK_TYPE}} \
   --price 0.05 \
   --wallet 0xYourPayoutAddress

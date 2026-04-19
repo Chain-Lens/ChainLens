@@ -103,7 +103,7 @@ test("parseRegisterArgs: rejects invalid task type", async () => {
   );
 });
 
-test("parseRegisterArgs: uses CHAINLENS_API_URL env default", async () => {
+test("parseRegisterArgs: uses CHAIN_LENS_API_URL env default", async () => {
   const opts = await parseRegisterArgs(
     [
       "--task-type", "defillama_tvl",
@@ -111,7 +111,7 @@ test("parseRegisterArgs: uses CHAINLENS_API_URL env default", async () => {
       "--wallet", "0x".padEnd(42, "a"),
       "--endpoint", "https://x.vercel.app",
     ],
-    await baseDeps({ env: { CHAINLENS_API_URL: "https://gw.example/api/" } as NodeJS.ProcessEnv }),
+    await baseDeps({ env: { CHAIN_LENS_API_URL: "https://gw.example/api/" } as NodeJS.ProcessEnv }),
   );
   assert.equal(opts.gatewayUrl, "https://gw.example/api");
 });

@@ -73,15 +73,22 @@
 
 > 작업 단위(커밋 기준)로 누적 기록. 최신이 위.
 
+### 2026-04-20
+
+- **npm publish 준비: scope 재명명 `@chainlens/*` → `@chain-lens/*`**
+  - npm 조직 `chainlens` 이미 선점되어 있어 `chain-lens` (하이픈)로 조직 생성. npm 조직명은 생성 후 변경 불가 → scope 전체 치환 결정.
+  - 일관성을 위해 소문자 식별자 전부 하이픈화: 패키지 scope (`@chain-lens/shared|mcp-tool|create-seller`), CLI bin (`create-chain-lens-seller`, `chain-lens-seller`, `chain-lens-mcp`), MCP tool id (`chain-lens.discover/request/status`), env var (`CHAIN_LENS_API_URL`), 상태파일 (`.chain-lens-deploy.json`), SKILL 이름 (`chain-lens-seller-onboarding`). 브랜드 프로즈 "ChainLens" (대문자)는 보존.
+  - 78개 파일 일괄 치환, `pnpm-lock.yaml` 재생성, 클린 재빌드 통과, 테스트 62/62 (`create-seller` 45 + `mcp-tool` 17) 통과, 3개 패키지 dry-run 배포 tarball 이상 없음 확인.
+
 ### 2026-04-19
 
 - **Phase C: Seller CLI 스캐폴드·배포·등록 자동화 + Agent Skill**
-  - 신규 워크스페이스 [packages/create-seller](packages/create-seller) — `@chainlens/create-seller`. `bin: create-chainlens-seller / chainlens-seller`, `files: [dist, README.md, SKILL.md]`, `publishConfig.access: public`. 의존성 없음 (표준 라이브러리만으로 구현해 `npx` 콜드스타트 부담 최소화).
+  - 신규 워크스페이스 [packages/create-seller](packages/create-seller) — `@chain-lens/create-seller`. `bin: create-chain-lens-seller / chain-lens-seller`, `files: [dist, README.md, SKILL.md]`, `publishConfig.access: public`. 의존성 없음 (표준 라이브러리만으로 구현해 `npx` 콜드스타트 부담 최소화).
   - [src/cli.ts](packages/create-seller/src/cli.ts) — 4 명령 디스패처: `init / deploy / register / status` + `--help`. 각 명령 모듈은 DI 패턴 (deps 인자 받는 pure `run*` + `parse*Args` 순수 함수 + CLI 엔트리 래퍼) — caution.md "고수준 모듈 안에서 new 저수준구현체 금지"에 맞춰 fetch/spawn/fs를 전부 주입식으로 받아 테스트가 네트워크·프로세스 없이 실행.
   - **`init`** ([src/commands/init.ts](packages/create-seller/src/commands/init.ts)) — `src/templates/basic/` 10개 파일을 복사+placeholder 치환 (`{{SELLER_NAME}}`/`{{TASK_TYPE}}`/`{{PORT}}`). `.tmpl` 확장자 strip, dir 존재 시 `--force` 요구. 템플릿은 독립 Express 앱 (workspace 의존성 0개 — `express`만 dep), Vercel serverless entry (`api/index.ts`) + `vercel.json` 포함해 `vercel --prod` 바로 가능. [scripts/copy-templates.mjs](packages/create-seller/scripts/copy-templates.mjs)가 tsc 후 `src/templates` → `dist/templates` 복사 (tsc는 non-ts 파일 미복사).
-  - **`deploy`** ([src/commands/deploy.ts](packages/create-seller/src/commands/deploy.ts)) — `vercel --prod --yes` spawn, stdout에서 `https://*.vercel.app` 정규식 추출, `.chainlens-deploy.json`에 `{url, deployedAt}` 저장. 사전 체크: `vercel --version` 성공 + cwd에 `package.json` 존재. 실패 시 `npm i -g vercel && vercel login` 안내 (**사용자 대신 login 시도 금지** — SKILL.md에 명시).
-  - **`register`** ([src/commands/register.ts](packages/create-seller/src/commands/register.ts)) — `POST /api/apis/register`. `parsePriceToWei("0.05")` → `"50000"` USDC 6-decimals 변환 (음수/지수/초과 소수자리 거절). `--endpoint` 생략 시 `readDeployState(cwd)`로 `.chainlens-deploy.json`에서 fallback. `$CHAINLENS_API_URL` env fallback + trailing slash 정규화. 백엔드 스키마 (`registerSchema`)와 매핑: `category ← taskType`, `price ← priceUsdcWei` (wei string).
-  - **`status`** ([src/commands/status.ts](packages/create-seller/src/commands/status.ts)) — `GET /api/reputation/:address` + 배포된 `/health` ping. healthUrl은 `.chainlens-deploy.json`에서 자동 파생, 없으면 skip. reputation 404(`seller_not_registered`)도 throw 아닌 에러 객체로 반환해 "아직 승인 전"을 정상 상태로 구분.
+  - **`deploy`** ([src/commands/deploy.ts](packages/create-seller/src/commands/deploy.ts)) — `vercel --prod --yes` spawn, stdout에서 `https://*.vercel.app` 정규식 추출, `.chain-lens-deploy.json`에 `{url, deployedAt}` 저장. 사전 체크: `vercel --version` 성공 + cwd에 `package.json` 존재. 실패 시 `npm i -g vercel && vercel login` 안내 (**사용자 대신 login 시도 금지** — SKILL.md에 명시).
+  - **`register`** ([src/commands/register.ts](packages/create-seller/src/commands/register.ts)) — `POST /api/apis/register`. `parsePriceToWei("0.05")` → `"50000"` USDC 6-decimals 변환 (음수/지수/초과 소수자리 거절). `--endpoint` 생략 시 `readDeployState(cwd)`로 `.chain-lens-deploy.json`에서 fallback. `$CHAIN_LENS_API_URL` env fallback + trailing slash 정규화. 백엔드 스키마 (`registerSchema`)와 매핑: `category ← taskType`, `price ← priceUsdcWei` (wei string).
+  - **`status`** ([src/commands/status.ts](packages/create-seller/src/commands/status.ts)) — `GET /api/reputation/:address` + 배포된 `/health` ping. healthUrl은 `.chain-lens-deploy.json`에서 자동 파생, 없으면 skip. reputation 404(`seller_not_registered`)도 throw 아닌 에러 객체로 반환해 "아직 승인 전"을 정상 상태로 구분.
   - [SKILL.md](packages/create-seller/SKILL.md) — IDE 에이전트용 onboarding 스킬 계약. **언제 invoke** (유저 발화 패턴), **사전 확인 5종** (task type / wallet / price / gateway / vercel 로그인), **4-명령 순서**, **비밀·안전 3원칙** (private key를 seller 프로젝트에 넣지 말 것 / `vercel login` 대리 금지 / wallet 주소 추측 금지), **Troubleshooting 6 증상** 매트릭스. `init` 후 handler 자동 구현 금지 규칙 명시 — 각 task type이 gateway에서 JSON schema로 강제되므로 잘못 추측하면 자동 refund만 나오기 때문.
   - 테스트 45/45 — init 9 (arg parsing, placeholder 치환, overwrite 방지) + deploy 10 (URL 추출, state 파일 쓰기/읽기, CLI 미설치/프로젝트 아님/비영 exit/URL 파싱 실패) + register 15 (parsePriceToWei 경계, parseRegisterArgs endpoint fallback/env/basename 기본값, runRegister POST body 검증 + 에러 surface) + status 11 (parseStatusArgs + fetchReputation 200/404/URL + fetchHealth JSON/네트워크에러 + runStatus 섹션 출력).
   - 루트 [README.md](README.md) 문서 섹션에 "Sellers" 행 추가 — create-seller 링크 + SKILL.md 언급.
@@ -90,18 +97,18 @@
 - **Phase B: Buyer 온보딩 가이드 (`docs/BUYER_GUIDE.md`)**
   - 신규 [docs/BUYER_GUIDE.md](docs/BUYER_GUIDE.md) — 6 스텝: (1) 전용 버리어블 지갑 생성(메인 지갑 재사용 금지), (2) Base Sepolia ETH + USDC 파우셋, (3) Claude Desktop `claude_desktop_config.json` 등록 (npx 형식), (4) 첫 유료 콜 프롬프트 예시 + approve/createJob 두 트랜잭션 설명, (5) `/evidence/[jobId]` 브라우저 해시 매치 + basescan 확인, (6) revoke.cash 로 allowance 취소해 에이전트 차단.
   - Troubleshooting 섹션: 도구가 안 보일 때(재시작), `CHAIN_ID` 미지원, `TIMEOUT` 폴링, insufficient allowance, 140M gas "exceeds block gas limit" (ABI 불일치 진단).
-  - 하단에 로컬 개발자용 `pnpm dev` 경로 추가 (backend 자체호스팅 + `CHAINLENS_API_URL=http://localhost:3001/api`).
-  - README 갱신: MCP config 예시를 `"command":"node" + /absolute/path` → `"command":"npx" + "-y @chainlens/mcp-tool"`로 교체, Quick start 하단에 Buyer 가이드 링크 추가.
+  - 하단에 로컬 개발자용 `pnpm dev` 경로 추가 (backend 자체호스팅 + `CHAIN_LENS_API_URL=http://localhost:3001/api`).
+  - README 갱신: MCP config 예시를 `"command":"node" + /absolute/path` → `"command":"npx" + "-y @chain-lens/mcp-tool"`로 교체, Quick start 하단에 Buyer 가이드 링크 추가.
   - 설계 선택: 보안 포스처를 **지갑 생성 단계에서부터** 강조 — 전용 지갑, 파우셋 한도, allowance revoke — "에이전트에게 줄 돈만 지갑에 넣어라"가 핵심 멘탈 모델. API 키 유출 걱정 없이 spend cap을 ERC-20 balance로 대체하는 것이 ChainLens의 UX 이점.
 
-- **Phase A: npm 퍼블리싱 사전 준비 — `@apimarket/*` → `@chainlens/*` 리네임**
-  - 전수 치환: `grep -rl '@apimarket/' | xargs sed -i 's|@apimarket/|@chainlens/|g'` 43개 파일 (package.json 5종, 소스 임포트, Dockerfile, README, 루트 package.json scripts, PROGRESS 기록).
+- **Phase A: npm 퍼블리싱 사전 준비 — `@apimarket/*` → `@chain-lens/*` 리네임**
+  - 전수 치환: `grep -rl '@apimarket/' | xargs sed -i 's|@apimarket/|@chain-lens/|g'` 43개 파일 (package.json 5종, 소스 임포트, Dockerfile, README, 루트 package.json scripts, PROGRESS 기록).
   - `packages/shared/package.json` — `private: true` 제거, `license: MIT`, `repository`, `files: [dist, README.md]`, `prepublishOnly: "pnpm build"`, `publishConfig.access: public` 추가. 외부 퍼블리싱 가능한 라이브러리로 전환.
-  - `packages/shared/README.md` — 신규. 외부 소비자용 usage 예시 (`@chainlens/shared` 임포트, 노출 심볼 카테고리별 요약).
-  - `packages/mcp-tool/package.json` — `license`, `repository`, `keywords` (mcp/claude/base/web3/agents), `prepublishOnly`, `publishConfig.access: public` 추가. `bin: chainlens-mcp`와 `files: [dist, README.md]`는 기존 유지.
-  - `packages/mcp-tool/README.md` — 사용자 가이드를 `npx -y @chainlens/mcp-tool` 중심으로 재작성. Claude Desktop config 예시도 `command: "npx"` 형태로 교체 (git clone + 절대 경로 제거). Alchemy/Infura RPC 권장 노트 추가.
-  - 루트 `package.json` 이름 `monapi-market` → `chainlens`.
-  - 검증: `pnpm install` 성공(workspace 해결), `@chainlens/shared` + `@chainlens/mcp-tool` build 성공, MCP 17/17 pass, frontend `tsc --noEmit` 클린. `pnpm publish --dry-run`은 네트워크/인증 필요해 보류 — workspace:* 자동 버전 치환은 pnpm 공식 동작.
+  - `packages/shared/README.md` — 신규. 외부 소비자용 usage 예시 (`@chain-lens/shared` 임포트, 노출 심볼 카테고리별 요약).
+  - `packages/mcp-tool/package.json` — `license`, `repository`, `keywords` (mcp/claude/base/web3/agents), `prepublishOnly`, `publishConfig.access: public` 추가. `bin: chain-lens-mcp`와 `files: [dist, README.md]`는 기존 유지.
+  - `packages/mcp-tool/README.md` — 사용자 가이드를 `npx -y @chain-lens/mcp-tool` 중심으로 재작성. Claude Desktop config 예시도 `command: "npx"` 형태로 교체 (git clone + 절대 경로 제거). Alchemy/Infura RPC 권장 노트 추가.
+  - 루트 `package.json` 이름 `monapi-market` → `chain-lens`.
+  - 검증: `pnpm install` 성공(workspace 해결), `@chain-lens/shared` + `@chain-lens/mcp-tool` build 성공, MCP 17/17 pass, frontend `tsc --noEmit` 클린. `pnpm publish --dry-run`은 네트워크/인증 필요해 보류 — workspace:* 자동 버전 치환은 pnpm 공식 동작.
   - 설계 결정: v0.1.0 그대로 유지 (아직 미출판 초기 릴리즈). 실제 `pnpm publish`는 npm 로그인 + 2FA 필요하므로 사용자가 직접 실행.
 
 - **Week 3 Day 6-7: 문서 + 데모 시나리오 (Type 2 MVP 완료)**
@@ -113,7 +120,7 @@
   - **Type 2 MVP 21일치 전체 완료**: contracts 34/34, backend 79/79, mcp-tool 17/17, sample-sellers 18/18. frontend tsc 클린. 모든 Day 체크박스 ✅.
 
 - **Week 3 Day 5: Sample seller 에이전트 3종 + Dockerfile**
-  - [packages/sample-sellers/package.json](packages/sample-sellers/package.json) + [tsconfig.json](packages/sample-sellers/tsconfig.json) — 신규 워크스페이스 `@chainlens/sample-sellers`. 래퍼 3종은 한 패키지 안의 별도 엔트리(`dist/blockscout|defillama|sourcify/index.js`) — 3개 패키지로 쪼개면 lib/types/server 중복 발생하고 Dockerfile은 어차피 각각이므로, 패키지 1 × 진입점 3 이 SRP와 배포 유연성을 동시에 만족.
+  - [packages/sample-sellers/package.json](packages/sample-sellers/package.json) + [tsconfig.json](packages/sample-sellers/tsconfig.json) — 신규 워크스페이스 `@chain-lens/sample-sellers`. 래퍼 3종은 한 패키지 안의 별도 엔트리(`dist/blockscout|defillama|sourcify/index.js`) — 3개 패키지로 쪼개면 lib/types/server 중복 발생하고 Dockerfile은 어차피 각각이므로, 패키지 1 × 진입점 3 이 SRP와 배포 유연성을 동시에 만족.
   - [packages/sample-sellers/src/lib/server.ts](packages/sample-sellers/src/lib/server.ts) + [lib/types.ts](packages/sample-sellers/src/lib/types.ts) — `createSellerApp({name, handlers})` Express 앱 팩토리. 공통 컨트랙트: `POST /` `{task_type, inputs}` → 핸들러 디스패치. `GET /health` 에 capabilities 목록 노출. `BadInputError` → 400 / `UpstreamError(code)` → 그 code / 그 외 Error → 500 으로 분기해 seller-tester·게이트웨이가 원인별로 구분 가능. body limit 64kb.
   - [packages/sample-sellers/src/blockscout/handler.ts](packages/sample-sellers/src/blockscout/handler.ts) + [index.ts](packages/sample-sellers/src/blockscout/index.ts) — `blockscout_contract_source` + `blockscout_tx_info` 2종. `DEFAULT_BLOCKSCOUT_BASES`(Ethereum mainnet / Base / Base Sepolia) + `baseUrlFor(chainId)` DI로 미지원 체인은 `BadInputError`. 응답은 필드 white-list로 정규화 (업스트림 필드 변경에 덜 민감하게 + schema 맞추기). 기본 포트 8081.
   - [packages/sample-sellers/src/defillama/handler.ts](packages/sample-sellers/src/defillama/handler.ts) + [index.ts](packages/sample-sellers/src/defillama/index.ts) — `defillama_tvl`. `protocol` 슬러그 regex(`/^[a-z0-9][a-z0-9-]{0,63}$/`)로 검증 → URL 인젝션·path traversal 차단. `chainTvls`를 `{chain: tvl}` 맵으로 요약, 수치 아닌 항목 제거. 기본 포트 8082.
@@ -129,11 +136,11 @@
   - [packages/backend/src/routes/sellers.routes.ts](packages/backend/src/routes/sellers.routes.ts) — `GET /api/sellers`. Zod `safeParse`로 쿼리 검증 (task_type, active_only 'true'/'false' → boolean transform, limit/offset coerce.number). 실패 시 `{400: invalid_query, details: flatten()}`.
   - [packages/backend/src/routes/index.ts](packages/backend/src/routes/index.ts) — `/sellers` 마운트.
   - [packages/backend/src/services/sellers.service.test.ts](packages/backend/src/services/sellers.service.test.ts) — 6 케이스 (activeOnly 기본/명시 false / limit·offset 클램프 / taskType 패스스루 / listSellers가 정규화 필터로 store 호출).
-  - [packages/mcp-tool/package.json](packages/mcp-tool/package.json) + [packages/mcp-tool/tsconfig.json](packages/mcp-tool/tsconfig.json) + [packages/mcp-tool/README.md](packages/mcp-tool/README.md) — 신규 워크스페이스 패키지 `@chainlens/mcp-tool`, `bin: chainlens-mcp` 바이너리. `@modelcontextprotocol/sdk` + `viem` + `@chainlens/shared` + `@types/node` 의존.
-  - [packages/mcp-tool/src/config.ts](packages/mcp-tool/src/config.ts) — env → `McpConfig`. `CHAINLENS_API_URL` 트레일링 슬래시 제거, `CHAIN_ID` 정수 검증, `WALLET_PRIVATE_KEY` 0x64hex 정규식 검증 (실패 시 fail-fast). `WALLET_PRIVATE_KEY`가 없으면 request 툴 비활성화, discover/status는 여전히 사용 가능.
-  - [packages/mcp-tool/src/tools/discover.ts](packages/mcp-tool/src/tools/discover.ts) — `chainlens.discover` pure 핸들러. `URLSearchParams`로 `task_type / limit / offset / active_only` 쿼리 빌드, 필터 없으면 `?` 자체를 붙이지 않음. 백엔드 non-ok는 명시적 `Error` throw.
-  - [packages/mcp-tool/src/tools/status.ts](packages/mcp-tool/src/tools/status.ts) — `chainlens.status` pure 핸들러. `job_id` bigint/number/string 모두 수용, decimal 정규식 검증, 404 시 `{found:false}` (예외 아님 — "존재하지 않음"은 정상 응답).
-  - [packages/mcp-tool/src/tools/request.ts](packages/mcp-tool/src/tools/request.ts) — `chainlens.request` DI-pure 핸들러. 4단계: (1) USDC approve → (2) `createJob(seller, taskType, amount, inputsHash, apiId)` → (3) receipt의 `JobCreated` 이벤트 `topics[1]` (indexed jobId)에서 jobId 파싱 → (4) `GET /api/evidence/:jobId` 폴링 (deadline 기반 loop, terminal set `{COMPLETED, REFUNDED, FAILED}`). 404는 "아직 미기록"으로 간주하고 계속 폴링. 타임아웃 시 `status: "TIMEOUT"` + 마지막 evidence 반환. `keccak256`/`taskTypeId`/`inputsHash`/`wait`을 모두 DI로 받아 테스트가 viem 없이 실행 가능.
+  - [packages/mcp-tool/package.json](packages/mcp-tool/package.json) + [packages/mcp-tool/tsconfig.json](packages/mcp-tool/tsconfig.json) + [packages/mcp-tool/README.md](packages/mcp-tool/README.md) — 신규 워크스페이스 패키지 `@chain-lens/mcp-tool`, `bin: chain-lens-mcp` 바이너리. `@modelcontextprotocol/sdk` + `viem` + `@chain-lens/shared` + `@types/node` 의존.
+  - [packages/mcp-tool/src/config.ts](packages/mcp-tool/src/config.ts) — env → `McpConfig`. `CHAIN_LENS_API_URL` 트레일링 슬래시 제거, `CHAIN_ID` 정수 검증, `WALLET_PRIVATE_KEY` 0x64hex 정규식 검증 (실패 시 fail-fast). `WALLET_PRIVATE_KEY`가 없으면 request 툴 비활성화, discover/status는 여전히 사용 가능.
+  - [packages/mcp-tool/src/tools/discover.ts](packages/mcp-tool/src/tools/discover.ts) — `chain-lens.discover` pure 핸들러. `URLSearchParams`로 `task_type / limit / offset / active_only` 쿼리 빌드, 필터 없으면 `?` 자체를 붙이지 않음. 백엔드 non-ok는 명시적 `Error` throw.
+  - [packages/mcp-tool/src/tools/status.ts](packages/mcp-tool/src/tools/status.ts) — `chain-lens.status` pure 핸들러. `job_id` bigint/number/string 모두 수용, decimal 정규식 검증, 404 시 `{found:false}` (예외 아님 — "존재하지 않음"은 정상 응답).
+  - [packages/mcp-tool/src/tools/request.ts](packages/mcp-tool/src/tools/request.ts) — `chain-lens.request` DI-pure 핸들러. 4단계: (1) USDC approve → (2) `createJob(seller, taskType, amount, inputsHash, apiId)` → (3) receipt의 `JobCreated` 이벤트 `topics[1]` (indexed jobId)에서 jobId 파싱 → (4) `GET /api/evidence/:jobId` 폴링 (deadline 기반 loop, terminal set `{COMPLETED, REFUNDED, FAILED}`). 404는 "아직 미기록"으로 간주하고 계속 폴링. 타임아웃 시 `status: "TIMEOUT"` + 마지막 evidence 반환. `keccak256`/`taskTypeId`/`inputsHash`/`wait`을 모두 DI로 받아 테스트가 viem 없이 실행 가능.
   - [packages/mcp-tool/src/server.ts](packages/mcp-tool/src/server.ts) — `@modelcontextprotocol/sdk` `Server` 인스턴스 조립. `ListToolsRequestSchema` / `CallToolRequestSchema` 핸들러 등록, request 툴은 deps.request 없으면 목록에서 제외 + 호출 시 명시적 에러. 결과는 `content:[{type:"text",text:JSON.stringify(...)}]`로 반환하되 **custom replacer로 BigInt → string** (MCP 클라이언트는 JSON만 이해). 핸들러 내부 throw는 `isError:true` + 메시지로 래핑해 stdio 연결이 끊기지 않도록 격리.
   - [packages/mcp-tool/src/index.ts](packages/mcp-tool/src/index.ts) — 프로덕션 wiring. `chainFor(chainId)`로 baseSepolia/baseMainnet 선택, 미배포 체인에 대해 fail-fast throw, `bytes32FromName = keccak256(utf8(name))`(게이트웨이 인코딩과 일치), `canonicalInputsHash`는 **키 정렬 stable stringify** 후 keccak256 (buyer·gateway inputs hash 불일치 방지). `WALLET_PRIVATE_KEY` 부재 시 request deps 자체를 `undefined`로 넘겨 read-only 모드.
   - 테스트: [config.test.ts](packages/mcp-tool/src/config.test.ts) 5 / [discover.test.ts](packages/mcp-tool/src/tools/discover.test.ts) 4 / [status.test.ts](packages/mcp-tool/src/tools/status.test.ts) 4 / [request.test.ts](packages/mcp-tool/src/tools/request.test.ts) 4. Fake `fetch`가 URL을 기록하고, fake publicClient/walletClient가 writeContract 호출을 기록한 뒤 JobCreated 로그를 합성 → on-chain/RPC 없이 4단계 플로우 전체 검증.

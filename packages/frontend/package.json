@@ -1,5 +1,5 @@
 {
-  "name": "@chainlens/frontend",
+  "name": "@chain-lens/frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@chainlens/shared": "workspace:*",
+    "@chain-lens/shared": "workspace:*",
     "@rainbow-me/rainbowkit": "^2.2.10",
     "@tanstack/react-query": "^5.62.0",
     "next": "^15.1.0",

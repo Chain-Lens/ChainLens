@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatUnits } from "viem";
-import type { ApiListing } from "@chainlens/shared";
+import type { ApiListing } from "@chain-lens/shared";
 import StatusBadge from "../shared/StatusBadge";
 
 interface TestResult {

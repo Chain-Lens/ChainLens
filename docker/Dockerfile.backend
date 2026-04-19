@@ -18,9 +18,9 @@ RUN pnpm install --frozen-lockfile
 COPY packages/shared ./packages/shared
 COPY packages/backend ./packages/backend
 
-RUN pnpm --filter @chainlens/shared build
-RUN pnpm --filter @chainlens/backend db:generate
-RUN pnpm --filter @chainlens/backend build
+RUN pnpm --filter @chain-lens/shared build
+RUN pnpm --filter @chain-lens/backend db:generate
+RUN pnpm --filter @chain-lens/backend build
 
 COPY docker/backend-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

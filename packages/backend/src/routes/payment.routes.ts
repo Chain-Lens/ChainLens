@@ -3,9 +3,9 @@ import { z } from "zod";
 import * as paymentService from "../services/payment.service.js";
 import * as gatewayService from "../services/gateway.service.js";
 import { validate } from "../middleware/validate.js";
-import { PaymentStatus } from "@chainlens/shared";
+import { PaymentStatus } from "@chain-lens/shared";
 import { walletClient, publicClient } from "../config/viem.js";
-import { ApiMarketEscrowAbi } from "@chainlens/shared";
+import { ApiMarketEscrowAbi } from "@chain-lens/shared";
 import { env } from "../config/env.js";
 import { BadRequestError, UnauthorizedError } from "../utils/errors.js";
 

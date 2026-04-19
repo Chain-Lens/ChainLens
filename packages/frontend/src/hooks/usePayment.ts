@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { apiClient } from "@/lib/api-client";
 import { ESCROW_ADDRESS, USDC_ADDRESS } from "@/config/contracts";
-import type { PreparePaymentResponse } from "@chainlens/shared";
+import type { PreparePaymentResponse } from "@chain-lens/shared";
 
 const approveAbi = [
   {

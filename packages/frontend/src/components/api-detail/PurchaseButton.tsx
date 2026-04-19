@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useAccount } from "wagmi";
 import { usePayment } from "@/hooks/usePayment";
-import type { ApiListingPublic } from "@chainlens/shared";
+import type { ApiListingPublic } from "@chain-lens/shared";
 
 type Props = {
   api: ApiListingPublic;

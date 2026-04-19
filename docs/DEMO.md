@@ -53,18 +53,18 @@ Best for showing that an AI agent can spend on its own.
 
 1. **Build the MCP tool once.**
    ```bash
-   pnpm --filter @chainlens/mcp-tool build
+   pnpm --filter @chain-lens/mcp-tool build
    ```
 2. **Configure Claude Desktop.** Add to
    `~/Library/Application Support/Claude/claude_desktop_config.json`:
    ```jsonc
    {
      "mcpServers": {
-       "chainlens": {
+       "chain-lens": {
          "command": "node",
          "args": ["/absolute/path/to/ChainLens/packages/mcp-tool/dist/index.js"],
          "env": {
-           "CHAINLENS_API_URL": "https://your-chainlens/api",
+           "CHAIN_LENS_API_URL": "https://your-chain-lens/api",
            "CHAIN_ID": "84532",
            "RPC_URL": "https://sepolia.base.org",
            "WALLET_PRIVATE_KEY": "0x..."
@@ -73,16 +73,16 @@ Best for showing that an AI agent can spend on its own.
      }
    }
    ```
-   Restart Claude Desktop. The three `chainlens.*` tools appear in the tool
+   Restart Claude Desktop. The three `chain-lens.*` tools appear in the tool
    menu.
 3. **Ask Claude.** Sample prompt:
    > "Find a ChainLens seller that serves `defillama_tvl`, request Uniswap's
    > TVL for 0.05 USDC, and tell me the job id I can share."
 4. **Watch it run.** Claude will call:
-   - `chainlens.discover({ task_type: "defillama_tvl" })`
-   - `chainlens.request({ seller, task_type: "defillama_tvl", inputs: { protocol: "uniswap" }, amount: "50000" })`
+   - `chain-lens.discover({ task_type: "defillama_tvl" })`
+   - `chain-lens.request({ seller, task_type: "defillama_tvl", inputs: { protocol: "uniswap" }, amount: "50000" })`
 5. **Verify.** Claude reports the `jobId`. Open `/evidence/[jobId]` or run
-   `curl $CHAINLENS_API_URL/evidence/<id>` to recompute the hash.
+   `curl $CHAIN_LENS_API_URL/evidence/<id>` to recompute the hash.
 
 **What to point at:** the tool call panel in Claude Desktop (showing the
 two on-chain txs and the evidence poll), followed by the same hash-match
@@ -96,9 +96,9 @@ Best for showing the supply side of the market.
 
 1. **Run a sample seller locally.**
    ```bash
-   pnpm --filter @chainlens/sample-sellers dev:defillama   # :8082
-   # or: docker build -f packages/sample-sellers/docker/Dockerfile.defillama -t chainlens/defillama .
-   #     docker run -p 8082:8082 chainlens/defillama
+   pnpm --filter @chain-lens/sample-sellers dev:defillama   # :8082
+   # or: docker build -f packages/sample-sellers/docker/Dockerfile.defillama -t chain-lens/defillama .
+   #     docker run -p 8082:8082 chain-lens/defillama
    ```
    Sanity check: `curl http://localhost:8082/health`.
 2. **Register via the backend.** The seller calls the gateway's onboarding
@@ -120,7 +120,7 @@ Best for showing the supply side of the market.
    strings. Pass → the seller moves to `status: "active"` and the admin
    signs `registerSeller` on `SellerRegistry`.
 4. **Live.** The seller now appears in `/marketplace` and in
-   `chainlens.discover`. Once Scenario A or B routes a job to it, the
+   `chain-lens.discover`. Once Scenario A or B routes a job to it, the
    registry counter in Scenario A step 4 is theirs.
 
 **What to point at:** the test result JSON (`schemaValid: true`,

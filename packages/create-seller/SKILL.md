@@ -1,5 +1,5 @@
 ---
-name: chainlens-seller-onboarding
+name: chain-lens-seller-onboarding
 description: End-to-end: scaffold, deploy, and register a ChainLens seller so agents can pay it in USDC for data. Use when the user says "make my API a ChainLens seller", "onboard me to ChainLens", "register my wrapper with ChainLens", or similar.
 ---
 
@@ -8,7 +8,7 @@ description: End-to-end: scaffold, deploy, and register a ChainLens seller so ag
 You are helping the user turn an API (theirs or a third-party's) into a
 **ChainLens seller** — a paid data endpoint that agents discover on-chain
 and call through the ChainLens gateway. The CLI that drives every step
-is `@chainlens/create-seller`. Your job is to orchestrate the four
+is `@chain-lens/create-seller`. Your job is to orchestrate the four
 commands below in order, confirming destructive or paid steps with the
 user before running them.
 
@@ -21,7 +21,7 @@ Trigger on requests like:
 - "Onboard me as a seller — I want to receive USDC for API calls."
 
 Do **not** invoke this skill for buyer-side work (that is the
-`@chainlens/mcp-tool` path — see `docs/BUYER_GUIDE.md`).
+`@chain-lens/mcp-tool` path — see `docs/BUYER_GUIDE.md`).
 
 ## Prerequisites to confirm with the user up front
 
@@ -39,7 +39,7 @@ the conversation:
    converts to 6-decimal wei.
 4. **Gateway URL.** If the user is running ChainLens locally, use
    `http://localhost:3001/api`. Otherwise ask for their gateway URL
-   (`CHAINLENS_API_URL`).
+   (`CHAIN_LENS_API_URL`).
 5. **Vercel account.** The deploy step uses their local `vercel` CLI
    login. If `vercel whoami` fails, ask the user to run `vercel login`
    — **do not attempt to log in on their behalf**.
@@ -49,7 +49,7 @@ the conversation:
 ### 1. Scaffold (only if they don't have a project yet)
 
 ```bash
-npx @chainlens/create-seller init <name> \
+npx @chain-lens/create-seller init <name> \
   --task-type <task_type> \
   --port 3000
 ```
@@ -71,17 +71,17 @@ JSON, that's enough. They can skip straight to step 3 with
 
 ```bash
 cd <name>
-npx @chainlens/create-seller deploy
+npx @chain-lens/create-seller deploy
 ```
 
 Wraps `vercel --prod --yes`. Writes the resulting URL to
-`.chainlens-deploy.json`. If `vercel` isn't installed or the user isn't
+`.chain-lens-deploy.json`. If `vercel` isn't installed or the user isn't
 logged in, stop and surface the real error — don't paper over it.
 
 After deploy, smoke-test before registering:
 
 ```bash
-curl -sS "$(jq -r .url .chainlens-deploy.json)/health"
+curl -sS "$(jq -r .url .chain-lens-deploy.json)/health"
 ```
 
 Expect `{"status":"ok","seller":"<name>","capabilities":["<task_type>"]}`.
@@ -91,12 +91,12 @@ dead endpoint wastes admin review time.
 ### 3. Register with the gateway
 
 ```bash
-npx @chainlens/create-seller register \
+npx @chain-lens/create-seller register \
   --task-type <task_type> \
   --price <usdc_amount> \
   --wallet <0x...> \
-  [--endpoint <url>]     # defaults to .chainlens-deploy.json
-  [--gateway <url>]      # defaults to $CHAINLENS_API_URL
+  [--endpoint <url>]     # defaults to .chain-lens-deploy.json
+  [--gateway <url>]      # defaults to $CHAIN_LENS_API_URL
 ```
 
 The CLI POSTs to `/apis/register` on the gateway. The seller then sits
@@ -106,12 +106,12 @@ prompt-injection scan) and an admin approves.
 ### 4. Monitor
 
 ```bash
-npx @chainlens/create-seller status --wallet <0x...>
+npx @chain-lens/create-seller status --wallet <0x...>
 ```
 
 Prints `jobsCompleted` / `jobsFailed` / `totalEarnings` from the
 gateway's reputation endpoint, and pings `/health` on the deployed
-seller if `.chainlens-deploy.json` is present.
+seller if `.chain-lens-deploy.json` is present.
 
 ## Secrets and safety
 
@@ -142,9 +142,9 @@ seller if `.chainlens-deploy.json` is present.
 
 - Publishing your `mcp-tool` / `shared` packages to npm — that's a
   separate developer task, not part of seller onboarding.
-- Setting `CHAINLENS_API_URL` / gateway authentication on the buyer
+- Setting `CHAIN_LENS_API_URL` / gateway authentication on the buyer
   side — that's `docs/BUYER_GUIDE.md`.
 - Writing the handler logic against a specific upstream API — the
   human implements that in `src/handler.ts`. You can offer to help
   once asked, but respect the task-type schema in
-  `@chainlens/shared/task-types`.
+  `@chain-lens/shared/task-types`.

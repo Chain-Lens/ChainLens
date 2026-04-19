@@ -7,7 +7,7 @@ The stack:
 
 1. A crypto wallet (any EVM wallet — MetaMask / Rabby / Coinbase Wallet).
 2. A little Base Sepolia ETH (free) and USDC (free).
-3. Claude Desktop with the `@chainlens/mcp-tool` MCP server installed.
+3. Claude Desktop with the `@chain-lens/mcp-tool` MCP server installed.
 
 You never hand out API keys. You sign one-time USDC approvals with your
 wallet, and the agent spends per call from the approved allowance.
@@ -50,16 +50,16 @@ Claude Desktop reads a JSON config at:
 - **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 - **Linux:** `~/.config/Claude/claude_desktop_config.json`
 
-Open (or create) that file and add the `chainlens` server:
+Open (or create) that file and add the `chain-lens` server:
 
 ```jsonc
 {
   "mcpServers": {
-    "chainlens": {
+    "chain-lens": {
       "command": "npx",
-      "args": ["-y", "@chainlens/mcp-tool"],
+      "args": ["-y", "@chain-lens/mcp-tool"],
       "env": {
-        "CHAINLENS_API_URL": "https://your-chainlens-host/api",
+        "CHAIN_LENS_API_URL": "https://your-chain-lens-host/api",
         "CHAIN_ID": "84532",
         "RPC_URL": "https://base-sepolia.g.alchemy.com/v2/<YOUR_ALCHEMY_KEY>",
         "WALLET_PRIVATE_KEY": "0x<your-buyer-private-key>"
@@ -73,7 +73,7 @@ Fill in:
 
 | Field | What to put |
 | --- | --- |
-| `CHAINLENS_API_URL` | Your ChainLens gateway. Use `http://localhost:3001/api` if you're running the backend locally. |
+| `CHAIN_LENS_API_URL` | Your ChainLens gateway. Use `http://localhost:3001/api` if you're running the backend locally. |
 | `CHAIN_ID` | `84532` (Base Sepolia). Use `8453` for Base Mainnet (when addresses are published). |
 | `RPC_URL` | An [Alchemy](https://alchemy.com) or [Infura](https://infura.io) Base Sepolia URL. The public `sepolia.base.org` endpoint works for light use but drops filter state; dedicated endpoints are far more reliable. |
 | `WALLET_PRIVATE_KEY` | The `0x`-prefixed 64-hex key you exported in step 1. |
@@ -81,9 +81,9 @@ Fill in:
 Restart Claude Desktop. Open a new chat; you should see three new tools in
 the tool menu:
 
-- `chainlens.discover` — list sellers for a task type
-- `chainlens.request` — pay and fetch an answer
-- `chainlens.status` — look up evidence for a past job
+- `chain-lens.discover` — list sellers for a task type
+- `chain-lens.request` — pay and fetch an answer
+- `chain-lens.status` — look up evidence for a past job
 
 > **No wallet yet?** You can omit `WALLET_PRIVATE_KEY`. `discover` and
 > `status` still work — useful to browse the market before funding a
@@ -98,9 +98,9 @@ Try this prompt:
 
 Claude will:
 
-1. Call `chainlens.discover({ task_type: "defillama_tvl" })` — picks an
+1. Call `chain-lens.discover({ task_type: "defillama_tvl" })` — picks an
    active seller.
-2. Call `chainlens.request({ seller, task_type: "defillama_tvl", inputs: { protocol: "uniswap" }, amount: "50000" })`
+2. Call `chain-lens.request({ seller, task_type: "defillama_tvl", inputs: { protocol: "uniswap" }, amount: "50000" })`
    — this triggers two on-chain transactions from your wallet:
    - `approve(USDC, escrow, 0.05)` — one-time allowance
    - `createJob(seller, taskType, amount, inputsHash, 0)` — escrows 0.05
@@ -116,7 +116,7 @@ Amount `50000` is USDC with 6 decimals, i.e. **0.05 USDC** per call.
 
 Two independent checks:
 
-- **On the web:** Open `https://your-chainlens-host/evidence/<jobId>`.
+- **On the web:** Open `https://your-chain-lens-host/evidence/<jobId>`.
   The page recomputes `keccak256(JSON.stringify(response))` in your
   browser and shows a green banner when it matches what the seller
   committed on-chain. No gateway trust required.
@@ -138,7 +138,7 @@ prompt-injection filter), the gateway calls `refund(jobId)` and your
   wallet address (filter to Base Sepolia) to revoke the escrow's
   allowance if you want to stop the agent cold.
 - **Every call is auditable.** You can always point the agent at
-  `chainlens.status({ job_id })` later to re-fetch and re-hash the
+  `chain-lens.status({ job_id })` later to re-fetch and re-hash the
   evidence.
 
 ---
@@ -148,23 +148,23 @@ prompt-injection filter), the gateway calls `refund(jobId)` and your
 **Tools don't appear in Claude Desktop.**
 Claude only reads the config on startup. Fully quit (not just close the
 window) and relaunch. On macOS: Cmd+Q. If still missing, run the command
-manually in a terminal — `npx -y @chainlens/mcp-tool` — and check the
+manually in a terminal — `npx -y @chain-lens/mcp-tool` — and check the
 error.
 
 **"No ApiMarketEscrowV2 deployed for chainId …"**
 You set `CHAIN_ID` to something other than `84532` (Base Sepolia) or
 `8453` (Base Mainnet). Those are the only two ChainLens is deployed to.
 
-**`chainlens.request` returns `status: "TIMEOUT"`.**
+**`chain-lens.request` returns `status: "TIMEOUT"`.**
 The gateway didn't finalize within 2 minutes. Usually means the seller's
 upstream API is slow or down. The escrow is still in-flight — the
 gateway's event listener will either complete or refund it when it
-catches up. Poll with `chainlens.status({ job_id })`.
+catches up. Poll with `chain-lens.status({ job_id })`.
 
 **Transaction reverts with "insufficient allowance" or "insufficient balance".**
 Your wallet is missing USDC on Base Sepolia, or the previous `approve`
 was revoked. Top up from [faucet.circle.com](https://faucet.circle.com)
-and retry — `chainlens.request` re-approves automatically.
+and retry — `chain-lens.request` re-approves automatically.
 
 **MetaMask says "transaction exceeds block gas limit".**
 The most common cause is an ABI mismatch or a contract-level revert that
@@ -183,11 +183,11 @@ git clone https://github.com/lejuho/ChainLens.git
 cd ChainLens
 pnpm install
 docker compose up -d         # postgres
-pnpm --filter @chainlens/backend db:migrate
+pnpm --filter @chain-lens/backend db:migrate
 pnpm dev                     # backend :3001, frontend :3000
 ```
 
-Then set `CHAINLENS_API_URL` to `http://localhost:3001/api` in your MCP
+Then set `CHAIN_LENS_API_URL` to `http://localhost:3001/api` in your MCP
 config. The rest of this guide is identical.
 
 See [DEMO.md](DEMO.md) for the three end-to-end scenarios (browser buyer,

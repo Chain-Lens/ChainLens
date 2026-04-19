@@ -1,5 +1,5 @@
 /**
- * `chainlens.request` — create a paid job on ChainLens and wait for evidence.
+ * `chain-lens.request` — create a paid job on ChainLens and wait for evidence.
  *
  * Flow:
  *   1. Approve USDC spending by the escrow (up to `amount`).
@@ -67,7 +67,7 @@ function pickJobIdFromReceipt(receipt: TransactionReceipt): bigint {
       return BigInt(topics[1]);
     }
   }
-  throw new Error("chainlens.request: failed to parse jobId from tx receipt");
+  throw new Error("chain-lens.request: failed to parse jobId from tx receipt");
 }
 
 export async function requestHandler(
@@ -75,13 +75,13 @@ export async function requestHandler(
   deps: RequestDeps,
 ): Promise<RequestResult> {
   if (!/^0x[0-9a-fA-F]{40}$/.test(input.seller)) {
-    throw new Error(`chainlens.request: invalid seller address '${input.seller}'`);
+    throw new Error(`chain-lens.request: invalid seller address '${input.seller}'`);
   }
   if (!/^\d+$/.test(input.amount)) {
-    throw new Error(`chainlens.request: amount must be a non-negative integer string (USDC atomic units)`);
+    throw new Error(`chain-lens.request: amount must be a non-negative integer string (USDC atomic units)`);
   }
   const amount = BigInt(input.amount);
-  if (amount <= 0n) throw new Error("chainlens.request: amount must be > 0");
+  if (amount <= 0n) throw new Error("chain-lens.request: amount must be > 0");
   const apiId = BigInt(input.api_id ?? 0);
   const taskTypeId = deps.taskTypeId(input.task_type);
   const inputsHash = deps.inputsHash(input.inputs);
@@ -128,7 +128,7 @@ export async function requestHandler(
       }
     } else if (res.status !== 404) {
       // 404 just means evidence row not yet written — keep polling.
-      throw new Error(`chainlens.request: evidence poll failed ${res.status}`);
+      throw new Error(`chain-lens.request: evidence poll failed ${res.status}`);
     }
     await wait(deps.pollIntervalMs);
   }
@@ -141,7 +141,7 @@ export async function requestHandler(
 }
 
 export const requestToolDefinition = {
-  name: "chainlens.request",
+  name: "chain-lens.request",
   description:
     "Create a paid ChainLens job. Approves USDC, calls createJob on the v2 escrow, then waits for the evidence to be recorded.",
   inputSchema: {

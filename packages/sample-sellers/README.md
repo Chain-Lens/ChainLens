@@ -1,4 +1,4 @@
-# @chainlens/sample-sellers
+# @chain-lens/sample-sellers
 
 Reference seller agents demonstrating how a ChainLens Type 2 seller can be
 implemented. Each wrapper runs a small Express service that the gateway can
@@ -24,9 +24,9 @@ Each server exposes:
 ## Running locally
 
 ```bash
-pnpm --filter @chainlens/sample-sellers dev:blockscout   # :8081
-pnpm --filter @chainlens/sample-sellers dev:defillama    # :8082
-pnpm --filter @chainlens/sample-sellers dev:sourcify     # :8083
+pnpm --filter @chain-lens/sample-sellers dev:blockscout   # :8081
+pnpm --filter @chain-lens/sample-sellers dev:defillama    # :8082
+pnpm --filter @chain-lens/sample-sellers dev:sourcify     # :8083
 ```
 
 Example call:
@@ -40,11 +40,11 @@ curl -X POST http://localhost:8082/ \
 ## Docker
 
 ```bash
-docker build -f packages/sample-sellers/docker/Dockerfile.blockscout -t chainlens/blockscout-wrapper .
-docker build -f packages/sample-sellers/docker/Dockerfile.defillama  -t chainlens/defillama-wrapper  .
-docker build -f packages/sample-sellers/docker/Dockerfile.sourcify   -t chainlens/sourcify-wrapper   .
+docker build -f packages/sample-sellers/docker/Dockerfile.blockscout -t chain-lens/blockscout-wrapper .
+docker build -f packages/sample-sellers/docker/Dockerfile.defillama  -t chain-lens/defillama-wrapper  .
+docker build -f packages/sample-sellers/docker/Dockerfile.sourcify   -t chain-lens/sourcify-wrapper   .
 
-docker run -p 8082:8082 chainlens/defillama-wrapper
+docker run -p 8082:8082 chain-lens/defillama-wrapper
 ```
 
 The Dockerfiles expect to be built from the repo root so pnpm can resolve the
@@ -54,7 +54,7 @@ compiled JS for that wrapper's module tree; no workspace siblings are shipped.
 ## Tests
 
 ```bash
-pnpm --filter @chainlens/sample-sellers test
+pnpm --filter @chain-lens/sample-sellers test
 ```
 
 Handlers are written as `makeXxxHandler(deps)` where `deps.fetch` is

@@ -1,4 +1,4 @@
-import { ApiStatus, ApiMarketEscrowAbi } from "@chainlens/shared";
+import { ApiStatus, ApiMarketEscrowAbi } from "@chain-lens/shared";
 import { env } from "../config/env.js";
 import { walletClient, publicClient } from "../config/viem.js";
 import prisma from "../config/prisma.js";

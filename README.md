@@ -47,7 +47,7 @@ every answer is independently verifiable.
 | [`packages/backend`](packages/backend) | Express gateway: `/api/sellers`, `/api/jobs`, `/api/evidence/:jobId`, `/api/reputation/:addr`. Listens for v2 events and finalizes jobs. |
 | [`packages/frontend`](packages/frontend) | Next.js 15 marketplace, evidence explorer, reputation pages. |
 | [`packages/shared`](packages/shared) | Contract ABIs, addresses, task type registry, chain configs. |
-| [`packages/mcp-tool`](packages/mcp-tool) | `@chainlens/mcp-tool` — MCP server for Claude Desktop with `chainlens.discover` / `chainlens.request` / `chainlens.status`. |
+| [`packages/mcp-tool`](packages/mcp-tool) | `@chain-lens/mcp-tool` — MCP server for Claude Desktop with `chain-lens.discover` / `chain-lens.request` / `chain-lens.status`. |
 | [`packages/sample-sellers`](packages/sample-sellers) | Reference seller agents (Blockscout / DeFiLlama / Sourcify) + Dockerfiles. |
 
 ---
@@ -75,20 +75,20 @@ committed. Bad responses trigger refund + reputation penalty automatically.
 pnpm install
 cp .env.example .env                                  # fill PLATFORM_URL, PRIVATE_KEY, DATABASE_URL
 docker compose up -d                                  # postgres
-pnpm --filter @chainlens/backend db:migrate
+pnpm --filter @chain-lens/backend db:migrate
 pnpm dev                                              # starts backend + frontend
 ```
 
 Run a sample seller in another terminal:
 
 ```bash
-pnpm --filter @chainlens/sample-sellers dev:defillama # :8082
+pnpm --filter @chain-lens/sample-sellers dev:defillama # :8082
 ```
 
 - **Buyers:** [docs/BUYER_GUIDE.md](docs/BUYER_GUIDE.md) — wallet setup,
   Claude Desktop config, first query, evidence verification.
 - **Sellers:** [packages/create-seller](packages/create-seller) +
-  [SKILL.md](packages/create-seller/SKILL.md) — `npx @chainlens/create-seller init`,
+  [SKILL.md](packages/create-seller/SKILL.md) — `npx @chain-lens/create-seller init`,
   deploy, register, monitor. An IDE agent (Claude Code, Cursor) can
   drive the whole flow from the SKILL.md.
 - **Demos:** [docs/DEMO.md](docs/DEMO.md) — three end-to-end scenarios
@@ -98,7 +98,7 @@ pnpm --filter @chainlens/sample-sellers dev:defillama # :8082
 
 ## Agent integration (MCP)
 
-The [`@chainlens/mcp-tool`](packages/mcp-tool) package exposes three tools
+The [`@chain-lens/mcp-tool`](packages/mcp-tool) package exposes three tools
 over Model Context Protocol stdio, so Claude Desktop (and any MCP client)
 can spend USDC on data. Install with `npx` — no clone required:
 
@@ -106,11 +106,11 @@ can spend USDC on data. Install with `npx` — no clone required:
 // ~/Library/Application Support/Claude/claude_desktop_config.json
 {
   "mcpServers": {
-    "chainlens": {
+    "chain-lens": {
       "command": "npx",
-      "args": ["-y", "@chainlens/mcp-tool"],
+      "args": ["-y", "@chain-lens/mcp-tool"],
       "env": {
-        "CHAINLENS_API_URL": "https://your-chainlens/api",
+        "CHAIN_LENS_API_URL": "https://your-chain-lens/api",
         "CHAIN_ID": "84532",
         "RPC_URL": "https://base-sepolia.g.alchemy.com/v2/<YOUR_KEY>",
         "WALLET_PRIVATE_KEY": "0x..."
@@ -122,9 +122,9 @@ can spend USDC on data. Install with `npx` — no clone required:
 
 Tools:
 
-- `chainlens.discover` — find sellers for a task type
-- `chainlens.request` — approve USDC → createJob → poll evidence
-- `chainlens.status` — fetch stored evidence for a job id
+- `chain-lens.discover` — find sellers for a task type
+- `chain-lens.request` — approve USDC → createJob → poll evidence
+- `chain-lens.status` — fetch stored evidence for a job id
 
 `WALLET_PRIVATE_KEY` is optional; without it the agent can still `discover`
 and read `status`, just not spend.

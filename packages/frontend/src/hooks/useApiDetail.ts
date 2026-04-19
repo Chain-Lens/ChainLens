@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
 import { mockApis } from "@/lib/mock-data";
-import type { ApiListingPublic } from "@chainlens/shared";
+import type { ApiListingPublic } from "@chain-lens/shared";
 
 export function useApiDetail(id: string) {
   const [api, setApi] = useState<ApiListingPublic | null>(null);

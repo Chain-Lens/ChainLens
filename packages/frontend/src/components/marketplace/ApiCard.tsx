@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatUnits } from "viem";
-import type { ApiListingPublic } from "@chainlens/shared";
+import type { ApiListingPublic } from "@chain-lens/shared";
 
 export default function ApiCard({ api }: { api: ApiListingPublic }) {
   return (

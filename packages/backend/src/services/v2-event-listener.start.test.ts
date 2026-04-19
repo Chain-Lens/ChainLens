@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { CONTRACT_ADDRESSES_V2, SELLER_REGISTRY_ADDRESSES } from "@chainlens/shared";
+import { CONTRACT_ADDRESSES_V2, SELLER_REGISTRY_ADDRESSES } from "@chain-lens/shared";
 import {
   startV2EventListener,
   type V2ListenerDeps,

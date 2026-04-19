@@ -1,14 +1,14 @@
 {
-  "name": "chainlens",
+  "name": "chain-lens",
   "private": true,
   "scripts": {
-    "dev": "pnpm -r --parallel --filter @chainlens/backend --filter @chainlens/frontend dev",
-    "build": "pnpm --filter @chainlens/shared build && pnpm --filter @chainlens/backend build && pnpm --filter @chainlens/frontend build",
+    "dev": "pnpm -r --parallel --filter @chain-lens/backend --filter @chain-lens/frontend dev",
+    "build": "pnpm --filter @chain-lens/shared build && pnpm --filter @chain-lens/backend build && pnpm --filter @chain-lens/frontend build",
     "test": "pnpm -r test",
-    "contracts:compile": "pnpm --filter @chainlens/contracts compile",
-    "contracts:test": "pnpm --filter @chainlens/contracts test",
-    "db:migrate": "pnpm --filter @chainlens/backend db:migrate",
-    "db:studio": "pnpm --filter @chainlens/backend db:studio",
+    "contracts:compile": "pnpm --filter @chain-lens/contracts compile",
+    "contracts:test": "pnpm --filter @chain-lens/contracts test",
+    "db:migrate": "pnpm --filter @chain-lens/backend db:migrate",
+    "db:studio": "pnpm --filter @chain-lens/backend db:studio",
     "clean": "pnpm -r exec rm -rf dist node_modules .next"
   },
   "devDependencies": {

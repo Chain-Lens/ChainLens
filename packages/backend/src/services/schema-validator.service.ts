@@ -1,6 +1,7 @@
 import Ajv, { type ValidateFunction } from "ajv";
 import addFormats from "ajv-formats";
 import { AppError } from "../utils/errors.js";
+import { assertSafeOutboundUrl } from "../utils/network.js";
 
 const ajv = new Ajv({ strict: true, allErrors: true });
 addFormats(ajv);
@@ -51,10 +52,11 @@ async function getValidator(schemaURI: string): Promise<ValidateFunction> {
 }
 
 async function fetchSchema(uri: string): Promise<object> {
-  const url = uri.startsWith("ipfs://")
+  const resolvedUrl = uri.startsWith("ipfs://")
     ? `https://ipfs.io/ipfs/${uri.slice("ipfs://".length)}`
     : uri;
-  const response = await fetch(url);
+  const url = await assertSafeOutboundUrl(resolvedUrl);
+  const response = await fetch(url, { redirect: "error" });
   if (!response.ok) {
     throw new AppError(
       `schema fetch failed: ${uri} -> HTTP ${response.status}`,

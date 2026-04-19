@@ -1,12 +1,12 @@
-# Build from repo root: `docker build -f packages/sample-sellers/docker/Dockerfile.sourcify -t chainlens/sourcify-wrapper .`
+# Build from repo root: `docker build -f packages/sample-sellers/docker/Dockerfile.sourcify -t chain-lens/sourcify-wrapper .`
 FROM node:20-alpine AS build
 WORKDIR /repo
 RUN corepack enable
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
 COPY packages/sample-sellers/package.json packages/sample-sellers/tsconfig.json packages/sample-sellers/
 COPY packages/sample-sellers/src packages/sample-sellers/src
-RUN pnpm install --filter @chainlens/sample-sellers... --frozen-lockfile
-RUN pnpm --filter @chainlens/sample-sellers build
+RUN pnpm install --filter @chain-lens/sample-sellers... --frozen-lockfile
+RUN pnpm --filter @chain-lens/sample-sellers build
 
 FROM node:20-alpine
 WORKDIR /app

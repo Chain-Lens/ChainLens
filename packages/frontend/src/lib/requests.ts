@@ -1,4 +1,4 @@
-import type { PaymentRequest } from "@chainlens/shared";
+import type { PaymentRequest } from "@chain-lens/shared";
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001/api";

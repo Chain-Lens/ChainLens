@@ -1,11 +1,11 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { parseEventLogs } from "viem";
-import { ApiMarketEscrowAbi } from "@chainlens/shared";
+import { ApiMarketEscrowAbi } from "@chain-lens/shared";
 import { publicClient } from "../config/viem.js";
 import { env } from "../config/env.js";
 import prisma from "../config/prisma.js";
 import * as gatewayService from "../services/gateway.service.js";
-import { PaymentStatus } from "@chainlens/shared";
+import { PaymentStatus } from "@chain-lens/shared";
 import { logger } from "../utils/logger.js";
 
 const router = Router();

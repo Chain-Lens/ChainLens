@@ -29,15 +29,15 @@ export interface HealthView {
   error?: string;
 }
 
-const STATUS_HELP = `chainlens-seller status [options]
+const STATUS_HELP = `chain-lens-seller status [options]
 
 Options:
   --wallet <0x...>   Seller payout address (required).
-  --gateway <url>    Backend URL (default: \$CHAINLENS_API_URL or http://localhost:3001/api).
+  --gateway <url>    Backend URL (default: \$CHAIN_LENS_API_URL or http://localhost:3001/api).
 
 Reports on-chain reputation (jobsCompleted / jobsFailed / totalEarnings)
 plus a liveness check against the deployed /health endpoint if a
-.chainlens-deploy.json is present.
+.chain-lens-deploy.json is present.
 `;
 
 function normalize(raw: string): string {
@@ -65,7 +65,7 @@ export async function parseStatusArgs(
   }
 
   const gatewayUrl = normalize(
-    gateway ?? deps.env.CHAINLENS_API_URL ?? "http://localhost:3001/api",
+    gateway ?? deps.env.CHAIN_LENS_API_URL ?? "http://localhost:3001/api",
   );
   const deployState = await deps.readDeployState(deps.cwd);
   const healthUrl = deployState ? `${normalize(deployState.url)}/health` : null;
@@ -147,7 +147,7 @@ export async function runStatus(
             : `  not ok: ${health.status}\n`),
     );
   } else {
-    deps.stdout(`Health: no .chainlens-deploy.json — skip\n`);
+    deps.stdout(`Health: no .chain-lens-deploy.json — skip\n`);
   }
 
   return { reputation, health };

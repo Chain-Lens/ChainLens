@@ -17,13 +17,13 @@ import { requestHandler, requestToolDefinition, type RequestDeps } from "./tools
 export interface McpServerDeps {
   discover: DiscoverDeps;
   status: StatusDeps;
-  /** Omit to disable chainlens.request (no wallet configured). */
+  /** Omit to disable chain-lens.request (no wallet configured). */
   request?: RequestDeps;
 }
 
 export function buildMcpServer(deps: McpServerDeps): Server {
   const server = new Server(
-    { name: "chainlens-mcp", version: "0.0.1" },
+    { name: "chain-lens-mcp", version: "0.0.1" },
     { capabilities: { tools: {} } },
   );
 
@@ -47,7 +47,7 @@ export function buildMcpServer(deps: McpServerDeps): Server {
       if (name === requestToolDefinition.name) {
         if (!deps.request) {
           throw new Error(
-            "chainlens.request is not configured — set WALLET_PRIVATE_KEY to enable paid requests.",
+            "chain-lens.request is not configured — set WALLET_PRIVATE_KEY to enable paid requests.",
           );
         }
         const result = await requestHandler(args as never, deps.request);

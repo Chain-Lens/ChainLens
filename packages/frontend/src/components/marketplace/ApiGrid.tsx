@@ -1,4 +1,4 @@
-import type { ApiListingPublic } from "@chainlens/shared";
+import type { ApiListingPublic } from "@chain-lens/shared";
 import ApiCard from "./ApiCard";
 
 export default function ApiGrid({ apis }: { apis: ApiListingPublic[] }) {

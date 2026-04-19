@@ -23,7 +23,7 @@ import {
   USDC_ADDRESSES,
   baseSepolia,
   baseMainnet,
-} from "@chainlens/shared";
+} from "@chain-lens/shared";
 
 import { loadMcpConfig } from "./config.js";
 import { buildMcpServer } from "./server.js";
@@ -121,6 +121,6 @@ async function main() {
 
 main().catch((err) => {
   // eslint-disable-next-line no-console
-  console.error("chainlens-mcp fatal:", err);
+  console.error("chain-lens-mcp fatal:", err);
   process.exit(1);
 });

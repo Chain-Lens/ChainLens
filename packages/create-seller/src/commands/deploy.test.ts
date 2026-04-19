@@ -53,7 +53,7 @@ test("runDeploy: writes state file with extracted URL on success", async () => {
 
   const result = await runDeploy(deps);
   assert.equal(result.url, "https://my-seller-abc.vercel.app");
-  assert.equal(result.statePath, "/tmp/fake-seller/.chainlens-deploy.json");
+  assert.equal(result.statePath, "/tmp/fake-seller/.chain-lens-deploy.json");
 
   assert.deepEqual(calls[0], { cmd: "vercel", args: ["--version"] });
   assert.deepEqual(calls[1], { cmd: "vercel", args: ["--prod", "--yes"] });
@@ -112,7 +112,7 @@ test("readDeployState: round-trips through a real file", async () => {
   const dir = await mkdtemp(join(tmpdir(), "deploy-state-"));
   try {
     await writeFile(
-      join(dir, ".chainlens-deploy.json"),
+      join(dir, ".chain-lens-deploy.json"),
       JSON.stringify({ url: "https://x.vercel.app", deployedAt: "2026-04-19T00:00:00Z" }),
     );
     const state = await readDeployState(dir);
@@ -134,7 +134,7 @@ test("readDeployState: returns null when file is missing", async () => {
 test("readDeployState: returns null when file is malformed", async () => {
   const dir = await mkdtemp(join(tmpdir(), "deploy-state-"));
   try {
-    await writeFile(join(dir, ".chainlens-deploy.json"), "not json");
+    await writeFile(join(dir, ".chain-lens-deploy.json"), "not json");
     assert.equal(await readDeployState(dir), null);
   } finally {
     await rm(dir, { recursive: true, force: true });

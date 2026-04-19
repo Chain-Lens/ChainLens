@@ -21,10 +21,10 @@ test("parseStatusArgs: rejects bad wallet", async () => {
   );
 });
 
-test("parseStatusArgs: env CHAINLENS_API_URL fallback + trailing slash strip", async () => {
+test("parseStatusArgs: env CHAIN_LENS_API_URL fallback + trailing slash strip", async () => {
   const opts = await parseStatusArgs(
     ["--wallet", "0x".padEnd(42, "a")],
-    baseDeps({ env: { CHAINLENS_API_URL: "https://gw.example/api//" } as NodeJS.ProcessEnv }),
+    baseDeps({ env: { CHAIN_LENS_API_URL: "https://gw.example/api//" } as NodeJS.ProcessEnv }),
   );
   assert.equal(opts.gatewayUrl, "https://gw.example/api");
   assert.equal(opts.healthUrl, null);
@@ -135,5 +135,5 @@ test("runStatus: skips health when no deploy state", async () => {
     },
     { fetch: fakeFetch, stdout: (m) => out.push(m) },
   );
-  assert.match(out.join(""), /Health: no \.chainlens-deploy\.json — skip/);
+  assert.match(out.join(""), /Health: no \.chain-lens-deploy\.json — skip/);
 });

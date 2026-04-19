@@ -1,5 +1,5 @@
 {
-  "name": "@chainlens/create-seller",
+  "name": "@chain-lens/create-seller",
   "version": "0.0.1",
   "description": "Scaffold, deploy, and register a ChainLens seller (data wrapper) from a single CLI.",
   "license": "MIT",
@@ -9,7 +9,7 @@
     "directory": "packages/create-seller"
   },
   "keywords": [
-    "chainlens",
+    "chain-lens",
     "cli",
     "seller",
     "web3",
@@ -19,8 +19,8 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "create-chainlens-seller": "dist/index.js",
-    "chainlens-seller": "dist/index.js"
+    "create-chain-lens-seller": "dist/index.js",
+    "chain-lens-seller": "dist/index.js"
   },
   "files": [
     "dist",

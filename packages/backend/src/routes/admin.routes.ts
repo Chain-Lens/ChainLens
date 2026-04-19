@@ -4,6 +4,8 @@ import * as adminService from "../services/admin.service.js";
 import { requireAdmin, type AuthenticatedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import prisma from "../config/prisma.js";
+import { scanResponse } from "../services/injection-filter.service.js";
+import { assertSafeOutboundUrl } from "../utils/network.js";
 
 const router = Router();
 
@@ -73,10 +75,12 @@ router.post(
         const payload = requestPayload ?? api.exampleRequest ?? {};
         const hasBody = Object.keys(payload as object).length > 0;
         const method = requestMethod?.toUpperCase() || (hasBody ? "POST" : "GET");
+        const safeUrl = await assertSafeOutboundUrl(api.endpoint);
 
         const fetchOptions: RequestInit = {
           method,
           signal: AbortSignal.timeout(8000),
+          redirect: "error",
         };
 
         if (method !== "GET" && method !== "HEAD") {
@@ -84,10 +88,15 @@ router.post(
           fetchOptions.body = JSON.stringify(payload);
         }
 
-        const response = await fetch(api.endpoint, fetchOptions);
+        const response = await fetch(safeUrl, fetchOptions);
         status = response.status;
         const text = await response.text();
         try { body = JSON.parse(text); } catch { body = text; }
+
+        const scan = scanResponse(body);
+        if (!scan.clean) {
+          error = scan.reason ?? "response_rejected";
+        }
       } catch (err) {
         error = err instanceof Error ? err.message : "Request failed";
       }
@@ -96,6 +105,7 @@ router.post(
         status,
         body,
         error,
+        injectionFree: error === null,
         latencyMs: Date.now() - startedAt,
       });
     } catch (err) {

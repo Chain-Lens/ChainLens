@@ -1,4 +1,4 @@
-import { ApiMarketEscrowAbi } from "@chainlens/shared";
+import { ApiMarketEscrowAbi } from "@chain-lens/shared";
 import { env } from "../config/env.js";
 import { publicClient } from "../config/viem.js";
 import * as paymentService from "./payment.service.js";

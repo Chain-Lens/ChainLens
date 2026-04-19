@@ -17,7 +17,7 @@ importers:
 
   packages/backend:
     dependencies:
-      '@chainlens/shared':
+      '@chain-lens/shared':
         specifier: workspace:*
         version: link:../shared
       '@prisma/client':
@@ -127,7 +127,7 @@ importers:
 
   packages/frontend:
     dependencies:
-      '@chainlens/shared':
+      '@chain-lens/shared':
         specifier: workspace:*
         version: link:../shared
       '@rainbow-me/rainbowkit':
@@ -182,7 +182,7 @@ importers:
 
   packages/mcp-tool:
     dependencies:
-      '@chainlens/shared':
+      '@chain-lens/shared':
         specifier: workspace:*
         version: link:../shared
       '@modelcontextprotocol/sdk':

@@ -1,4 +1,4 @@
-import type { ApiListingPublic } from "@chainlens/shared";
+import type { ApiListingPublic } from "@chain-lens/shared";
 import { mockApis } from "@/lib/mock-data";
 
 const BASE_URL =

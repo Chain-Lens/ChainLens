@@ -1,4 +1,4 @@
-# @chainlens/shared
+# @chain-lens/shared
 
 Shared TypeScript types, contract ABIs, deployed addresses, chain configs, and
 task-type registry for [ChainLens](https://github.com/lejuho/ChainLens) — a
@@ -6,14 +6,14 @@ Web2-data relay market for autonomous agents on Base.
 
 Used internally by:
 
-- `@chainlens/mcp-tool` — MCP client for Claude Desktop
-- `@chainlens/backend` — gateway service
-- `@chainlens/frontend` — marketplace UI
+- `@chain-lens/mcp-tool` — MCP client for Claude Desktop
+- `@chain-lens/backend` — gateway service
+- `@chain-lens/frontend` — marketplace UI
 
 ## Install
 
 ```bash
-npm install @chainlens/shared
+npm install @chain-lens/shared
 ```
 
 ## Usage
@@ -25,7 +25,7 @@ import {
   baseSepolia,
   INITIAL_TASK_TYPE_NAMES,
   PaymentStatus,
-} from "@chainlens/shared";
+} from "@chain-lens/shared";
 ```
 
 Exports include:

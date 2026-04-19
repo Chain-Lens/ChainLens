@@ -29,7 +29,7 @@ const VALID_TASK_TYPES = new Set([
 
 const USDC_DECIMALS = 6;
 
-const REGISTER_HELP = `chainlens-seller register [options]
+const REGISTER_HELP = `chain-lens-seller register [options]
 
 Options:
   --task-type <id>      Task type (required unless set in package.json).
@@ -37,8 +37,8 @@ Options:
   --wallet <0x...>      Payout address (required).
   --name <string>       Listing name (default: directory basename).
   --description <text>  Listing description.
-  --endpoint <url>      Seller URL (default: read from .chainlens-deploy.json).
-  --gateway <url>       Backend URL (default: \$CHAINLENS_API_URL or http://localhost:3001/api).
+  --endpoint <url>      Seller URL (default: read from .chain-lens-deploy.json).
+  --gateway <url>       Backend URL (default: \$CHAIN_LENS_API_URL or http://localhost:3001/api).
 
 Valid task types:
   blockscout_contract_source, blockscout_tx_info, defillama_tvl,
@@ -109,7 +109,7 @@ export async function parseRegisterArgs(
     const state = await deps.readDeployState(deps.cwd);
     if (!state) {
       throw new Error(
-        `register: --endpoint not given and no ${".chainlens-deploy.json"} in cwd — run \`chainlens-seller deploy\` first or pass --endpoint explicitly`,
+        `register: --endpoint not given and no ${".chain-lens-deploy.json"} in cwd — run \`chain-lens-seller deploy\` first or pass --endpoint explicitly`,
       );
     }
     endpoint = state.url;
@@ -124,7 +124,7 @@ export async function parseRegisterArgs(
   if (!description) description = `ChainLens seller for ${taskType}`;
 
   gatewayUrl = normalizeGatewayUrl(
-    gatewayUrl ?? deps.env.CHAINLENS_API_URL ?? "http://localhost:3001/api",
+    gatewayUrl ?? deps.env.CHAIN_LENS_API_URL ?? "http://localhost:3001/api",
   );
 
   return {

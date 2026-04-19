@@ -59,12 +59,12 @@ describe("buildEvidenceURI", () => {
 
   it("strips trailing slashes from the platform URL", () => {
     assert.equal(
-      buildEvidenceURI(7n, "https://api.chainlens.xyz/"),
-      "https://api.chainlens.xyz/api/evidence/7",
+      buildEvidenceURI(7n, "https://api.chain-lens.xyz/"),
+      "https://api.chain-lens.xyz/api/evidence/7",
     );
     assert.equal(
-      buildEvidenceURI(7n, "https://api.chainlens.xyz///"),
-      "https://api.chainlens.xyz/api/evidence/7",
+      buildEvidenceURI(7n, "https://api.chain-lens.xyz///"),
+      "https://api.chain-lens.xyz/api/evidence/7",
     );
   });
 });

@@ -1,5 +1,5 @@
 import prisma from "../config/prisma.js";
-import { ApiStatus } from "@chainlens/shared";
+import { ApiStatus } from "@chain-lens/shared";
 import { BadRequestError, NotFoundError } from "../utils/errors.js";
 
 export async function listApproved(filters?: {

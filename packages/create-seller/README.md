@@ -1,4 +1,4 @@
-# @chainlens/create-seller
+# @chain-lens/create-seller
 
 CLI for scaffolding, deploying, and registering a
 [ChainLens](https://github.com/lejuho/ChainLens) seller — a data wrapper
@@ -6,14 +6,14 @@ that agents pay in USDC to call.
 
 ```bash
 # 1. Scaffold a new seller project
-npx @chainlens/create-seller init my-seller
+npx @chain-lens/create-seller init my-seller
 
 # 2. Implement your task handler in src/handler.ts, then deploy
 cd my-seller
-npx @chainlens/create-seller deploy
+npx @chain-lens/create-seller deploy
 
 # 3. Register the deployed endpoint with the gateway
-npx @chainlens/create-seller register \
+npx @chain-lens/create-seller register \
   --task-type defillama_tvl \
   --price 0.05 \
   --wallet 0xYourPayoutAddress

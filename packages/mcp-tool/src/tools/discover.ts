@@ -1,5 +1,5 @@
 /**
- * `chainlens.discover` — find registered sellers for a task type.
+ * `chain-lens.discover` — find registered sellers for a task type.
  *
  * Thin wrapper over `GET /api/sellers` so Claude Desktop (and other MCP clients)
  * can find who serves a given capability before requesting data.
@@ -42,13 +42,13 @@ export async function discoverHandler(
 
   const res = await deps.fetch(url);
   if (!res.ok) {
-    throw new Error(`chainlens.discover: backend returned ${res.status} ${res.statusText}`);
+    throw new Error(`chain-lens.discover: backend returned ${res.status} ${res.statusText}`);
   }
   return (await res.json()) as DiscoverResult;
 }
 
 export const discoverToolDefinition = {
-  name: "chainlens.discover",
+  name: "chain-lens.discover",
   description:
     "Find ChainLens sellers that serve a given task type. Returns endpoint, price per call, reputation stats.",
   inputSchema: {

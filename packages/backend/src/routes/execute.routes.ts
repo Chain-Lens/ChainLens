@@ -1,12 +1,13 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { parseEventLogs } from "viem";
-import { ApiMarketEscrowAbi } from "@chainlens/shared";
+import { ApiMarketEscrowAbi } from "@chain-lens/shared";
 import { publicClient } from "../config/viem.js";
 import { env } from "../config/env.js";
 import prisma from "../config/prisma.js";
 import * as gatewayService from "../services/gateway.service.js";
-import { PaymentStatus } from "@chainlens/shared";
+import { PaymentStatus } from "@chain-lens/shared";
 import { logger } from "../utils/logger.js";
+import { BadRequestError } from "../utils/errors.js";
 
 const router = Router();
 
@@ -65,16 +66,34 @@ async function handleExecute(req: Request, res: Response, next: NextFunction) {
     // PaymentReceived 이벤트 파싱
     const logs = parseEventLogs({
       abi: ApiMarketEscrowAbi as never,
-      logs: receipt.logs,
+      logs: receipt.logs.filter(
+        (log) => log.address.toLowerCase() === env.CONTRACT_ADDRESS.toLowerCase()
+      ),
       eventName: "PaymentReceived",
     });
 
-    if (logs.length === 0) {
-      res.status(400).json({ error: "No PaymentReceived event found in tx" });
+    const matchingEvents = logs.filter((log) => {
+      const event = log as unknown as {
+        args: {
+          apiId: bigint;
+          seller: string;
+          amount: bigint;
+        };
+      };
+      return (
+        api.onChainId !== null &&
+        Number(event.args.apiId) === api.onChainId &&
+        event.args.seller.toLowerCase() === api.sellerAddress.toLowerCase() &&
+        event.args.amount >= BigInt(api.price)
+      );
+    });
+
+    if (matchingEvents.length !== 1) {
+      res.status(400).json({ error: "Could not uniquely verify payment for this API" });
       return;
     }
 
-    const event = (logs[0] as unknown as {
+    const event = (matchingEvents[0] as unknown as {
       args: {
         paymentId: bigint;
         buyer: string;
@@ -84,15 +103,8 @@ async function handleExecute(req: Request, res: Response, next: NextFunction) {
       };
     }).args;
 
-    // onChainId 일치 확인
-    if (api.onChainId === null || Number(event.apiId) !== api.onChainId) {
-      res.status(400).json({ error: "Payment is for a different API" });
-      return;
-    }
-
-    // 금액 확인
-    if (event.amount < BigInt(api.price)) {
-      res.status(400).json({ error: "Insufficient payment amount" });
+    if (receipt.to?.toLowerCase() !== env.CONTRACT_ADDRESS.toLowerCase()) {
+      res.status(400).json({ error: "Payment transaction targets a different contract" });
       return;
     }
 
@@ -125,6 +137,14 @@ async function handleExecute(req: Request, res: Response, next: NextFunction) {
       req.method === "POST" && req.body && Object.keys(req.body).length > 0
         ? (req.body as Record<string, unknown>)
         : undefined;
+
+    if (
+      req.method === "POST" &&
+      agentPayload !== undefined &&
+      (typeof agentPayload !== "object" || Array.isArray(agentPayload))
+    ) {
+      throw new BadRequestError("Execution payload must be a JSON object");
+    }
 
     // ── 4단계: seller API 호출 + 온체인 complete ──────────────────
     const result = await gatewayService.execute(paymentRequest.id, agentPayload);

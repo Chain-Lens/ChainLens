@@ -1,7 +1,8 @@
-import type { OnChainTaskTypeConfig } from "@chainlens/shared";
+import type { OnChainTaskTypeConfig } from "@chain-lens/shared";
 import { validateAgainstSchema } from "./schema-validator.service.js";
 import { scanResponse } from "./injection-filter.service.js";
 import { getTestPayload } from "./test-payloads.js";
+import { assertSafeOutboundUrl } from "../utils/network.js";
 
 // Lazy import so unit tests that stub `getConfig` never load the on-chain
 // module (which pulls env + viem at module load).
@@ -94,11 +95,13 @@ async function probeCapability(
 
   let response: Response;
   try {
-    response = await fetchImpl(endpointUrl, {
+    const safeUrl = await assertSafeOutboundUrl(endpointUrl);
+    response = await fetchImpl(safeUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ task_type: capability, inputs: payload }),
       signal: AbortSignal.timeout(Number(cfg.maxResponseTime) * 1000),
+      redirect: "error",
     });
   } catch (err) {
     return {

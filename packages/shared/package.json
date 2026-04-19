@@ -1,5 +1,5 @@
 {
-  "name": "@chainlens/shared",
+  "name": "@chain-lens/shared",
   "version": "0.0.1",
   "description": "Shared types, ABIs, addresses, and task-type registry for ChainLens (Type 2 MVP).",
   "license": "MIT",

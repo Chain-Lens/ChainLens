@@ -1,5 +1,5 @@
 {
-  "name": "@chainlens/backend",
+  "name": "@chain-lens/backend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -18,7 +18,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@chainlens/shared": "workspace:*",
+    "@chain-lens/shared": "workspace:*",
     "@prisma/client": "^6.1.0",
     "ajv": "^8.18.0",
     "ajv-formats": "^3.0.1",

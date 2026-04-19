@@ -2,7 +2,9 @@ import { Router, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import * as apiService from "../services/api.service.js";
 import { validate } from "../middleware/validate.js";
-import { ApiStatus } from "@chainlens/shared";
+import { ApiStatus } from "@chain-lens/shared";
+import { BadRequestError } from "../utils/errors.js";
+import { assertSafeOutboundUrl } from "../utils/network.js";
 
 const router = Router();
 
@@ -13,10 +15,8 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
     const search = req.query.search as string | undefined;
     const status = req.query.status as string | undefined;
 
-    if (status === "PENDING") {
-      const apis = await apiService.listByStatus(ApiStatus.PENDING);
-      res.json(apis);
-      return;
+    if (status && status !== ApiStatus.APPROVED) {
+      throw new BadRequestError("Only approved APIs are publicly listable");
     }
 
     const apis = await apiService.listApproved({ category, search });
@@ -92,6 +92,7 @@ router.post(
   validate(registerSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      await assertSafeOutboundUrl(req.body.endpoint);
       const api = await apiService.register(req.body as z.infer<typeof registerSchema>);
       res.status(201).json(api);
     } catch (err) {

@@ -22,7 +22,7 @@ export interface DeployResult {
   statePath: string;
 }
 
-const STATE_FILE = ".chainlens-deploy.json";
+const STATE_FILE = ".chain-lens-deploy.json";
 
 const URL_RE = /https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.vercel\.app/i;
 
@@ -55,7 +55,7 @@ export async function runDeploy(deps: DeployDeps): Promise<DeployResult> {
   await deps.writeFile(statePath, payload);
 
   deps.stdout(`\nDeployed: ${url}\n`);
-  deps.stdout(`Saved to ${STATE_FILE}. Next: \`chainlens-seller register ...\`\n`);
+  deps.stdout(`Saved to ${STATE_FILE}. Next: \`chain-lens-seller register ...\`\n`);
   return { url, statePath };
 }
 
@@ -113,7 +113,7 @@ export async function deployCommand(args: string[]): Promise<void> {
   for (const a of args) {
     if (a === "--help" || a === "-h") {
       process.stdout.write(
-        `chainlens-seller deploy\n\nDeploys the current seller project to Vercel (production).\nWraps \`vercel --prod --yes\`. Requires \`vercel login\` once.\n`,
+        `chain-lens-seller deploy\n\nDeploys the current seller project to Vercel (production).\nWraps \`vercel --prod --yes\`. Requires \`vercel login\` once.\n`,
       );
       return;
     }

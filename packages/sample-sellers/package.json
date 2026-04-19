@@ -1,5 +1,5 @@
 {
-  "name": "@chainlens/sample-sellers",
+  "name": "@chain-lens/sample-sellers",
   "version": "0.1.0",
   "private": true,
   "description": "Reference seller agents (Blockscout, DeFiLlama, Sourcify) for the ChainLens Type 2 MVP.",

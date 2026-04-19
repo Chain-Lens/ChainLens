@@ -11,9 +11,9 @@ describe("loadMcpConfig", () => {
     assert.equal(cfg.walletPrivateKey, undefined);
   });
 
-  it("strips trailing slashes from CHAINLENS_API_URL", () => {
-    const cfg = loadMcpConfig({ CHAINLENS_API_URL: "https://api.chainlens.io/api///" });
-    assert.equal(cfg.apiBaseUrl, "https://api.chainlens.io/api");
+  it("strips trailing slashes from CHAIN_LENS_API_URL", () => {
+    const cfg = loadMcpConfig({ CHAIN_LENS_API_URL: "https://api.chain-lens.io/api///" });
+    assert.equal(cfg.apiBaseUrl, "https://api.chain-lens.io/api");
   });
 
   it("throws when CHAIN_ID is non-numeric", () => {

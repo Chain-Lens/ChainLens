@@ -61,7 +61,7 @@ export function parseInitArgs(argv: string[]): InitOptions {
   return { name, taskType, port, targetDir: join(process.cwd(), name), force };
 }
 
-const INIT_HELP = `chainlens-seller init <name> [options]
+const INIT_HELP = `chain-lens-seller init <name> [options]
 
 Scaffolds a new seller project in ./<name>/.
 
@@ -155,6 +155,6 @@ export async function initCommand(args: string[]): Promise<void> {
       `  pnpm install\n` +
       `  pnpm dev            # local server on :${opts.port}\n` +
       `  # edit src/handler.ts\n` +
-      `  npx @chainlens/create-seller deploy\n`,
+      `  npx @chain-lens/create-seller deploy\n`,
   );
 }
