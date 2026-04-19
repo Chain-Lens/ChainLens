@@ -61,3 +61,73 @@ export async function recordSellerResult(args: {
   await publicClient.waitForTransactionReceipt({ hash });
   return hash;
 }
+
+export interface OnChainSellerInfo {
+  sellerAddress: `0x${string}`;
+  name: string;
+  capabilities: readonly `0x${string}`[];
+  metadataURI: string;
+  registeredAt: bigint;
+  active: boolean;
+}
+
+export interface OnChainSellerStats {
+  completed: bigint;
+  failed: bigint;
+  earnings: bigint;
+}
+
+export async function getSellerInfo(
+  seller: `0x${string}`,
+): Promise<OnChainSellerInfo | null> {
+  const info = (await publicClient.readContract({
+    address: addressFor(SELLER_REGISTRY_ADDRESSES, "SellerRegistry"),
+    abi: SellerRegistryAbi,
+    functionName: "getSellerInfo",
+    args: [seller],
+  })) as OnChainSellerInfo;
+  if (info.registeredAt === 0n) return null;
+  return info;
+}
+
+export async function getSellerReputationBps(
+  seller: `0x${string}`,
+): Promise<bigint> {
+  return (await publicClient.readContract({
+    address: addressFor(SELLER_REGISTRY_ADDRESSES, "SellerRegistry"),
+    abi: SellerRegistryAbi,
+    functionName: "getReputation",
+    args: [seller],
+  })) as bigint;
+}
+
+export async function getSellerStats(
+  seller: `0x${string}`,
+): Promise<OnChainSellerStats> {
+  const addr = addressFor(SELLER_REGISTRY_ADDRESSES, "SellerRegistry");
+  const [completed, failed, earnings] = await Promise.all([
+    publicClient.readContract({
+      address: addr,
+      abi: SellerRegistryAbi,
+      functionName: "jobsCompleted",
+      args: [seller],
+    }),
+    publicClient.readContract({
+      address: addr,
+      abi: SellerRegistryAbi,
+      functionName: "jobsFailed",
+      args: [seller],
+    }),
+    publicClient.readContract({
+      address: addr,
+      abi: SellerRegistryAbi,
+      functionName: "totalEarnings",
+      args: [seller],
+    }),
+  ]);
+  return {
+    completed: completed as bigint,
+    failed: failed as bigint,
+    earnings: earnings as bigint,
+  };
+}

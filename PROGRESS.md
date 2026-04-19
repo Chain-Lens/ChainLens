@@ -26,7 +26,7 @@
 | 2 | seller-tester 자동 API 테스트 서비스 | ✅ Done |
 | 3 | Gateway 확장 (validation + responseHash/evidenceURI + reputation) | ✅ Done |
 | 4 | Evidence 저장 (Phase 1: DB) + `/api/evidence/:jobId` | ✅ Done |
-| 5 | Prisma 마이그레이션 (Job, SellerProfile, ApiTestResult) + reputation 엔드포인트 | 📅 Planned |
+| 5 | Prisma 마이그레이션 (Job, SellerProfile, ApiTestResult) + reputation 엔드포인트 | ✅ Done |
 | 6-7 | Event listener 확장 + E2E 테스트 | 📅 Planned |
 
 ### Week 3 — 프론트엔드 + MCP + 데모
@@ -74,6 +74,18 @@
 > 작업 단위(커밋 기준)로 누적 기록. 최신이 위.
 
 ### 2026-04-19
+
+- **Week 2 Day 5: SellerProfile/ApiTestResult 스키마 + reputation/jobs 엔드포인트**
+  - [packages/backend/prisma/schema.prisma](packages/backend/prisma/schema.prisma) — `SellerProfile` (`sellerAddress` unique, `endpointUrl`, `capabilities Json`, `pricePerCall Decimal(18,6)`, `status` + `@@index`, `jobsCompleted/jobsFailed/totalEarnings` 캐시) + `ApiTestResult` (`sellerAddress` + `capability`별 테스트 기록, `responseTimeMs`/`schemaValid`/`injectionFree`/`statusCode`) 모델 추가. `pnpm prisma generate`로 타입 재생성.
+  - [packages/backend/src/services/on-chain.service.ts](packages/backend/src/services/on-chain.service.ts) — SellerRegistry read 3종 추가: `getSellerInfo(addr)` (registeredAt===0n 시 null 반환해 "미등록" 명시), `getSellerReputationBps(addr)`, `getSellerStats(addr)` (completed/failed/earnings를 `Promise.all`로 1-RTT). `OnChainSellerInfo`/`OnChainSellerStats` 인터페이스 노출.
+  - [packages/backend/src/services/reputation.service.ts](packages/backend/src/services/reputation.service.ts) — pure DI 레이어: `ReputationDeps` (getSellerInfo/getSellerReputationBps/getSellerStats), `getSellerReputation(address, deps)`가 info 없으면 **조기 null** 반환 (불필요한 on-chain read 방지) → `Promise.all`로 bps+stats 병렬 조회 → bigint 전부 `.toString()` 직렬화한 `SellerReputation` 반환. `defaultReputationDeps()`는 lazy `import()` — 유닛 테스트가 viem/env 로드 없이 실행 가능.
+  - [packages/backend/src/services/jobs.service.ts](packages/backend/src/services/jobs.service.ts) — pure 페이지네이션 레이어: `normalizeFilter(filter)`가 limit [1, 100] 클램프 + `Math.floor` + buyer/seller `toLowerCase()` (DB 대소문자 매칭 일관성), `listJobs(filter, store)`가 `JobsStore` 인터페이스에 위임. 런타임 prisma import 없음.
+  - [packages/backend/src/services/jobs-store.ts](packages/backend/src/services/jobs-store.ts) — prisma 기반 `prismaJobsStore` (evidence-store.ts와 동일한 SRP 분리 패턴). `findMany`+`count`를 `Promise.all`로 병렬 실행, `orderBy: createdAt desc`, BigInt/Decimal/DateTime 전부 `.toString()`/`.toISOString()`로 `EvidenceView` 형태로 직렬화.
+  - [packages/backend/src/routes/reputation.routes.ts](packages/backend/src/routes/reputation.routes.ts) — `GET /api/reputation/:sellerAddress`. 0x40 정규식 검증 → lazy dep 싱글턴 → `getSellerReputation` → `{400: invalid_address, 404: seller_not_registered}`.
+  - [packages/backend/src/routes/jobs.routes.ts](packages/backend/src/routes/jobs.routes.ts) — `GET /api/jobs`. Zod `safeParse`로 쿼리 검증 (buyer/seller 0x40, taskType, status enum, limit/offset 숫자 강제 변환) → `listJobs(filter, prismaJobsStore)`. 검증 실패 시 `{400: invalid_query, details: zod.flatten()}`.
+  - [packages/backend/src/routes/index.ts](packages/backend/src/routes/index.ts) — `/reputation`, `/jobs` 마운트.
+  - 테스트: [reputation.service.test.ts](packages/backend/src/services/reputation.service.test.ts) 4 케이스 (미등록 null / shape 매핑 / uint256 초과값 직렬화 / 미등록 시 bps·stats 호출 차단), [jobs.service.test.ts](packages/backend/src/services/jobs.service.test.ts) 7 케이스 (normalizeFilter 6개: defaults / limit 클램프 / offset 클램프 / 주소 소문자 / taskType·status 패스스루 / 빈 필드 omit, listJobs 1개: store 정규화 필터 전달 + 페이지 리턴).
+  - 전체 **62/62 통과**, `tsc --noEmit` 클린.
 
 - **Week 2 Day 4: Evidence 저장 Phase 1 (DB) + `/api/evidence/:jobId`**
   - [packages/backend/prisma/schema.prisma](packages/backend/prisma/schema.prisma) — `Job` 모델 + `JobStatus` enum 추가 (`onchainJobId BigInt @unique`, `amount Decimal(18,6)`, `inputs/response Json?`, `inputsHash/responseHash/evidenceURI/errorReason`, `buyer/seller/taskType/status` 인덱스). `pnpm prisma generate`로 타입 재생성. `adminActions` pre-existing 타입 에러도 재생성으로 해결.
