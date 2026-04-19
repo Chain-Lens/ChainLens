@@ -1,5 +1,4 @@
-import { readFile } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { basename } from "node:path";
 import { readDeployState } from "./deploy.js";
 
 export interface RegisterOptions {
@@ -16,7 +15,6 @@ export interface RegisterDeps {
   cwd: string;
   env: NodeJS.ProcessEnv;
   fetch: typeof fetch;
-  readFile: (path: string) => Promise<string>;
   readDeployState: (cwd: string) => Promise<{ url: string } | null>;
   stdout: (msg: string) => void;
 }
@@ -69,7 +67,7 @@ export function normalizeGatewayUrl(raw: string): string {
 
 export async function parseRegisterArgs(
   argv: string[],
-  deps: Pick<RegisterDeps, "cwd" | "env" | "readFile" | "readDeployState">,
+  deps: Pick<RegisterDeps, "cwd" | "env" | "readDeployState">,
 ): Promise<RegisterOptions> {
   let name: string | null = null;
   let description: string | null = null;
@@ -188,7 +186,6 @@ export async function registerCommand(args: string[]): Promise<void> {
     cwd: process.cwd(),
     env: process.env,
     fetch: globalThis.fetch.bind(globalThis),
-    readFile: (p) => readFile(p, "utf8"),
     readDeployState,
     stdout: (m) => process.stdout.write(m),
   };

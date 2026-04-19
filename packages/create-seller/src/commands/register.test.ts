@@ -35,7 +35,6 @@ async function baseDeps(overrides: { cwd?: string; env?: NodeJS.ProcessEnv; depl
   return {
     cwd: overrides.cwd ?? "/tmp/my-seller",
     env: overrides.env ?? ({} as NodeJS.ProcessEnv),
-    readFile: async () => "{}",
     readDeployState: async () => overrides.deployState ?? null,
   };
 }
