@@ -75,6 +75,13 @@
 
 ### 2026-04-20
 
+- **보안 패치: `WALLET_PRIVATE_KEY` 평문 저장 패턴 디에mphsize + stderr 경고 (`mcp-tool` 0.0.3)**
+  - `WALLET_PRIVATE_KEY`를 `claude_desktop_config.json`에 평문으로 두는 패턴은 백업·sync·기타 앱 노출 + MCP 서버가 사용자 동의 없이 임의 tx 서명 가능 → 명시적 보안 위험.
+  - `mcp-tool/README.md`와 `docs/BUYER_GUIDE.md`의 기본(권장) 설정에서 `WALLET_PRIVATE_KEY` 제거 — 기본은 read-only(discover+status)로 안내. 유료 `request`는 별도 "Wallet / signing" 섹션으로 분리, 테스트넷 throwaway 지갑 전용 명시.
+  - `src/index.ts`에 `WALLET_PRIVATE_KEY` 감지 시 stderr 경고 출력. `server.ts`에 버전 sync (0.0.3).
+  - 영구 해결책인 `@chain-lens/sign` CLI (암호화된 키 + 비밀번호 prompt + per-tx 사용자 확인) 로드맵에 기록 — `0.1.x` 목표.
+  - 기능은 유지 (breaking change 아님). 0.0.2는 publish 후 deprecate.
+
 - **`@chain-lens/mcp-tool` + `create-seller` 0.0.2 bump (버전 일관성)**
   - `mcp-tool@0.0.1`은 이미 배포됐지만 deprecated된 `shared@0.0.1`을 pin해서 설치 시 경고. `mcp-tool@0.0.2`로 재배포해 `shared@0.0.2` pin 확인 (pnpm `workspace:*` → `0.0.2`로 치환).
   - `create-seller`도 같이 0.0.2 bump (독립 패키지지만 3개 패키지 버전 동기화).

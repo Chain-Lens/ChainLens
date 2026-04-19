@@ -70,6 +70,14 @@ function stableStringify(value: unknown): string {
 
 async function main() {
   const config = loadMcpConfig();
+  if (config.walletPrivateKey) {
+    process.stderr.write(
+      "⚠  chain-lens-mcp: WALLET_PRIVATE_KEY is set. This is a TESTNET-ONLY pattern — the key " +
+        "lives in plaintext in your MCP config and the server can sign arbitrary txs without " +
+        "interactive confirmation. Use a throwaway Base Sepolia wallet only. A safer signing " +
+        "flow (@chain-lens/sign CLI) is planned for 0.1.x.\n",
+    );
+  }
   const chain = chainFor(config.chainId);
   const escrowAddress = CONTRACT_ADDRESSES_V2[config.chainId];
   const usdcAddress = USDC_ADDRESSES[config.chainId];

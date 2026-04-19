@@ -1,48 +1,24 @@
 # Buyer Guide — Spend USDC on Data from Claude Desktop
 
-This walks you (a buyer, human or agent) from zero to your first
-hash-verified ChainLens response in under 15 minutes.
+This walks you (a buyer, human or agent) from zero to browsing ChainLens
+sellers and, optionally, paying for testnet data from Claude Desktop.
 
 The stack:
 
-1. A crypto wallet (any EVM wallet — MetaMask / Rabby / Coinbase Wallet).
-2. A little Base Sepolia ETH (free) and USDC (free).
-3. Claude Desktop with the `@chain-lens/mcp-tool` MCP server installed.
+1. Claude Desktop with the `@chain-lens/mcp-tool` MCP server installed
+   (always free, always safe to install).
+2. **Optional (testnet only):** a dedicated throwaway wallet funded from
+   Base Sepolia faucets if you want to try `chain-lens.request`.
 
-You never hand out API keys. You sign one-time USDC approvals with your
-wallet, and the agent spends per call from the approved allowance.
+> ⚠ **Paid requests are testnet-only today.** `chain-lens.request` still
+> reads `WALLET_PRIVATE_KEY` from the MCP config, which stores the key in
+> plaintext on disk. The safer `@chain-lens/sign` CLI is planned for
+> `0.1.x`. Use a throwaway Base Sepolia wallet and never put a mainnet key
+> in there.
 
 ---
 
-## 1. Create a dedicated buyer wallet (5 min)
-
-**Don't reuse your main wallet.** Create a fresh one for agent spending so
-that (a) the private key lives in a config file, and (b) you can cap the
-exposure by only funding it with what you want the agent to spend.
-
-- Install [MetaMask](https://metamask.io) (or any EVM wallet).
-- Create a **new account** dedicated to ChainLens.
-- Back up the seed phrase offline. Treat the private key as a spending
-  budget — whatever sits in this wallet is what the agent can spend.
-- Export the private key (MetaMask: Account details → Show private key).
-  You'll paste this into the MCP config in step 3.
-
-## 2. Fund the wallet on Base Sepolia (2 min)
-
-Base Sepolia is the test network ChainLens is live on today. Both faucets
-are free.
-
-- **Testnet ETH** (for gas):
-  [coinbase.com/faucets/base-ethereum-sepolia-faucet](https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet)
-  — ask for 0.05 ETH.
-- **Testnet USDC** (to spend on data):
-  [faucet.circle.com](https://faucet.circle.com) → pick **Base Sepolia** →
-  paste your new wallet address → ask for 10 USDC.
-
-Verify on [sepolia.basescan.org](https://sepolia.basescan.org) by pasting
-your address: you should see both balances.
-
-## 3. Install the MCP tool in Claude Desktop (3 min)
+## 1. Install the MCP tool (read-only, 3 min)
 
 Claude Desktop reads a JSON config at:
 
@@ -61,37 +37,91 @@ Open (or create) that file and add the `chain-lens` server:
       "env": {
         "CHAIN_LENS_API_URL": "https://your-chain-lens-host/api",
         "CHAIN_ID": "84532",
-        "RPC_URL": "https://base-sepolia.g.alchemy.com/v2/<YOUR_ALCHEMY_KEY>",
-        "WALLET_PRIVATE_KEY": "0x<your-buyer-private-key>"
+        "RPC_URL": "https://sepolia.base.org"
       }
     }
   }
 }
 ```
 
-Fill in:
-
 | Field | What to put |
 | --- | --- |
 | `CHAIN_LENS_API_URL` | Your ChainLens gateway. Use `http://localhost:3001/api` if you're running the backend locally. |
-| `CHAIN_ID` | `84532` (Base Sepolia). Use `8453` for Base Mainnet (when addresses are published). |
-| `RPC_URL` | An [Alchemy](https://alchemy.com) or [Infura](https://infura.io) Base Sepolia URL. The public `sepolia.base.org` endpoint works for light use but drops filter state; dedicated endpoints are far more reliable. |
-| `WALLET_PRIVATE_KEY` | The `0x`-prefixed 64-hex key you exported in step 1. |
+| `CHAIN_ID` | `84532` (Base Sepolia). `8453` for Base Mainnet (when addresses are published). |
+| `RPC_URL` | Public Base Sepolia RPC is fine for light use. If the agent gets throttled, swap in an [Alchemy](https://alchemy.com) or [Infura](https://infura.io) URL. |
 
-Restart Claude Desktop. Open a new chat; you should see three new tools in
-the tool menu:
+Restart Claude Desktop. Two tools appear in the tool menu:
 
 - `chain-lens.discover` — list sellers for a task type
-- `chain-lens.request` — pay and fetch an answer
 - `chain-lens.status` — look up evidence for a past job
 
-> **No wallet yet?** You can omit `WALLET_PRIVATE_KEY`. `discover` and
-> `status` still work — useful to browse the market before funding a
-> wallet.
+Both are read-only — no wallet required, no funds at risk.
 
-## 4. Make your first paid call (1 min)
+## 2. Browse the market (1 min)
 
 Try this prompt:
+
+> "Use `chain-lens.discover` to find sellers for `defillama_tvl`. Show me
+> price per call and reputation stats."
+
+That's enough to see the marketplace. If you never want to pay from an
+agent, you can stop here — point any other agent at a seller's endpoint
+directly with your own wallet + UI.
+
+## 3. (Optional, testnet only) Enable `chain-lens.request`
+
+Skip this whole section unless you explicitly want the agent to spend
+on-chain.
+
+### 3a. Create a **throwaway** buyer wallet
+
+- Install [MetaMask](https://metamask.io) (or any EVM wallet).
+- Create a **brand-new account** used only for ChainLens testnet.
+- Treat the private key as disposable. Do **not** reuse a key that holds
+  real funds anywhere else.
+
+### 3b. Fund it on Base Sepolia
+
+- **Testnet ETH** (for gas):
+  [coinbase.com/faucets/base-ethereum-sepolia-faucet](https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet)
+  — ask for 0.05 ETH.
+- **Testnet USDC**:
+  [faucet.circle.com](https://faucet.circle.com) → pick **Base Sepolia** →
+  paste your throwaway address → 10 USDC.
+
+Verify both balances on [sepolia.basescan.org](https://sepolia.basescan.org).
+
+### 3c. Add `WALLET_PRIVATE_KEY` to the MCP config
+
+Extend the `env` block from step 1:
+
+```jsonc
+{
+  "mcpServers": {
+    "chain-lens": {
+      "command": "npx",
+      "args": ["-y", "@chain-lens/mcp-tool"],
+      "env": {
+        "CHAIN_LENS_API_URL": "https://your-chain-lens-host/api",
+        "CHAIN_ID": "84532",
+        "RPC_URL": "https://sepolia.base.org",
+        "WALLET_PRIVATE_KEY": "0x<throwaway-testnet-key>"
+      }
+    }
+  }
+}
+```
+
+Restart Claude Desktop. `chain-lens.request` now appears alongside the two
+read-only tools.
+
+When the MCP tool starts, it prints a stderr warning that
+`WALLET_PRIVATE_KEY` is set — this is expected and is there so you notice
+if it ever ends up in an unexpected config.
+
+## 4. Make your first paid call (testnet only, 1 min)
+
+With `WALLET_PRIVATE_KEY` wired up from step 3, try this prompt:
 
 > "Use ChainLens to find a seller that serves `defillama_tvl`, request
 > Uniswap's TVL for 0.05 USDC, and tell me the job id so I can verify it."
