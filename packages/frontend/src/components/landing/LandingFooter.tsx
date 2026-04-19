@@ -1,3 +1,4 @@
+import Image from "next/image";
 import styles from "./LandingFooter.module.css";
 
 function IconX() {
@@ -19,7 +20,10 @@ function IconTelegram() {
 export default function LandingFooter() {
   return (
     <footer className={styles.footer}>
-      <span className={styles.logo}>ChainLens</span>
+      <span className={styles.logo} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+        <Image src="/chainlens_coin_256.png" alt="ChainLens" width={18} height={18} />
+        ChainLens
+      </span>
 
       <div className={styles.links}>
         <a

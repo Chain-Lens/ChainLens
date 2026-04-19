@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import styles from "./LandingNavbar.module.css";
 
 export default function LandingNavbar() {
@@ -15,6 +16,7 @@ export default function LandingNavbar() {
   return (
     <nav className={`${styles.nav} ${scrolled ? styles.scrolled : ""}`}>
       <a href="#" className={styles.logo}>
+        <Image src="/chainlens_coin_256.png" alt="ChainLens" width={22} height={22} />
         ChainLens
       </a>
       <div className={styles.links}>

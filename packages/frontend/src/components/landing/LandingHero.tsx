@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { TerminalWindow, TLine, T, Cursor } from "./Terminal";
 import styles from "./LandingHero.module.css";
 
@@ -12,6 +13,8 @@ export default function LandingHero() {
   return (
     <section className={styles.hero}>
       <div className={styles.glow} />
+
+      <Image src="/chainlens_coin_256.png" alt="ChainLens" width={64} height={64} style={{ marginBottom: "1rem" }} />
 
       <div className={styles.badge}>
         <span className={styles.dot} />

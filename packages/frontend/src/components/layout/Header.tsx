@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import ConnectButton from "../shared/ConnectButton";
 import { useTheme } from "@/providers/ThemeProvider";
 
@@ -56,9 +57,10 @@ export default function Header() {
           <div className="flex items-center gap-8">
             <Link
               href="/"
-              className="text-base font-bold tracking-tight"
+              className="flex items-center gap-2 text-base font-bold tracking-tight"
               style={{ color: "var(--text)" }}
             >
+              <Image src="/chainlens_coin_256.png" alt="ChainLens" width={24} height={24} />
               ChainLens
             </Link>
 
