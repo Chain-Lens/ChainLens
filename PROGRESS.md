@@ -35,7 +35,7 @@
 |-----|------|--------|
 | 1-2 | `/marketplace` 개선 + `/evidence/[jobId]` + `/reputation/[sellerAddress]` + 훅 3개 | ✅ Done |
 | 3-4 | `packages/mcp-tool/` 신규 + discover/request/status 3개 도구 | ✅ Done |
-| 5 | Sample seller 3개 (Blockscout/DeFiLlama/Sourcify) | 📅 Planned |
+| 5 | Sample seller 3개 (Blockscout/DeFiLlama/Sourcify) | ✅ Done |
 | 6-7 | 통합·문서·데모 시나리오·영상 | 📅 Planned |
 
 ---
@@ -74,6 +74,17 @@
 > 작업 단위(커밋 기준)로 누적 기록. 최신이 위.
 
 ### 2026-04-19
+
+- **Week 3 Day 5: Sample seller 에이전트 3종 + Dockerfile**
+  - [packages/sample-sellers/package.json](packages/sample-sellers/package.json) + [tsconfig.json](packages/sample-sellers/tsconfig.json) — 신규 워크스페이스 `@chainlens/sample-sellers`. 래퍼 3종은 한 패키지 안의 별도 엔트리(`dist/blockscout|defillama|sourcify/index.js`) — 3개 패키지로 쪼개면 lib/types/server 중복 발생하고 Dockerfile은 어차피 각각이므로, 패키지 1 × 진입점 3 이 SRP와 배포 유연성을 동시에 만족.
+  - [packages/sample-sellers/src/lib/server.ts](packages/sample-sellers/src/lib/server.ts) + [lib/types.ts](packages/sample-sellers/src/lib/types.ts) — `createSellerApp({name, handlers})` Express 앱 팩토리. 공통 컨트랙트: `POST /` `{task_type, inputs}` → 핸들러 디스패치. `GET /health` 에 capabilities 목록 노출. `BadInputError` → 400 / `UpstreamError(code)` → 그 code / 그 외 Error → 500 으로 분기해 seller-tester·게이트웨이가 원인별로 구분 가능. body limit 64kb.
+  - [packages/sample-sellers/src/blockscout/handler.ts](packages/sample-sellers/src/blockscout/handler.ts) + [index.ts](packages/sample-sellers/src/blockscout/index.ts) — `blockscout_contract_source` + `blockscout_tx_info` 2종. `DEFAULT_BLOCKSCOUT_BASES`(Ethereum mainnet / Base / Base Sepolia) + `baseUrlFor(chainId)` DI로 미지원 체인은 `BadInputError`. 응답은 필드 white-list로 정규화 (업스트림 필드 변경에 덜 민감하게 + schema 맞추기). 기본 포트 8081.
+  - [packages/sample-sellers/src/defillama/handler.ts](packages/sample-sellers/src/defillama/handler.ts) + [index.ts](packages/sample-sellers/src/defillama/index.ts) — `defillama_tvl`. `protocol` 슬러그 regex(`/^[a-z0-9][a-z0-9-]{0,63}$/`)로 검증 → URL 인젝션·path traversal 차단. `chainTvls`를 `{chain: tvl}` 맵으로 요약, 수치 아닌 항목 제거. 기본 포트 8082.
+  - [packages/sample-sellers/src/sourcify/handler.ts](packages/sample-sellers/src/sourcify/handler.ts) + [index.ts](packages/sample-sellers/src/sourcify/index.ts) — `sourcify_verify`. `/check-all-by-addresses` 호출, `status: "perfect"|"partial"` → `verified=true`. 기본 포트 8083.
+  - Docker: [docker/Dockerfile.blockscout](packages/sample-sellers/docker/Dockerfile.blockscout) / [Dockerfile.defillama](packages/sample-sellers/docker/Dockerfile.defillama) / [Dockerfile.sourcify](packages/sample-sellers/docker/Dockerfile.sourcify). 3개 모두 repo root에서 빌드 (pnpm workspace 해석 필요), multi-stage (node:20-alpine build → alpine runtime). CMD만 바뀌어 세 이미지가 **같은 dist에서 다른 진입점**을 실행.
+  - 테스트: [blockscout/handler.test.ts](packages/sample-sellers/src/blockscout/handler.test.ts) 6 / [defillama/handler.test.ts](packages/sample-sellers/src/defillama/handler.test.ts) 3 / [sourcify/handler.test.ts](packages/sample-sellers/src/sourcify/handler.test.ts) 4 / [lib/server.test.ts](packages/sample-sellers/src/lib/server.test.ts) 5. 모두 `fakeFetch` DI로 네트워크 없이 실행. 서버 통합 테스트는 `http.createServer(app)` + 랜덤 포트 + 실제 fetch로 디스패치/에러 매핑 4경로 검증.
+  - **18/18 pass**, `tsc --noEmit` 클린. 백엔드 79/79 + MCP 17/17 회귀 없음.
+  - README에 curl 예시 + Docker build/run 명령 포함 — 세 이미지는 팀이 각자 호스트에 올려 `POST /api/sellers/register` 로 등록하면 바로 사용 가능.
 
 - **Week 3 Day 3-4: MCP Tool 패키지 (discover / request / status) + `/api/sellers` 백엔드**
   - [packages/backend/src/services/sellers.service.ts](packages/backend/src/services/sellers.service.ts) — pure 페이지네이션 레이어. `SELLERS_DEFAULT_LIMIT=20`, `SELLERS_MAX_LIMIT=100`, `normalizeSellerFilter`가 `activeOnly`를 **기본 true** (마켓플레이스 UX상 미사용 seller 노출 제한이 합리적 기본), limit `Math.floor` + [1,100] 클램프, negative offset 클램프. `listSellers(filter, store)`는 `SellersStore`에 위임 — prisma 런타임 import 없음 → 유닛 테스트 DB 없이 실행.

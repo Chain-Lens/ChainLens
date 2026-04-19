@@ -1,0 +1,27 @@
+{
+  "name": "@chainlens/sample-sellers",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reference seller agents (Blockscout, DeFiLlama, Sourcify) for the ChainLens Type 2 MVP.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev:blockscout": "tsx src/blockscout/index.ts",
+    "dev:defillama": "tsx src/defillama/index.ts",
+    "dev:sourcify": "tsx src/sourcify/index.ts",
+    "start:blockscout": "node dist/blockscout/index.js",
+    "start:defillama": "node dist/defillama/index.js",
+    "start:sourcify": "node dist/sourcify/index.js",
+    "test": "tsx --test 'src/**/*.test.ts'",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
