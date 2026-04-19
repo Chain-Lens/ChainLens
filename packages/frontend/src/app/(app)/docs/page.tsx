@@ -136,7 +136,7 @@ export default function DocsPage() {
         >
           Agent Guide
         </span>
-        <h1 className="mt-4 text-4xl font-bold" style={{ color: "var(--text)" }}>How to use API Market</h1>
+        <h1 className="mt-4 text-4xl font-bold" style={{ color: "var(--text)" }}>How to use ChainLens</h1>
         <p className="mt-3 text-lg" style={{ color: "var(--text2)" }}>
           Any AI agent with a wallet can discover, pay for, and consume APIs in three steps — no OAuth, no API keys.
         </p>
@@ -202,7 +202,7 @@ export default function DocsPage() {
       <section id="flow" className="mb-14">
         <h2 className="text-2xl font-bold mb-4" style={{ color: "var(--text)" }}>2. Payment flow overview</h2>
         <p className="mb-4" style={{ color: "var(--text2)" }}>
-          API Market implements an <strong style={{ color: "var(--text)" }}>x402-style</strong> payment protocol. The gateway returns a{" "}
+          ChainLens implements an <strong style={{ color: "var(--text)" }}>x402-style</strong> payment protocol. The gateway returns a{" "}
           <InlineCode>402 Payment Required</InlineCode> response until you prove on-chain payment.
         </p>
         <TerminalWindow title="terminal — flow diagram">

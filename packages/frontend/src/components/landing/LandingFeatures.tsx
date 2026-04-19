@@ -50,7 +50,7 @@ export default function LandingFeatures() {
     <section className={sStyles.section} id="features">
       <div className={sStyles.inner}>
         <FadeIn>
-          <div className={sStyles.tag}>{"// Why API-Market"}</div>
+          <div className={sStyles.tag}>{"// Why ChainLens"}</div>
           <h2 className={sStyles.title}>
             Built for the
             <br />

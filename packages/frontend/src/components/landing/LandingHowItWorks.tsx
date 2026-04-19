@@ -23,7 +23,7 @@ export default function LandingHowItWorks() {
             in a single transaction
           </h2>
           <p className={sStyles.sub}>
-            API-Market connects on-chain payment with off-chain API execution
+            ChainLens connects on-chain payment with off-chain API execution
             through a transparent, escrow-based flow.
           </p>
         </FadeIn>
@@ -45,7 +45,7 @@ export default function LandingHowItWorks() {
 
         <FadeIn delay={400}>
           <div style={{ marginTop: "3rem" }}>
-            <TerminalWindow title="agent.js — With API-Market">
+            <TerminalWindow title="agent.js — With ChainLens">
               <TLine>
                 <T.cmt>{"// ✅ Fully autonomous — no human required"}</T.cmt>
               </TLine>
@@ -54,7 +54,7 @@ export default function LandingHowItWorks() {
                 <T.kw>const</T.kw>
                 {" "}<T.val>apis</T.val>{" "}
                 <T.out>{"= await fetch("}</T.out>
-                <T.str>&apos;https://gateway.api-market.xyz/apis&apos;</T.str>
+                <T.str>&apos;https://monapi.pelicanlab.dev/api/apis&apos;</T.str>
                 <T.out>{");"}</T.out>
               </TLine>
               <TLine>

@@ -14,7 +14,7 @@ export default function LandingWaitlist() {
             when we launch
           </h2>
           <p className={styles.sub}>
-            API-Market mainnet is coming soon. Join the waitlist to be first in
+            ChainLens mainnet is coming soon. Join the waitlist to be first in
             line — whether you&apos;re building agents, offering APIs, or
             watching the agent economy grow.
           </p>

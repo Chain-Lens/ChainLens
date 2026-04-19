@@ -44,7 +44,7 @@ export default function LandingArchitecture() {
             One seamless flow.
           </h2>
           <p className={sStyles.sub}>
-            API-Market separates concerns cleanly — on-chain security,
+            ChainLens separates concerns cleanly — on-chain security,
             off-chain performance, curated trust.
           </p>
         </FadeIn>
@@ -65,7 +65,7 @@ export default function LandingArchitecture() {
           </div>
 
           <FadeIn delay={200}>
-            <TerminalWindow title="APIMarket.sol — Escrow Core">
+            <TerminalWindow title="ChainLens.sol — Escrow Core">
               <TLine>
                 <T.cmt>{"// SPDX-License-Identifier: MIT"}</T.cmt>
               </TLine>

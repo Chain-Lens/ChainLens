@@ -59,7 +59,7 @@ export default function Header() {
               className="text-base font-bold tracking-tight"
               style={{ color: "var(--text)" }}
             >
-              API<span style={{ color: "var(--accent)", margin: "0 1px" }}>-</span>Market
+              ChainLens
             </Link>
 
             {/* Nav */}

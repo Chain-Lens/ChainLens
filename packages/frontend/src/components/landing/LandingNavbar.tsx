@@ -15,7 +15,7 @@ export default function LandingNavbar() {
   return (
     <nav className={`${styles.nav} ${scrolled ? styles.scrolled : ""}`}>
       <a href="#" className={styles.logo}>
-        API-<span>Market</span>
+        ChainLens
       </a>
       <div className={styles.links}>
         <a href="#problem">Problem</a>

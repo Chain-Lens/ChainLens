@@ -49,7 +49,7 @@ export default function LandingHero() {
       </div>
 
       <div className={styles.termWrap}>
-        <TerminalWindow title="agent.js — API-Market quickstart">
+        <TerminalWindow title="agent.js — ChainLens quickstart">
           <TLine>
             <T.cmt>{"// Autonomous agent pays for an API — no human needed"}</T.cmt>
           </TLine>
@@ -58,7 +58,7 @@ export default function LandingHero() {
             <T.kw>const</T.kw>{" "}
             <T.val>apis</T.val>{" "}
             <T.out>= await</T.out>{" "}
-            <T.cmd>apiMarket</T.cmd>
+            <T.cmd>chainLens</T.cmd>
             <T.out>.</T.out>
             <T.ok>discover</T.ok>
             <T.out>();</T.out>
@@ -71,7 +71,7 @@ export default function LandingHero() {
             <T.kw>const</T.kw>{" "}
             <T.val>req</T.val>{" "}
             <T.out>= await</T.out>{" "}
-            <T.cmd>apiMarket</T.cmd>
+            <T.cmd>chainLens</T.cmd>
             <T.out>.</T.out>
             <T.ok>prepare</T.ok>
             <T.out>(</T.out>

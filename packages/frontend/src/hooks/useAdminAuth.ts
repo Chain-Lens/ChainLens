@@ -52,7 +52,7 @@ export function useAdminAuth() {
       const message = new SiweMessage({
         domain: window.location.host,
         address,
-        statement: "Sign in to API Market Admin Dashboard",
+        statement: "Sign in to ChainLens Admin Dashboard",
         uri: window.location.origin,
         version: "1",
         chainId,

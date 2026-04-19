@@ -19,7 +19,7 @@ function IconTelegram() {
 export default function LandingFooter() {
   return (
     <footer className={styles.footer}>
-      <span className={styles.logo}>API-Market</span>
+      <span className={styles.logo}>ChainLens</span>
 
       <div className={styles.links}>
         <a
@@ -52,7 +52,7 @@ export default function LandingFooter() {
         </a>
       </div>
 
-      <span className={styles.copy}>© 2025 API-Market · Built on Base</span>
+      <span className={styles.copy}>© 2025 ChainLens · Built on Base</span>
     </footer>
   );
 }

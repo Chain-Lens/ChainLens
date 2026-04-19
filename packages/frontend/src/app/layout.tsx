@@ -5,7 +5,7 @@ import "@/styles/globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "API Market - Agent API Marketplace",
+  title: "ChainLens - Agent API Marketplace",
   description:
     "Discover, buy, and use verified APIs with on-chain payments on Base",
   icons: {
