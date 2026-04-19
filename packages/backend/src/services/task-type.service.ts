@@ -23,12 +23,18 @@ function registryAddress(): `0x${string}` {
 export async function getTaskTypeConfig(
   name: string,
 ): Promise<OnChainTaskTypeConfig | null> {
+  return getTaskTypeConfigById(taskTypeId(name));
+}
+
+export async function getTaskTypeConfigById(
+  id: `0x${string}`,
+): Promise<OnChainTaskTypeConfig | null> {
   try {
     const cfg = (await publicClient.readContract({
       address: registryAddress(),
       abi: TaskTypeRegistryAbi,
       functionName: "getConfig",
-      args: [taskTypeId(name)],
+      args: [id],
     })) as OnChainTaskTypeConfig;
     return cfg;
   } catch (e) {

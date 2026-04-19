@@ -24,7 +24,7 @@
 |-----|------|--------|
 | 1 | schema-validator (ajv) + injection-filter (OWASP) | ✅ Done |
 | 2 | seller-tester 자동 API 테스트 서비스 | ✅ Done |
-| 3 | Gateway 확장 (validation + responseHash/evidenceURI + reputation) | 📅 Planned |
+| 3 | Gateway 확장 (validation + responseHash/evidenceURI + reputation) | ✅ Done |
 | 4 | Evidence 저장 (Phase 1: DB) + `/api/evidence/:jobId` | 📅 Planned |
 | 5 | Prisma 마이그레이션 (Job, SellerProfile, ApiTestResult) + reputation 엔드포인트 | 📅 Planned |
 | 6-7 | Event listener 확장 + E2E 테스트 | 📅 Planned |
@@ -74,6 +74,12 @@
 > 작업 단위(커밋 기준)로 누적 기록. 최신이 위.
 
 ### 2026-04-19
+
+- **Week 2 Day 3: Gateway 확장 (validation + responseHash/evidenceURI + reputation)**
+  - [packages/backend/src/services/task-type.service.ts](packages/backend/src/services/task-type.service.ts) — `getTaskTypeConfigById(bytes32)` 추가 (Gateway는 on-chain Job 구조체에서 이미 bytes32 id를 가지므로 이름 재계산 없이 직접 조회). `getTaskTypeConfig(name)`은 이 함수로 위임 리팩터링.
+  - [packages/backend/src/services/on-chain.service.ts](packages/backend/src/services/on-chain.service.ts) — v2 계약 쓰기 3종: `submitJob({jobId,responseHash,evidenceURI})`, `refundJob({jobId})`, `recordSellerResult({seller,success,earningsUsdc})`. chainId 기반 주소 조회 + `waitForTransactionReceipt`까지 동기화.
+  - [packages/backend/src/services/job-gateway.service.ts](packages/backend/src/services/job-gateway.service.ts) — `finalizeJob(input, deps?)` 오케스트레이션. 판정 순서: task_type → scan → schema → hash → submit. taskType=0x00은 레거시 경로로 검증 스킵. 모든 실패는 자동 refund+reputation 하향. submit 성공 후 reputation 실패는 **로그만** (에스크로 정산이 이미 끝난 시점이라 사용자 응답 차단 금지). refund 자체가 실패하면 `status:"failed", reason:"refund_failed:<원인>"` 로 gateway 운영자에게 수동 대응 신호 전달. 모든 on-chain 호출은 DI (`getConfigById`/`submitJobOnChain`/`refundJobOnChain`/`recordSellerResult`), 기본값은 lazy `import()` — 유닛 테스트가 viem/env를 로드하지 않도록 격리.
+  - [packages/backend/src/services/job-gateway.service.test.ts](packages/backend/src/services/job-gateway.service.test.ts) — 14 케이스: task_type_not_found/disabled, injection_detected (scan이 schema보다 먼저 실행됨 검증 포함), schema_invalid (ajv 에러 전달), schema_fetch_failed, response_unserializable (legacy 경로), 정상 submit (해시 일치, evidenceURI 통과), taskType=0x00 시 scan/schema 스킵, schemaURI="" 시 submit, recordSellerResult 실패 시에도 submitted 유지, submit revert 시 failed, refund revert 시 `refund_failed:<reason>`, 해시 결정성. 전체 39/39 통과.
 
 - **Week 2 Day 2: seller-tester 자동 API 테스트 서비스**
   - [packages/backend/src/services/task-type.service.ts](packages/backend/src/services/task-type.service.ts) — viem `publicClient.readContract` 래퍼. `taskTypeId(name)` = keccak256(utf8), `getTaskTypeConfig(name)` (on-chain "not found" 감지 시 `null`), `isTaskTypeEnabled(name)`. registry 주소는 chainId별 `TASK_TYPE_REGISTRY_ADDRESSES` 조회 + 미배포 체인/제로 주소에서 명시적 에러.
