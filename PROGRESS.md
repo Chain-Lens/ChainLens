@@ -14,7 +14,7 @@
 | Day | 작업 | Status |
 |-----|------|--------|
 | 1 | TaskTypeRegistry.sol + 테스트 + Ignition + 배포 + task_type 5개 등록 | ✅ Done |
-| 2 | SellerRegistry.sol (ERC-8004 호환) + 테스트 + 배포 | 📅 Planned |
+| 2 | SellerRegistry.sol (ERC-8004 호환) + 테스트 + 배포 | 🚧 In progress (contract+tests+ignition ✅, 배포 대기) |
 | 3-4 | ApiMarketEscrow v2 evolve (Job 개념, ERC-8183 alias, 하위 호환) | 📅 Planned |
 | 5 | shared ABI + types 업데이트 (v2 + 2개 Registry) | 📅 Planned |
 
@@ -46,7 +46,7 @@
 |----------|------|-------|----------|
 | ApiMarketEscrow (v1, legacy) | `contracts/ApiMarketEscrow.sol` | 기존 457L | `0xDAa04e9BD451F9D27EcEd569303181c71F0A7b27` (Base Sepolia) |
 | TaskTypeRegistry | `contracts/TaskTypeRegistry.sol` + `types/TaskTypeRegistryTypes.sol` | 30/30 passing | ✅ `0xD2ab227417B26f4d8311594C27c59adcA046501F` (Base Sepolia) |
-| SellerRegistry | TBD | — | — |
+| SellerRegistry | `contracts/SellerRegistry.sol` + `types/SellerRegistryTypes.sol` | 40/40 passing | — |
 | ApiMarketEscrow v2 | TBD | — | — |
 
 ---
@@ -74,6 +74,15 @@
 > 작업 단위(커밋 기준)로 누적 기록. 최신이 위.
 
 ### 2026-04-19
+
+- **Week 1 Day 2 (local): SellerRegistry 구현 + 테스트 + Ignition 모듈**
+  - [contracts/SellerRegistry.sol](packages/contracts/contracts/SellerRegistry.sol) — OZ `Ownable2Step` + `onlyGateway` 모디파이어, 게이트웨이 로테이션 지원, 5 이벤트 (`SellerRegistered`/`SellerUpdated`/`SellerDeactivated`/`JobResultRecorded`/`GatewayUpdated`)
+  - [contracts/types/SellerRegistryTypes.sol](packages/contracts/contracts/types/SellerRegistryTypes.sol) — `Seller` 구조체 라이브러리 (caution.md 규칙 준수)
+  - [test/SellerRegistry.test.ts](packages/contracts/test/SellerRegistry.test.ts) — 40 케이스 전부 통과 (deployment / setGateway / registerSeller / updateMetadataURI / deactivate 3-role / recordJobResult / getReputation 4 분기 / view 헬퍼 / Ownable2Step)
+  - [ignition/modules/SellerRegistry.ts](packages/contracts/ignition/modules/SellerRegistry.ts) — `gateway` 파라미터 지원 (기본값: 기존 deployer 주소, 배포 시 덮어쓰기 가능)
+  - `pnpm deploy:seller-registry` 스크립트 추가 (Base Sepolia 타겟)
+  - 로컬 hardhat 네트워크에서 Ignition flow 검증 완료
+  - 스펙 §3.2 대비 추가: `updateMetadataURI(seller, metadataURI)` (스펙은 `SellerUpdated` 이벤트만 선언했지만 emit 경로 필요), `GatewayUpdated` 이벤트 (게이트웨이 로테이션 투명성), `isRegistered`/`isActive` view 헬퍼
 
 - **Week 1 Day 1 배포: TaskTypeRegistry → Base Sepolia**
   - 주소: `0xD2ab227417B26f4d8311594C27c59adcA046501F`
