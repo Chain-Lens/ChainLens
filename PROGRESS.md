@@ -13,7 +13,7 @@
 
 | Day | 작업 | Status |
 |-----|------|--------|
-| 1 | TaskTypeRegistry.sol + 테스트 + Ignition + 배포 + task_type 5개 등록 | 📅 Next |
+| 1 | TaskTypeRegistry.sol + 테스트 + Ignition + 배포 + task_type 5개 등록 | 🔄 로컬 완료, 배포 대기 |
 | 2 | SellerRegistry.sol (ERC-8004 호환) + 테스트 + 배포 | 📅 Planned |
 | 3-4 | ApiMarketEscrow v2 evolve (Job 개념, ERC-8183 alias, 하위 호환) | 📅 Planned |
 | 5 | shared ABI + types 업데이트 (v2 + 2개 Registry) | 📅 Planned |
@@ -45,7 +45,7 @@
 | Contract | File | Tests | Deployed |
 |----------|------|-------|----------|
 | ApiMarketEscrow (v1, legacy) | `contracts/ApiMarketEscrow.sol` | 기존 457L | `0xDAa04e9BD451F9D27EcEd569303181c71F0A7b27` (Base Sepolia) |
-| TaskTypeRegistry | TBD | — | — |
+| TaskTypeRegistry | `contracts/TaskTypeRegistry.sol` + `types/TaskTypeRegistryTypes.sol` | 30/30 passing | ⏳ 미배포 |
 | SellerRegistry | TBD | — | — |
 | ApiMarketEscrow v2 | TBD | — | — |
 
@@ -75,4 +75,12 @@
 
 ### 2026-04-19
 
+- **Week 1 Day 1 (local): TaskTypeRegistry 구현 + 테스트 + Ignition 모듈**
+  - [contracts/TaskTypeRegistry.sol](packages/contracts/contracts/TaskTypeRegistry.sol) — OZ `Ownable2Step` 상속, require-string 검증, 3 이벤트
+  - [contracts/types/TaskTypeRegistryTypes.sol](packages/contracts/contracts/types/TaskTypeRegistryTypes.sol) — `TaskTypeConfig` 구조체 라이브러리 (caution.md 규칙 준수)
+  - [test/TaskTypeRegistry.test.ts](packages/contracts/test/TaskTypeRegistry.test.ts) — 30 케이스 전부 통과 (deployment / register / update / setEnabled / isEnabled·getConfig / Ownable2Step 2단계 전환)
+  - [ignition/modules/TaskTypeRegistry.ts](packages/contracts/ignition/modules/TaskTypeRegistry.ts) + [ignition/task-types.ts](packages/contracts/ignition/task-types.ts) — 5개 초기 task_type 상수화, 배포 시 `registerTaskType` 5회 자동 호출
+  - [hardhat.config.ts](packages/contracts/hardhat.config.ts) — 루트 `.env` 로드 경로 수정 (`dotenv.config({ path: '../../.env' })`)
+  - `pnpm deploy:task-type-registry` 스크립트 추가 (Base Sepolia 타겟)
+  - 로컬 hardhat 네트워크에서 전체 Ignition flow 검증 완료 (배포 + 5회 등록 성공)
 - **Sprint kickoff** — `@openzeppelin/contracts@5.6.1` 설치, `PROGRESS.md` 스켈레톤 생성 ([TYPE2_MVP_CLEAN_BUILD_SPEC.md](./TYPE2_MVP_CLEAN_BUILD_SPEC.md) §7 기반)
