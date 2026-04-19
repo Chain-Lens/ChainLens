@@ -33,7 +33,7 @@
 
 | Day | 작업 | Status |
 |-----|------|--------|
-| 1-2 | `/marketplace` 개선 + `/evidence/[jobId]` + `/reputation/[sellerAddress]` + 훅 3개 | 📅 Planned |
+| 1-2 | `/marketplace` 개선 + `/evidence/[jobId]` + `/reputation/[sellerAddress]` + 훅 3개 | ✅ Done |
 | 3-4 | `packages/mcp-tool/` 신규 + discover/request/status 3개 도구 | 📅 Planned |
 | 5 | Sample seller 3개 (Blockscout/DeFiLlama/Sourcify) | 📅 Planned |
 | 6-7 | 통합·문서·데모 시나리오·영상 | 📅 Planned |
@@ -74,6 +74,15 @@
 > 작업 단위(커밋 기준)로 누적 기록. 최신이 위.
 
 ### 2026-04-19
+
+- **Week 3 Day 1-2: Evidence Explorer + Reputation Views + 훅 3종**
+  - [packages/frontend/src/hooks/useJob.ts](packages/frontend/src/hooks/useJob.ts) — `GET /api/evidence/:jobId`를 래핑. jobId는 `string | bigint | undefined` 수용 (언마운트/누락 시 로딩만 해제하고 요청은 보내지 않음). `cancelled` 플래그로 리랜더 중 응답 폐기. 프론트엔드 내부 `JobEvidence` 타입은 백엔드 `EvidenceView`와 1:1 (string 직렬화 포함).
+  - [packages/frontend/src/hooks/useReputation.ts](packages/frontend/src/hooks/useReputation.ts) — `GET /api/reputation/:sellerAddress`. 동일 패턴(`undefined` 가드 + cancel). BigInt 값은 모두 문자열로 렌더에 넘김.
+  - [packages/frontend/src/hooks/useTaskTypes.ts](packages/frontend/src/hooks/useTaskTypes.ts) — 현재 MVP에선 shared의 `INITIAL_TASK_TYPE_NAMES` 정적 리스트만 반환. 주석으로 백엔드 `/api/task-types` 추가 시 확장 경로 명시 (premature abstraction 회피).
+  - [packages/frontend/src/app/(app)/evidence/[jobId]/page.tsx](packages/frontend/src/app/(app)/evidence/[jobId]/page.tsx) — Evidence Explorer. Job 상세 + 상태 뱃지 + 해시 섹션에서 **로컬 `keccak256(stringToBytes(JSON.stringify(response)))`와 on-chain `responseHash` 비교 표시** (스펙 "responseHash 검증 UI"). Seller 주소는 reputation 페이지로 연결. 입력/응답 JSON pretty-printed. `inputsHash` / `evidenceURI` / 에러 원인 모두 노출. 재사용 UI는 기존 `StatusBadge` / `LoadingSpinner` / `.card` 스타일 재활용.
+  - [packages/frontend/src/app/(app)/reputation/[sellerAddress]/page.tsx](packages/frontend/src/app/(app)/reputation/[sellerAddress]/page.tsx) — Seller Reputation. 0x40 regex로 라우트 파라미터 검증, active/inactive 뱃지, reputationBps → 퍼센트 표시, `jobsCompleted / (completed+failed)` 기반 success rate 계산. 총 earnings는 raw uint256 문자열을 BigInt로 나눠 6 decimals USDC 포맷 (float 오차 회피). 등록 시각은 유닉스 초 → 날짜. capabilities / metadataURI(ipfs:// 자동 게이트웨이 변환) 섹션 포함.
+  - marketplace task_type 필터는 의도적으로 미반영: `ApiListing`이 taskType 컬럼/필터를 지원하지 않음 → UI만 추가하면 백엔드와 불일치. 훅은 준비됐고 Week 3 Day 3-4 MCP 단계나 백엔드 필터 확장 시점에 붙일 예정.
+  - `tsc --noEmit` 클린 (ES2017 타겟이라 `1_000_000n` 리터럴 대신 `BigInt(1_000_000)` 사용). 백엔드 73/73 회귀 없음.
 
 - **Week 2 Day 6-7: V2 Event Listener + E2E 테스트**
   - [packages/backend/src/services/v2-event-listener.service.ts](packages/backend/src/services/v2-event-listener.service.ts) — 4개 이벤트 구독 (스펙 3개 + 데이터 정합성을 위해 `PaymentRefunded` 추가). 각 핸들러는 pure DI 함수: `handleJobCreated`(PAID 행 생성 — `evidenceURI`는 `buildEvidenceURI(jobId, PLATFORM_URL)` 캐노니컬, taskType==0x00은 `null`로 저장해 legacy 경로 명시), `handleJobSubmitted`(`status=COMPLETED`, `responseHash` 이벤트에서 직접 복사), `handlePaymentRefunded`(`status=REFUNDED`), `handleJobResultRecorded`(로그만 — reputation은 on-chain이 authoritative). 모든 핸들러는 store/logger 실패를 **삼킨 뒤 error 로그만 남김** — 이벤트 구독이 한 번의 실패로 끊기면 후속 이벤트를 전부 놓치므로 격리. `startV2EventListener({chainId, publicClient, deps})`가 wiring을 담당, 미배포 체인에서는 명시적 throw (fail-fast). 반환값은 `stop()` 언서브 함수.
