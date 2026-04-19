@@ -75,6 +75,11 @@
 
 ### 2026-04-20
 
+- **README URL 수정 + `@chain-lens/shared` 0.0.2 bump**
+  - README/템플릿 내 `github.com/lejuho/ChainLens` → `github.com/Chain-Lens/ChainLens` 일괄 치환 (5개 파일: shared/mcp-tool/create-seller README, create-seller 템플릿 README, docs/BUYER_GUIDE).
+  - `@chain-lens/shared@0.0.1`은 이미 npm publish 후에 잘못된 URL 발견. 기능 정상이지만 첫 인상 중요해 `0.0.2`로 재배포 결정. 0.0.1은 publish 후 `npm deprecate`로 0.0.2 안내.
+  - 3개 패키지 전부 클린 재빌드 통과, dry-run 정상.
+
 - **npm publish 준비: scope 재명명 `@chainlens/*` → `@chain-lens/*`**
   - npm 조직 `chainlens` 이미 선점되어 있어 `chain-lens` (하이픈)로 조직 생성. npm 조직명은 생성 후 변경 불가 → scope 전체 치환 결정.
   - 일관성을 위해 소문자 식별자 전부 하이픈화: 패키지 scope (`@chain-lens/shared|mcp-tool|create-seller`), CLI bin (`create-chain-lens-seller`, `chain-lens-seller`, `chain-lens-mcp`), MCP tool id (`chain-lens.discover/request/status`), env var (`CHAIN_LENS_API_URL`), 상태파일 (`.chain-lens-deploy.json`), SKILL 이름 (`chain-lens-seller-onboarding`). 브랜드 프로즈 "ChainLens" (대문자)는 보존.

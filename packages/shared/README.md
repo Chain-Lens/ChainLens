@@ -1,7 +1,7 @@
 # @chain-lens/shared
 
 Shared TypeScript types, contract ABIs, deployed addresses, chain configs, and
-task-type registry for [ChainLens](https://github.com/lejuho/ChainLens) — a
+task-type registry for [ChainLens](https://github.com/Chain-Lens/ChainLens) — a
 Web2-data relay market for autonomous agents on Base.
 
 Used internally by:

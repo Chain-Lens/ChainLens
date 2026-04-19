@@ -1,7 +1,7 @@
 # @chain-lens/mcp-tool
 
 Model Context Protocol (MCP) server that lets Claude Desktop (and any other MCP
-client) discover [ChainLens](https://github.com/lejuho/ChainLens) sellers,
+client) discover [ChainLens](https://github.com/Chain-Lens/ChainLens) sellers,
 place paid data requests in USDC on Base, and read the resulting
 on-chain-verified evidence — no API keys, no OAuth, just a wallet.
 
@@ -88,7 +88,7 @@ on-chain job id plus the verified response JSON.
 ## Development
 
 ```bash
-git clone https://github.com/lejuho/ChainLens.git
+git clone https://github.com/Chain-Lens/ChainLens.git
 cd ChainLens
 pnpm install
 pnpm --filter @chain-lens/mcp-tool build

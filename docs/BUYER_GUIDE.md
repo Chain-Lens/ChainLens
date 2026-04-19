@@ -179,7 +179,7 @@ Sepolia explorer for the failed tx and paste the revert reason.
 If you're running the backend on your laptop for a demo:
 
 ```bash
-git clone https://github.com/lejuho/ChainLens.git
+git clone https://github.com/Chain-Lens/ChainLens.git
 cd ChainLens
 pnpm install
 docker compose up -d         # postgres

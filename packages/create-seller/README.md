@@ -1,7 +1,7 @@
 # @chain-lens/create-seller
 
 CLI for scaffolding, deploying, and registering a
-[ChainLens](https://github.com/lejuho/ChainLens) seller — a data wrapper
+[ChainLens](https://github.com/Chain-Lens/ChainLens) seller — a data wrapper
 that agents pay in USDC to call.
 
 ```bash
