@@ -14,7 +14,7 @@
 | Day | 작업 | Status |
 |-----|------|--------|
 | 1 | TaskTypeRegistry.sol + 테스트 + Ignition + 배포 + task_type 5개 등록 | ✅ Done |
-| 2 | SellerRegistry.sol (ERC-8004 호환) + 테스트 + 배포 | 🚧 In progress (contract+tests+ignition ✅, 배포 대기) |
+| 2 | SellerRegistry.sol (ERC-8004 호환) + 테스트 + 배포 | ✅ Done |
 | 3-4 | ApiMarketEscrow v2 evolve (Job 개념, ERC-8183 alias, 하위 호환) | 📅 Planned |
 | 5 | shared ABI + types 업데이트 (v2 + 2개 Registry) | 📅 Planned |
 
@@ -46,7 +46,7 @@
 |----------|------|-------|----------|
 | ApiMarketEscrow (v1, legacy) | `contracts/ApiMarketEscrow.sol` | 기존 457L | `0xDAa04e9BD451F9D27EcEd569303181c71F0A7b27` (Base Sepolia) |
 | TaskTypeRegistry | `contracts/TaskTypeRegistry.sol` + `types/TaskTypeRegistryTypes.sol` | 30/30 passing | ✅ `0xD2ab227417B26f4d8311594C27c59adcA046501F` (Base Sepolia) |
-| SellerRegistry | `contracts/SellerRegistry.sol` + `types/SellerRegistryTypes.sol` | 40/40 passing | — |
+| SellerRegistry | `contracts/SellerRegistry.sol` + `types/SellerRegistryTypes.sol` | 40/40 passing | ✅ `0xcF36b76b5Da55471D4EBB5349A0653624371BE2c` (Base Sepolia) |
 | ApiMarketEscrow v2 | TBD | — | — |
 
 ---
@@ -75,6 +75,11 @@
 
 ### 2026-04-19
 
+- **Week 1 Day 2 배포: SellerRegistry → Base Sepolia**
+  - 주소: `0xcF36b76b5Da55471D4EBB5349A0653624371BE2c`
+  - Owner/Gateway: `0xD21dE9470d8A0dbae0dE0b5f705001a6482Db580` (deployer, 동일 주소로 부트스트랩)
+  - `REPUTATION_NEUTRAL_BPS=5000`, `REPUTATION_MAX_BPS=10000` on-chain 읽기 확인
+  - `scripts/verify-seller-registry.ts` 추가 (owner/gateway/상수 검증)
 - **Week 1 Day 2 (local): SellerRegistry 구현 + 테스트 + Ignition 모듈**
   - [contracts/SellerRegistry.sol](packages/contracts/contracts/SellerRegistry.sol) — OZ `Ownable2Step` + `onlyGateway` 모디파이어, 게이트웨이 로테이션 지원, 5 이벤트 (`SellerRegistered`/`SellerUpdated`/`SellerDeactivated`/`JobResultRecorded`/`GatewayUpdated`)
   - [contracts/types/SellerRegistryTypes.sol](packages/contracts/contracts/types/SellerRegistryTypes.sol) — `Seller` 구조체 라이브러리 (caution.md 규칙 준수)

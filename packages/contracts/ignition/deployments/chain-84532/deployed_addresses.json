@@ -1,5 +1,6 @@
 {
   "MonApiEscrowModule#MonApiEscrow": "0xE35053B2441B8DF180D83B7d620a9fE40fbe3Ae2",
   "ApiMarketEscrowModule#ApiMarketEscrow": "0xDAa04e9BD451F9D27EcEd569303181c71F0A7b27",
-  "TaskTypeRegistryModule#TaskTypeRegistry": "0xD2ab227417B26f4d8311594C27c59adcA046501F"
+  "TaskTypeRegistryModule#TaskTypeRegistry": "0xD2ab227417B26f4d8311594C27c59adcA046501F",
+  "SellerRegistryModule#SellerRegistry": "0xcF36b76b5Da55471D4EBB5349A0653624371BE2c"
 }
