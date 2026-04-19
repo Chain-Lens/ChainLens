@@ -75,6 +75,12 @@
 
 ### 2026-04-20
 
+- **`@chain-lens/mcp-tool` + `create-seller` 0.0.2 bump (버전 일관성)**
+  - `mcp-tool@0.0.1`은 이미 배포됐지만 deprecated된 `shared@0.0.1`을 pin해서 설치 시 경고. `mcp-tool@0.0.2`로 재배포해 `shared@0.0.2` pin 확인 (pnpm `workspace:*` → `0.0.2`로 치환).
+  - `create-seller`도 같이 0.0.2 bump (독립 패키지지만 3개 패키지 버전 동기화).
+  - `src/server.ts`의 하드코딩된 `version: "0.0.1"`도 0.0.2로 맞춤 (MCP 프로토콜 handshake에 노출되는 값).
+  - dry-run 확인: mcp-tool 0.0.2 tarball의 `dependencies["@chain-lens/shared"] = "0.0.2"`.
+
 - **README URL 수정 + `@chain-lens/shared` 0.0.2 bump**
   - README/템플릿 내 `github.com/lejuho/ChainLens` → `github.com/Chain-Lens/ChainLens` 일괄 치환 (5개 파일: shared/mcp-tool/create-seller README, create-seller 템플릿 README, docs/BUYER_GUIDE).
   - `@chain-lens/shared@0.0.1`은 이미 npm publish 후에 잘못된 URL 발견. 기능 정상이지만 첫 인상 중요해 `0.0.2`로 재배포 결정. 0.0.1은 publish 후 `npm deprecate`로 0.0.2 안내.
