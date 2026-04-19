@@ -21,7 +21,7 @@ export default function AdminPage() {
   const { address, isConnected } = useAccount();
   const { isAuthenticated, signIn, signOut, loading: authLoading, error: authError } = useAdminAuth();
   const { pendingApis, loading, error, approve, reject, testApi } = useAdmin();
-  const { apis: allApis, loading: allLoading, refetch: refetchAll } = useAdminAllApis(isAuthenticated);
+  const { apis: allApis, loading: allLoading, error: allError, refetch: refetchAll } = useAdminAllApis(isAuthenticated);
   const [tab, setTab] = useState<"pending" | "all">("pending");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -160,6 +160,7 @@ export default function AdminPage() {
       {tab === "all" && (
         <>
           {allLoading && <LoadingSpinner />}
+          {allError && <p className="mb-4 text-[var(--red)]">{allError}</p>}
           {!allLoading && (
             <div className="card overflow-hidden border-[var(--border)] p-0">
               <table className="w-full text-sm">

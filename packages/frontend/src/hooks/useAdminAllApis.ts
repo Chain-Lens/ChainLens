@@ -17,6 +17,7 @@ export interface AdminApi {
 export function useAdminAllApis(isAuthenticated: boolean) {
   const [apis, setApis] = useState<AdminApi[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
   const refetch = () => setTick((t) => t + 1);
@@ -24,12 +25,15 @@ export function useAdminAllApis(isAuthenticated: boolean) {
   useEffect(() => {
     if (!isAuthenticated) return;
     setLoading(true);
+    setError(null);
     apiClient
       .get<AdminApi[]>("/admin/apis")
       .then(setApis)
-      .catch(console.error)
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Failed to load APIs");
+      })
       .finally(() => setLoading(false));
   }, [isAuthenticated, tick]);
 
-  return { apis, loading, refetch };
+  return { apis, loading, error, refetch };
 }

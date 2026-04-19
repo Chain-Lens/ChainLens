@@ -40,16 +40,7 @@ export default function Header() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header
-      style={{
-        background: "var(--bg2)",
-        borderBottom: "1px solid var(--border)",
-        position: "sticky",
-        top: 0,
-        zIndex: 50,
-        backdropFilter: "blur(8px)",
-      }}
-    >
+    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--bg2)] backdrop-blur-[8px]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14">
 
@@ -70,16 +61,7 @@ export default function Header() {
                 <Link
                   key={href}
                   href={href}
-                  className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
-                  style={{ color: "var(--text2)" }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = "var(--text)";
-                    e.currentTarget.style.background = "var(--bg3)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = "var(--text2)";
-                    e.currentTarget.style.background = "transparent";
-                  }}
+                  className="rounded-md px-3 py-1.5 text-sm font-medium text-[var(--text2)] transition-colors hover:bg-[var(--bg3)] hover:text-[var(--text)]"
                 >
                   {label}
                 </Link>
@@ -93,28 +75,7 @@ export default function Header() {
             <button
               onClick={toggleTheme}
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 34,
-                height: 34,
-                borderRadius: "8px",
-                background: "var(--bg3)",
-                color: "var(--text2)",
-                border: "1px solid var(--border2)",
-                cursor: "pointer",
-                transition: "background 0.15s, color 0.15s",
-                flexShrink: 0,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "var(--border)";
-                e.currentTarget.style.color = "var(--text)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "var(--bg3)";
-                e.currentTarget.style.color = "var(--text2)";
-              }}
+              className="inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[8px] border border-[var(--border2)] bg-[var(--bg3)] text-[var(--text2)] transition-colors hover:bg-[var(--border)] hover:text-[var(--text)]"
             >
               {theme === "dark" ? <SunIcon /> : <MoonIcon />}
             </button>

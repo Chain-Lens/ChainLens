@@ -32,7 +32,7 @@ export default function EvidencePage() {
   if (error || !job) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-8">
-        <p style={{ color: "var(--red)" }}>{error ?? "Evidence not found"}</p>
+        <p className="text-[var(--red)]">{error ?? "Evidence not found"}</p>
       </div>
     );
   }
@@ -45,17 +45,15 @@ export default function EvidencePage() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--text)" }}>
-          Evidence
-        </h1>
-        <p className="text-sm font-mono" style={{ color: "var(--text3)" }}>
+        <h1 className="mb-2 text-2xl font-bold text-[var(--text)]">Evidence</h1>
+        <p className="font-mono text-sm text-[var(--text3)]">
           Job #{job.onchainJobId}
         </p>
       </div>
 
       <div className="card space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold" style={{ color: "var(--text)" }}>
+          <h2 className="text-lg font-semibold text-[var(--text)]">
             Job Details
           </h2>
           <StatusBadge status={job.status} />
@@ -69,8 +67,7 @@ export default function EvidencePage() {
             value={
               <Link
                 href={`/reputation/${job.seller}`}
-                style={{ color: "var(--cyan)" }}
-                className="hover:underline"
+                className="text-[var(--cyan)] hover:underline"
               >
                 {job.seller}
               </Link>
@@ -99,7 +96,7 @@ export default function EvidencePage() {
       </div>
 
       <div className="card space-y-4">
-        <h2 className="text-lg font-semibold" style={{ color: "var(--text)" }}>
+        <h2 className="text-lg font-semibold text-[var(--text)]">
           Hashes
         </h2>
         <Field label="Inputs Hash" mono value={job.inputsHash} />
@@ -108,16 +105,11 @@ export default function EvidencePage() {
         )}
         {hashMatches !== null && (
           <div
-            className="px-3 py-2 rounded-lg text-sm"
-            style={{
-              background: hashMatches
-                ? "rgba(35,134,54,0.12)"
-                : "rgba(248,81,73,0.12)",
-              border: hashMatches
-                ? "1px solid rgba(35,134,54,0.3)"
-                : "1px solid rgba(248,81,73,0.3)",
-              color: hashMatches ? "#3fb950" : "var(--red)",
-            }}
+            className={`rounded-lg px-3 py-2 text-sm ${
+              hashMatches
+                ? "border border-[rgba(35,134,54,0.3)] bg-[rgba(35,134,54,0.12)] text-[#3fb950]"
+                : "border border-[rgba(248,81,73,0.3)] bg-[rgba(248,81,73,0.12)] text-[var(--red)]"
+            }`}
           >
             {hashMatches
               ? "✓ Local keccak256(response) matches on-chain responseHash"
@@ -128,7 +120,7 @@ export default function EvidencePage() {
 
       {job.inputs != null && (
         <div className="card space-y-2">
-          <h2 className="text-lg font-semibold" style={{ color: "var(--text)" }}>
+          <h2 className="text-lg font-semibold text-[var(--text)]">
             Request Inputs
           </h2>
           <JsonBlock value={job.inputs} />
@@ -137,7 +129,7 @@ export default function EvidencePage() {
 
       {job.response != null && (
         <div className="card space-y-2">
-          <h2 className="text-lg font-semibold" style={{ color: "var(--text)" }}>
+          <h2 className="text-lg font-semibold text-[var(--text)]">
             Response
           </h2>
           <JsonBlock value={job.response} />
@@ -145,17 +137,11 @@ export default function EvidencePage() {
       )}
 
       {job.errorReason && (
-        <div
-          className="p-4 rounded-lg"
-          style={{
-            background: "rgba(248,81,73,0.1)",
-            border: "1px solid rgba(248,81,73,0.3)",
-          }}
-        >
-          <span className="text-sm font-medium" style={{ color: "var(--red)" }}>
+        <div className="rounded-lg border border-[rgba(248,81,73,0.3)] bg-[rgba(248,81,73,0.1)] p-4">
+          <span className="text-sm font-medium text-[var(--red)]">
             Error:{" "}
           </span>
-          <span className="text-sm" style={{ color: "var(--red)" }}>
+          <span className="text-sm text-[var(--red)]">
             {job.errorReason}
           </span>
         </div>
@@ -175,12 +161,11 @@ function Field({
 }) {
   return (
     <div>
-      <div className="text-xs mb-1" style={{ color: "var(--text2)" }}>
+      <div className="mb-1 text-xs text-[var(--text2)]">
         {label}
       </div>
       <div
-        className={mono ? "font-mono text-xs break-all" : ""}
-        style={{ color: "var(--text)" }}
+        className={`${mono ? "break-all font-mono text-xs" : ""} text-[var(--text)]`}
       >
         {value}
       </div>
@@ -196,15 +181,7 @@ function JsonBlock({ value }: { value: unknown }) {
     text = String(value);
   }
   return (
-    <pre
-      className="p-4 rounded-lg text-sm overflow-auto"
-      style={{
-        background: "var(--bg)",
-        color: "var(--text)",
-        border: "1px solid var(--border)",
-        fontFamily: "var(--font-mono)",
-      }}
-    >
+    <pre className="overflow-auto rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4 font-mono text-sm text-[var(--text)]">
       {text}
     </pre>
   );

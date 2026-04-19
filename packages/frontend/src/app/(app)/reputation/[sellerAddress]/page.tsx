@@ -15,7 +15,7 @@ export default function ReputationPage() {
   if (!addr) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-8">
-        <p style={{ color: "var(--red)" }}>Invalid seller address</p>
+        <p className="text-[var(--red)]">Invalid seller address</p>
       </div>
     );
   }
@@ -30,7 +30,7 @@ export default function ReputationPage() {
   if (error || !reputation) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-8">
-        <p style={{ color: "var(--red)" }}>
+        <p className="text-[var(--red)]">
           {error ?? "Seller not registered"}
         </p>
       </div>
@@ -47,28 +47,21 @@ export default function ReputationPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div>
-        <h1
-          className="text-2xl font-bold mb-1"
-          style={{ color: "var(--text)" }}
-        >
-          {reputation.name || "Unnamed Seller"}
-        </h1>
-        <p className="text-xs font-mono" style={{ color: "var(--text3)" }}>
+        <h1 className="mb-1 text-2xl font-bold text-[var(--text)]">{reputation.name || "Unnamed Seller"}</h1>
+        <p className="font-mono text-xs text-[var(--text3)]">
           {reputation.address}
         </p>
         <div className="mt-2 flex items-center gap-2 text-sm">
           <span
-            className="px-2 py-0.5 rounded-full text-xs"
-            style={{
-              background: reputation.active
-                ? "rgba(35,134,54,0.15)"
-                : "rgba(139,148,158,0.15)",
-              color: reputation.active ? "#3fb950" : "#8b949e",
-            }}
+            className={`rounded-full px-2 py-0.5 text-xs ${
+              reputation.active
+                ? "bg-[rgba(35,134,54,0.15)] text-[#3fb950]"
+                : "bg-[rgba(139,148,158,0.15)] text-[#8b949e]"
+            }`}
           >
             {reputation.active ? "Active" : "Inactive"}
           </span>
-          <span style={{ color: "var(--text2)" }}>
+          <span className="text-[var(--text2)]">
             Registered{" "}
             {new Date(Number(reputation.registeredAt) * 1000).toLocaleDateString()}
           </span>
@@ -87,24 +80,24 @@ export default function ReputationPage() {
       </div>
 
       <div className="card space-y-3">
-        <h2 className="text-lg font-semibold" style={{ color: "var(--text)" }}>
+        <h2 className="text-lg font-semibold text-[var(--text)]">
           Earnings
         </h2>
-        <div className="text-3xl font-mono" style={{ color: "var(--text)" }}>
+        <div className="font-mono text-3xl text-[var(--text)]">
           {earningsUsdc} USDC
         </div>
       </div>
 
       <div className="card space-y-3">
-        <h2 className="text-lg font-semibold" style={{ color: "var(--text)" }}>
+        <h2 className="text-lg font-semibold text-[var(--text)]">
           Capabilities
         </h2>
         {reputation.capabilities.length === 0 ? (
-          <p className="text-sm" style={{ color: "var(--text2)" }}>
+          <p className="text-sm text-[var(--text2)]">
             No capabilities registered on-chain.
           </p>
         ) : (
-          <ul className="space-y-1 text-xs font-mono" style={{ color: "var(--text)" }}>
+          <ul className="space-y-1 font-mono text-xs text-[var(--text)]">
             {reputation.capabilities.map((c) => (
               <li key={c} className="break-all">
                 {c}
@@ -116,15 +109,14 @@ export default function ReputationPage() {
 
       {reputation.metadataURI && (
         <div className="card space-y-2">
-          <h2 className="text-lg font-semibold" style={{ color: "var(--text)" }}>
+          <h2 className="text-lg font-semibold text-[var(--text)]">
             Metadata
           </h2>
           <a
             href={resolveUri(reputation.metadataURI)}
             target="_blank"
             rel="noreferrer"
-            className="text-sm font-mono break-all hover:underline"
-            style={{ color: "var(--cyan)" }}
+            className="break-all font-mono text-sm text-[var(--cyan)] hover:underline"
           >
             {reputation.metadataURI}
           </a>
@@ -145,14 +137,14 @@ function Stat({
 }) {
   return (
     <div className="card">
-      <div className="text-xs mb-1" style={{ color: "var(--text2)" }}>
+      <div className="mb-1 text-xs text-[var(--text2)]">
         {label}
       </div>
-      <div className="text-xl font-semibold" style={{ color: "var(--text)" }}>
+      <div className="text-xl font-semibold text-[var(--text)]">
         {value}
       </div>
       {hint && (
-        <div className="text-xs mt-1" style={{ color: "var(--text3)" }}>
+        <div className="mt-1 text-xs text-[var(--text3)]">
           {hint}
         </div>
       )}
