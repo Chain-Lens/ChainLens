@@ -6,6 +6,19 @@ import {
 } from "@chain-lens/shared";
 import { publicClient, walletClient } from "../config/viem.js";
 
+// Manual gas pins for every write path targeting the Phase-3.5 escrow +
+// SellerRegistry. viem's gas estimation over public sepolia.base.org
+// intermittently returns the block gas limit (~30M) instead of a real
+// estimate, and the L2 then rejects the tx with "intrinsic gas too high"
+// at admission time. eth_call simulations against identical calldata
+// succeed, confirming the calls are valid; it's an estimation wart, not
+// a revert. Pins leave ~2-3× headroom over observed on-chain consumption
+// without being wasteful.
+const GAS_SUBMIT = 250_000n;
+const GAS_REFUND = 150_000n;
+const GAS_REGISTER_SELLER = 350_000n;
+const GAS_RECORD_JOB_RESULT = 150_000n;
+
 function addressFor(
   map: Record<number, `0x${string}`>,
   contract: string,
@@ -29,6 +42,7 @@ export async function submitJob(args: {
     abi: ApiMarketEscrowV2Abi,
     functionName: "submit",
     args: [args.jobId, args.responseHash, args.evidenceURI],
+    gas: GAS_SUBMIT,
   });
   await publicClient.waitForTransactionReceipt({ hash });
   return hash;
@@ -42,6 +56,7 @@ export async function refundJob(args: {
     abi: ApiMarketEscrowV2Abi,
     functionName: "refund",
     args: [args.jobId],
+    gas: GAS_REFUND,
   });
   await publicClient.waitForTransactionReceipt({ hash });
   return hash;
@@ -58,6 +73,7 @@ export async function registerSellerOnChain(args: {
     abi: SellerRegistryAbi,
     functionName: "registerSeller",
     args: [args.seller, args.name, args.capabilities, args.metadataURI ?? ""],
+    gas: GAS_REGISTER_SELLER,
   });
   await publicClient.waitForTransactionReceipt({ hash });
   return hash;
@@ -84,6 +100,7 @@ export async function recordSellerResult(args: {
     abi: SellerRegistryAbi,
     functionName: "recordJobResult",
     args: [args.seller, args.success, args.earningsUsdc],
+    gas: GAS_RECORD_JOB_RESULT,
   });
   await publicClient.waitForTransactionReceipt({ hash });
   return hash;

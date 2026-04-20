@@ -66,12 +66,16 @@ export async function approve(apiId: string, adminAddress: string, reason?: stri
 
   const onChainId = await apiService.getNextOnChainId();
 
-  // Call approveApi on-chain
+  // Call approveApi on-chain. Manual gas pin: viem's estimation against
+  // the Phase-3.5 escrow over public Base Sepolia RPC occasionally falls
+  // through to block_gas_limit and the L2 rejects admission. approveApi
+  // in practice consumes ~50k; 100k is a generous buffer.
   const hash = await walletClient.writeContract({
     address: env.CONTRACT_ADDRESS as `0x${string}`,
     abi: ApiMarketEscrowAbi as readonly unknown[],
     functionName: "approveApi",
     args: [BigInt(onChainId)],
+    gas: 100_000n,
   });
 
   await publicClient.waitForTransactionReceipt({ hash });
