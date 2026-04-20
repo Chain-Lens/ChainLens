@@ -121,6 +121,16 @@ export async function requestHandler(
   const amount = BigInt(input.amount);
   if (amount <= 0n) throw new Error("chain-lens.request: amount must be > 0");
   const apiId = BigInt(input.api_id ?? 0);
+  if (input.api_id === undefined) {
+    // Backend falls back to (seller, task_type) string match when apiId=0. That
+    // path has bitten us twice: category drift ("finance" vs "finance_equity_analysis")
+    // and TaskTypeRegistry disable both surface here as failed jobs. Warn once.
+    process.stderr.write(
+      "chain-lens.request: api_id not provided — backend will fall back to " +
+        "(seller, task_type) string matching, which is fragile. Pass api_id from " +
+        "chain-lens.discover for reliable routing.\n",
+    );
+  }
   const taskTypeId = deps.taskTypeId(input.task_type);
   const inputsHash = deps.inputsHash(input.inputs);
 
@@ -233,14 +243,16 @@ export const requestToolDefinition = {
       },
       task_type: {
         type: "string",
-        description: "Task type name (must be registered, e.g. 'blockscout_contract_source').",
+        description:
+          "Task type name (e.g. 'defillama_tvl'). Must be registered AND enabled in the on-chain TaskTypeRegistry — otherwise the backend auto-refunds. When api_id is provided this is advisory for the on-chain event only; routing uses api_id.",
       },
       inputs: {
         description: "Arbitrary JSON inputs for the task; canonical-hashed into inputsHash.",
       },
       api_id: {
         type: "string",
-        description: "Optional backward-compat apiId (uint256). Defaults to 0.",
+        description:
+          "Strongly recommended. On-chain uint256 listing id — pull it from chain-lens.discover. When set, backend routes by primary key; otherwise it falls back to fragile (seller, task_type) string matching and jobs can silently auto-refund on drift.",
       },
       amount: {
         type: "string",

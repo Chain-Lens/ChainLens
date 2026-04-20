@@ -242,6 +242,32 @@ describe("requestHandler", () => {
     );
   });
 
+  it("forwards api_id to createJob args and /jobs/execute body when provided", async () => {
+    let executeBody: unknown;
+    const { deps, writes } = fakeDeps({
+      fetchImpl: (url, init) => {
+        if (url.endsWith("/jobs/execute")) {
+          executeBody = init?.body ? JSON.parse(String(init.body)) : undefined;
+          return { status: 202, body: { accepted: true } };
+        }
+        return { status: 200, body: { status: "COMPLETED", onchainJobId: "7" } };
+      },
+    });
+    await requestHandler(
+      {
+        seller: ("0x" + "1".repeat(40)) as `0x${string}`,
+        task_type: "defillama_tvl",
+        inputs: { protocol: "uniswap" },
+        amount: "50000",
+        api_id: "4",
+      },
+      deps,
+    );
+    const createJobArgs = writes.find((w) => w.functionName === "createJob")?.args;
+    assert.equal(createJobArgs?.[4], 4n, "apiId should be the 5th createJob arg");
+    assert.equal((executeBody as { apiId?: string }).apiId, "4");
+  });
+
   it("fails fast when the backend execution trigger is rejected", async () => {
     const { deps } = fakeDeps({
       fetchImpl: (url) =>
