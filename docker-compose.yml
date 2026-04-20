@@ -20,7 +20,7 @@ services:
       dockerfile: docker/Dockerfile.backend
     restart: unless-stopped
     env_file:
-      - .env
+      - packages/backend/.env
     environment:
       DATABASE_URL: postgresql://postgres:dlghwo1988@db:5432/monapi
     ports:
@@ -39,6 +39,8 @@ services:
         NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID:-YOUR_PROJECT_ID}
         NEXT_PUBLIC_ADMIN_ADDRESSES: ${NEXT_PUBLIC_ADMIN_ADDRESSES:-}
         NEXT_PUBLIC_CHAIN_ID: ${NEXT_PUBLIC_CHAIN_ID:-84532}
+    env_file:
+      - packages/frontend/.env
     restart: unless-stopped
     ports:
       - "3030:3000"

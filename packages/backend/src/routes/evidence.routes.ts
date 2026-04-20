@@ -16,6 +16,11 @@ router.get("/:jobId", async (req: Request, res: Response, next: NextFunction) =>
       return;
     }
     const onchainJobId = BigInt(raw);
+    // PostgreSQL BIGINT max is 2^63-1; anything larger can't exist in DB
+    if (onchainJobId > BigInt("9223372036854775807")) {
+      res.status(404).json({ error: "evidence_not_found" });
+      return;
+    }
     const evidence = await getEvidence(onchainJobId, prismaEvidenceStore);
     if (!evidence) {
       res.status(404).json({ error: "evidence_not_found" });

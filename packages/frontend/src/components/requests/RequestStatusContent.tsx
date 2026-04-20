@@ -134,7 +134,7 @@ export default function RequestStatusContent({
 
         <div>
           <span className="text-sm text-[var(--text2)]">Amount: </span>
-          <span className="font-mono text-[var(--text)]">{request.amount} wei</span>
+          <span className="font-mono text-[var(--text)]">{(Number(request.amount) / 1_000_000).toFixed(2)} USDC</span>
         </div>
 
         {request.txHash && (
