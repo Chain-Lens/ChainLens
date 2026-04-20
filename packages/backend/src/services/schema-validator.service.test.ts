@@ -91,7 +91,7 @@ describe("schema-validator", () => {
     clearSchemaCache();
     await assert.rejects(
       () => validateAgainstSchema({}, "https://127.0.0.1:1/never-listens.json"),
-      /schema fetch failed|fetch failed|ECONNREFUSED|ENOTFOUND/i,
+      /schema fetch failed|fetch failed|ECONNREFUSED|ENOTFOUND|blocked outbound/i,
     );
   });
 });
