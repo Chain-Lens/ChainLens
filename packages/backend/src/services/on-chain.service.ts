@@ -1,8 +1,10 @@
 import {
   ApiMarketEscrowV2Abi,
   SellerRegistryAbi,
+  TaskTypeRegistryAbi,
   CONTRACT_ADDRESSES_V2,
   SELLER_REGISTRY_ADDRESSES,
+  TASK_TYPE_REGISTRY_ADDRESSES,
 } from "@chain-lens/shared";
 import { publicClient, walletClient } from "../config/viem.js";
 
@@ -18,6 +20,7 @@ const GAS_SUBMIT = 250_000n;
 const GAS_REFUND = 150_000n;
 const GAS_REGISTER_SELLER = 350_000n;
 const GAS_RECORD_JOB_RESULT = 150_000n;
+const GAS_SET_ENABLED = 100_000n;
 
 function addressFor(
   map: Record<number, `0x${string}`>,
@@ -88,6 +91,21 @@ export async function isSellerRegisteredOnChain(
     functionName: "isRegistered",
     args: [seller],
   })) as boolean;
+}
+
+export async function setTaskTypeEnabled(args: {
+  taskTypeId: `0x${string}`;
+  enabled: boolean;
+}): Promise<`0x${string}`> {
+  const hash = await walletClient.writeContract({
+    address: addressFor(TASK_TYPE_REGISTRY_ADDRESSES, "TaskTypeRegistry"),
+    abi: TaskTypeRegistryAbi,
+    functionName: "setEnabled",
+    args: [args.taskTypeId, args.enabled],
+    gas: GAS_SET_ENABLED,
+  });
+  await publicClient.waitForTransactionReceipt({ hash });
+  return hash;
 }
 
 export async function recordSellerResult(args: {

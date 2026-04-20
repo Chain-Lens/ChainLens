@@ -6,6 +6,19 @@ import { validate } from "../middleware/validate.js";
 import prisma from "../config/prisma.js";
 import { scanResponse } from "../services/injection-filter.service.js";
 import { assertSafeOutboundUrl } from "../utils/network.js";
+import {
+  refundJob,
+  setTaskTypeEnabled,
+  isSellerRegisteredOnChain,
+  getSellerInfo,
+  getSellerStats,
+} from "../services/on-chain.service.js";
+import {
+  clearTaskTypeListCache,
+  taskTypeId as computeTaskTypeId,
+} from "../services/task-type.service.js";
+import { BadRequestError, NotFoundError } from "../utils/errors.js";
+import { logger } from "../utils/logger.js";
 
 const router = Router();
 
@@ -139,6 +152,140 @@ router.post(
 const rejectSchema = z.object({
   reason: z.string().optional(),
 });
+
+// GET /admin/sellers
+// Aggregates unique seller addresses from ApiListing and enriches each with
+// on-chain SellerRegistry state (registered/active/stats). N+1 reads are fine
+// at MVP scale; swap to multicall3 when the seller set grows.
+router.get(
+  "/sellers",
+  async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const distinct = await prisma.apiListing.findMany({
+        distinct: ["sellerAddress"],
+        select: { sellerAddress: true },
+      });
+      const addresses = distinct.map((d) => d.sellerAddress as `0x${string}`);
+
+      const items = await Promise.all(
+        addresses.map(async (address) => {
+          const listingCount = await prisma.apiListing.count({
+            where: { sellerAddress: address },
+          });
+          let registered = false;
+          let active = false;
+          let name: string | null = null;
+          let jobsCompleted = 0;
+          let jobsFailed = 0;
+          let earningsUsdcAtomic = "0";
+          try {
+            registered = await isSellerRegisteredOnChain(address);
+            if (registered) {
+              const info = await getSellerInfo(address);
+              if (info) {
+                active = info.active;
+                name = info.name;
+              }
+              const stats = await getSellerStats(address);
+              jobsCompleted = Number(stats.completed);
+              jobsFailed = Number(stats.failed);
+              earningsUsdcAtomic = stats.earnings.toString();
+            }
+          } catch (err) {
+            // On-chain read failures shouldn't hide the seller from the list;
+            // just show it as unregistered / missing stats.
+            logger.warn(
+              { err, address },
+              "Admin seller enrichment read failed",
+            );
+          }
+          return {
+            address,
+            listingCount,
+            registered,
+            active,
+            name,
+            jobsCompleted,
+            jobsFailed,
+            earningsUsdcAtomic,
+          };
+        }),
+      );
+      res.json({ items });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+const taskTypeToggleSchema = z.object({
+  enabled: z.boolean(),
+});
+
+// POST /admin/task-types/:name/toggle
+// Calls TaskTypeRegistry.setEnabled on-chain. Requires the backend wallet
+// to be the contract owner (Ownable2Step). Clears the /api/task-types
+// cache so the frontend dropdown reflects the change within seconds
+// rather than after TTL expiry.
+router.post(
+  "/task-types/:name/toggle",
+  validate(taskTypeToggleSchema),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const name = req.params["name"] as string;
+      const { enabled } = req.body as z.infer<typeof taskTypeToggleSchema>;
+      const id = computeTaskTypeId(name);
+      const hash = await setTaskTypeEnabled({ taskTypeId: id, enabled });
+      clearTaskTypeListCache();
+      logger.info(
+        { taskType: name, enabled, hash, admin: req.adminAddress },
+        "Admin toggled task type",
+      );
+      res.json({ taskType: name, enabled, txHash: hash });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// POST /admin/jobs/:jobId/refund
+// Escrow.refund() is onlyGateway, and the gateway wallet is this backend.
+// Admin triggers via an authenticated REST call; we call refund on-chain.
+// State transitions to REFUNDED will also flow through the PaymentRefunded
+// event listener, so the DB write here is idempotent with that path.
+router.post(
+  "/jobs/:jobId/refund",
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const jobId = req.params["jobId"] as string;
+      if (!/^\d+$/.test(jobId)) {
+        throw new BadRequestError("jobId must be a positive integer");
+      }
+      const onchainJobId = BigInt(jobId);
+      const existing = await prisma.job.findFirst({
+        where: { onchainJobId },
+      });
+      if (!existing) throw new NotFoundError(`job ${jobId} not found`);
+      if (existing.status === "REFUNDED") {
+        throw new BadRequestError(`job ${jobId} is already refunded`);
+      }
+      if (existing.status === "COMPLETED") {
+        throw new BadRequestError(
+          `job ${jobId} is completed, cannot refund`,
+        );
+      }
+
+      const hash = await refundJob({ jobId: onchainJobId });
+      logger.info(
+        { jobId, hash, admin: req.adminAddress },
+        "Admin-triggered refund submitted on-chain",
+      );
+      res.json({ jobId, txHash: hash });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // POST /admin/apis/:id/reject
 router.post(
