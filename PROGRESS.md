@@ -75,6 +75,13 @@
 
 ### 2026-04-20
 
+- **`@chain-lens/mcp-tool` 0.0.4 — 0.0.3 긴급 수정: `workspace:*` publish 누출**
+  - 0.0.3 tarball `dependencies["@chain-lens/shared"]`이 `workspace:*` 문자열 그대로 올라가 `npm install -g @chain-lens/mcp-tool` 시 `EUNSUPPORTEDPROTOCOL` — 신규 사용자 설치 전면 차단. 외부 사용자 신고로 발견.
+  - 원인: 0.0.2는 `pnpm publish`(workspace:* → 실버전 변환 수행)를 썼는데, 0.0.3 releasing 때 `npm publish`로 바꿔서 변환이 일어나지 않음. 문서화된 사전 체크 누락 — 앞으로 workspace 의존 있는 패키지는 `pnpm publish --dry-run` 후 tarball의 manifest `dependencies` 실버전 여부 확인하는 걸 필수화.
+  - 수정: `packages/mcp-tool/package.json` 0.0.3 → 0.0.4, `src/server.ts` MCP handshake 버전 상수도 동기. `pnpm pack --pack-destination /tmp` 후 `tar -xzOf` 로 0.0.4 tarball 검증 → `dependencies["@chain-lens/shared"] = "0.0.2"` 확인.
+  - 0.0.3 deprecate 예정: "broken: workspace:* published unresolved — use 0.0.4".
+  - `create-seller` 0.0.3은 의존성 0개라 무관, 계속 유효.
+
 - **`@chain-lens/create-seller` 0.0.3 — 첫 실행 사용자 실패 경로 전면 대응**
   - `deploy`에 `vercel whoami` 사전 체크 추가 — 미로그인 상태에서 `vercel --prod --yes`가 애매한 에러로 죽는 대신 `vercel login` 안내 메시지로 즉시 중단. 테스트 1개 추가 (11/11 pass).
   - `register` / `status` 양쪽에 `$CHAIN_LENS_PAYOUT_ADDRESS` env fallback + `$CHAIN_LENS_API_URL` 미설정 시 공개 MVP(`https://chainlens.pelicanlab.dev/api`) 자동 기본값. help 텍스트에 "공개 지갑 주소, 개인키 아님" 명시적 경고 — mcp-tool의 `WALLET_PRIVATE_KEY` 평문 재앙이 seller 플로우에 반복되지 않게 차단.

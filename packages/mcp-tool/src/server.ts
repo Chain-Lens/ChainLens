@@ -23,7 +23,7 @@ export interface McpServerDeps {
 
 export function buildMcpServer(deps: McpServerDeps): Server {
   const server = new Server(
-    { name: "chain-lens-mcp", version: "0.0.3" },
+    { name: "chain-lens-mcp", version: "0.0.4" },
     { capabilities: { tools: {} } },
   );
 
