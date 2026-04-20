@@ -2,7 +2,9 @@
  * `chain-lens.request` — create a paid job on ChainLens and wait for evidence.
  *
  * Flow:
- *   1. Approve USDC spending by the escrow (up to `amount`).
+ *   1. Check existing USDC allowance and only approve when needed.
+ *      If the token still has a stale non-zero allowance, reset it to `0`
+ *      before setting the new allowance amount.
  *   2. Call `ApiMarketEscrowV2.createJob(seller, taskType, amount, inputsHash, apiId)`.
  *   3. Parse the `JobCreated` event from the receipt to get `jobId`.
  *   4. Poll `GET /api/evidence/:jobId` until the job reaches a terminal status
@@ -51,6 +53,19 @@ export interface RequestDeps {
   wait?: (ms: number) => Promise<void>;
 }
 
+const ERC20_ALLOWANCE_ABI = [
+  {
+    type: "function",
+    name: "allowance",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const satisfies Abi;
+
 export interface RequestResult {
   jobId: string;
   txHash: `0x${string}`;
@@ -92,16 +107,36 @@ export async function requestHandler(
   const taskTypeId = deps.taskTypeId(input.task_type);
   const inputsHash = deps.inputsHash(input.inputs);
 
-  // 1. Approve USDC spending.
-  const approveHash = await deps.walletClient.writeContract({
+  // 1. Ensure the escrow has enough allowance without tripping USDC-style
+  // non-zero -> non-zero approve restrictions after a partially failed retry.
+  const currentAllowance = (await deps.publicClient.readContract({
     address: deps.usdcAddress,
-    abi: deps.usdcAbi,
-    functionName: "approve",
-    args: [deps.escrowAddress, amount],
-    account: deps.account,
-    chain: deps.walletClient.chain,
-  });
-  await deps.publicClient.waitForTransactionReceipt({ hash: approveHash });
+    abi: ERC20_ALLOWANCE_ABI,
+    functionName: "allowance",
+    args: [deps.account.address, deps.escrowAddress],
+  })) as bigint;
+  if (currentAllowance < amount) {
+    if (currentAllowance > 0n) {
+      const resetHash = await deps.walletClient.writeContract({
+        address: deps.usdcAddress,
+        abi: deps.usdcAbi,
+        functionName: "approve",
+        args: [deps.escrowAddress, 0n],
+        account: deps.account,
+        chain: deps.walletClient.chain,
+      });
+      await deps.publicClient.waitForTransactionReceipt({ hash: resetHash });
+    }
+    const approveHash = await deps.walletClient.writeContract({
+      address: deps.usdcAddress,
+      abi: deps.usdcAbi,
+      functionName: "approve",
+      args: [deps.escrowAddress, amount],
+      account: deps.account,
+      chain: deps.walletClient.chain,
+    });
+    await deps.publicClient.waitForTransactionReceipt({ hash: approveHash });
+  }
 
   // 2. createJob.
   const createHash = await deps.walletClient.writeContract({

@@ -1,7 +1,6 @@
-import { createApp } from "./server.js";
+import app from "./server.js";
 
 const PORT = Number(process.env.PORT ?? {{PORT}});
-const app = createApp();
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`[{{SELLER_NAME}}] listening on :${PORT}`);

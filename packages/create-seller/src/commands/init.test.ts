@@ -68,15 +68,19 @@ test("scaffold: writes tree with placeholders replaced and strips .tmpl", async 
     assert.ok(files.includes("package.json"), "package.json should exist (tmpl stripped)");
     assert.ok(files.includes("src/handler.ts"), "src/handler.ts should exist");
     assert.ok(files.includes("src/errors.ts"), "src/errors.ts should exist (not a template)");
-    assert.ok(files.includes("vercel.json"), "vercel.json should exist");
+    assert.ok(files.includes("src/server.ts"), "src/server.ts should exist (Vercel entry)");
+    assert.ok(files.includes("src/dev.ts"), "src/dev.ts should exist (local dev entry)");
 
     const pkg = await readFile(join(target, "package.json"), "utf8");
     assert.match(pkg, /"name": "my-seller"/);
     assert.match(pkg, /ChainLens seller for defillama_tvl/);
 
-    const index = await readFile(join(target, "src/index.ts"), "utf8");
-    assert.match(index, /process\.env\.PORT \?\? 9999/);
-    assert.match(index, /\[my-seller\] listening/);
+    const dev = await readFile(join(target, "src/dev.ts"), "utf8");
+    assert.match(dev, /process\.env\.PORT \?\? 9999/);
+    assert.match(dev, /\[my-seller\] listening/);
+
+    const server = await readFile(join(target, "src/server.ts"), "utf8");
+    assert.match(server, /export default app/);
 
     const handler = await readFile(join(target, "src/handler.ts"), "utf8");
     assert.match(handler, /task_type: "defillama_tvl"/);

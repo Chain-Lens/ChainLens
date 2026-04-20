@@ -14,6 +14,7 @@ function fakeDeps(options: {
   jobIdTopic?: `0x${string}`;
   pollTimeoutMs?: number;
   pollIntervalMs?: number;
+  initialAllowance?: bigint;
 }): { deps: RequestDeps; writes: WriteCall[]; fetchCalls: string[] } {
   const writes: WriteCall[] = [];
   const fetchCalls: string[] = [];
@@ -36,11 +37,12 @@ function fakeDeps(options: {
       args: readonly unknown[];
     }) => {
       writes.push({ address: args.address, functionName: args.functionName, args: args.args });
-      return writes.length === 1 ? "0xaaa" : "0xbbb";
+      return args.functionName === "createJob" ? "0xbbb" : "0xaaa";
     },
   } as unknown as RequestDeps["walletClient"];
 
   const publicClient = {
+    readContract: async () => options.initialAllowance ?? 0n,
     waitForTransactionReceipt: async ({ hash }: { hash: `0x${string}` }) => ({
       transactionHash: hash,
       logs:
@@ -110,6 +112,48 @@ describe("requestHandler", () => {
     assert.equal(out.jobId, "7");
     assert.equal(fetchCalls.length, 2);
     assert.ok(fetchCalls[0].endsWith("/evidence/7"));
+  });
+
+  it("resets stale allowance before approving again", async () => {
+    const { deps, writes } = fakeDeps({
+      fetchImpl: () => ({ status: 200, body: { status: "COMPLETED", onchainJobId: "7" } }),
+      initialAllowance: 1n,
+    });
+    const out = await requestHandler(
+      {
+        seller: ("0x" + "1".repeat(40)) as `0x${string}`,
+        task_type: "finance_equity_analysis",
+        inputs: { ticker: "TSLA" },
+        amount: "2000000",
+      },
+      deps,
+    );
+    assert.equal(writes.length, 3);
+    assert.equal(writes[0].functionName, "approve");
+    assert.deepEqual(writes[0].args, [("0x" + "b".repeat(40)) as `0x${string}`, 0n]);
+    assert.equal(writes[1].functionName, "approve");
+    assert.deepEqual(writes[1].args, [("0x" + "b".repeat(40)) as `0x${string}`, 2000000n]);
+    assert.equal(writes[2].functionName, "createJob");
+    assert.equal(out.status, "COMPLETED");
+  });
+
+  it("skips approve when allowance is already sufficient", async () => {
+    const { deps, writes } = fakeDeps({
+      fetchImpl: () => ({ status: 200, body: { status: "COMPLETED", onchainJobId: "7" } }),
+      initialAllowance: 50000n,
+    });
+    const out = await requestHandler(
+      {
+        seller: ("0x" + "1".repeat(40)) as `0x${string}`,
+        task_type: "defillama_tvl",
+        inputs: { protocol: "uniswap" },
+        amount: "50000",
+      },
+      deps,
+    );
+    assert.equal(writes.length, 1);
+    assert.equal(writes[0].functionName, "createJob");
+    assert.equal(out.status, "COMPLETED");
   });
 
   it("returns TIMEOUT when evidence never finalizes within poll window", async () => {
