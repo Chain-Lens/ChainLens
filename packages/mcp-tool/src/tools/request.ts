@@ -1,21 +1,23 @@
 /**
  * `chain-lens.request` — create a paid job on ChainLens and wait for evidence.
  *
- * Flow:
- *   1. Check existing USDC allowance and only approve when needed.
- *      If the token still has a stale non-zero allowance, reset it to `0`
- *      before setting the new allowance amount.
- *   2. Call `ApiMarketEscrowV2.createJob(seller, taskType, amount, inputsHash, apiId)`.
- *   3. Parse the `JobCreated` event from the receipt to get `jobId`.
- *   4. Tell the backend gateway to execute/finalize the new job.
- *   5. Poll `GET /api/evidence/:jobId` until the job reaches a terminal status
- *      (COMPLETED / REFUNDED / FAILED) or the timeout elapses.
+ * Flow (EIP-3009 single-tx path):
+ *   1. Sign a USDC TransferWithAuthorization off-chain (no gas, no RPC round-trip).
+ *   2. Call `ApiMarketEscrowV2.createJobWithAuth(...)` — escrow redeems the
+ *      authorization and records the job in the same tx. No prior `approve`
+ *      needed, so we avoid the approve-then-createJob race that previously
+ *      surfaced as "ERC20: transfer amount exceeds allowance" reverts when
+ *      RPC state between the two txs diverged.
+ *   3. Parse `JobCreated` event from the receipt to get `jobId`.
+ *   4. Trigger the backend gateway to execute/finalize.
+ *   5. Poll `GET /api/evidence/:jobId` until terminal status or timeout.
  *
- * The handler is dependency-injected so unit tests can supply fake clients and
- * fake fetch without pulling in viem or the network.
+ * The handler is dependency-injected so unit tests can supply fake clients
+ * and fake signers without pulling in viem or the network.
  */
 
 import type { Abi, Account, Log, PublicClient, TransactionReceipt, WalletClient } from "viem";
+import { parseSignature } from "viem";
 
 export interface RequestInput {
   seller: `0x${string}`;
@@ -41,31 +43,31 @@ export interface RequestDeps {
   escrowAddress: `0x${string}`;
   escrowAbi: Abi;
   usdcAddress: `0x${string}`;
-  usdcAbi: Abi;
+  /**
+   * EIP-712 domain name/version for the USDC contract at `usdcAddress`.
+   * For real USDC (FiatTokenV2 on Base), this is "USD Coin" / "2".
+   * Exposed so tests can inject a mock and deployers can override if they
+   * point at a non-standard USDC fork.
+   */
+  usdcEip712Name: string;
+  usdcEip712Version: string;
   /** keccak256 helper injected to keep handler viem-free-ish for tests. */
   keccak256: (value: string) => `0x${string}`;
   /** Encodes "task type name" → bytes32 id. */
   taskTypeId: (taskType: string) => `0x${string}`;
   /** Computes inputsHash from canonical JSON of inputs. */
   inputsHash: (inputs: unknown) => `0x${string}`;
+  /** Random bytes32 nonce generator for EIP-3009 replay protection. */
+  randomNonce: () => `0x${string}`;
   pollIntervalMs: number;
   pollTimeoutMs: number;
+  /** How long the EIP-3009 authorization stays valid. Default 1 hour. */
+  authValidSeconds?: number;
   /** Defaults to `setTimeout`; tests override with a fake timer. */
   wait?: (ms: number) => Promise<void>;
+  /** Defaults to `() => BigInt(Math.floor(Date.now() / 1000))`. */
+  nowSeconds?: () => bigint;
 }
-
-const ERC20_ALLOWANCE_ABI = [
-  {
-    type: "function",
-    name: "allowance",
-    stateMutability: "view",
-    inputs: [
-      { name: "owner", type: "address" },
-      { name: "spender", type: "address" },
-    ],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-] as const satisfies Abi;
 
 export interface RequestResult {
   jobId: string;
@@ -83,6 +85,17 @@ const defaultWait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 // cross-checks it against the ApiMarketEscrowV2 ABI so any ABI drift fails loudly.
 export const JOB_CREATED_TOPIC =
   "0x87970d72e091e94cc30361952ba516be479a55c4add2c20b9e94165af942fd66" as const;
+
+const TRANSFER_WITH_AUTH_TYPES = {
+  TransferWithAuthorization: [
+    { name: "from", type: "address" },
+    { name: "to", type: "address" },
+    { name: "value", type: "uint256" },
+    { name: "validAfter", type: "uint256" },
+    { name: "validBefore", type: "uint256" },
+    { name: "nonce", type: "bytes32" },
+  ],
+} as const;
 
 export function pickJobIdFromReceipt(
   receipt: TransactionReceipt,
@@ -134,43 +147,58 @@ export async function requestHandler(
   const taskTypeId = deps.taskTypeId(input.task_type);
   const inputsHash = deps.inputsHash(input.inputs);
 
-  // 1. Ensure the escrow has enough allowance without tripping USDC-style
-  // non-zero -> non-zero approve restrictions after a partially failed retry.
-  const currentAllowance = (await deps.publicClient.readContract({
-    address: deps.usdcAddress,
-    abi: ERC20_ALLOWANCE_ABI,
-    functionName: "allowance",
-    args: [deps.account.address, deps.escrowAddress],
-  })) as bigint;
-  if (currentAllowance < amount) {
-    if (currentAllowance > 0n) {
-      const resetHash = await deps.walletClient.writeContract({
-        address: deps.usdcAddress,
-        abi: deps.usdcAbi,
-        functionName: "approve",
-        args: [deps.escrowAddress, 0n],
-        account: deps.account,
-        chain: deps.walletClient.chain,
-      });
-      await deps.publicClient.waitForTransactionReceipt({ hash: resetHash });
-    }
-    const approveHash = await deps.walletClient.writeContract({
-      address: deps.usdcAddress,
-      abi: deps.usdcAbi,
-      functionName: "approve",
-      args: [deps.escrowAddress, amount],
-      account: deps.account,
-      chain: deps.walletClient.chain,
-    });
-    await deps.publicClient.waitForTransactionReceipt({ hash: approveHash });
+  // 1. Sign USDC TransferWithAuthorization off-chain. The signature authorizes
+  // the escrow to pull `amount` USDC from the buyer inside the same tx as
+  // createJob — no separate approve, no allowance state sitting around.
+  const nonce = deps.randomNonce();
+  const now = (deps.nowSeconds ?? (() => BigInt(Math.floor(Date.now() / 1000))))();
+  const validAfter = 0n;
+  const validBefore = now + BigInt(deps.authValidSeconds ?? 3600);
+
+  const chainId = deps.walletClient.chain?.id;
+  if (chainId === undefined) {
+    throw new Error("chain-lens.request: walletClient.chain not configured");
   }
 
-  // 2. createJob.
+  const signature = await deps.walletClient.signTypedData({
+    account: deps.account,
+    domain: {
+      name: deps.usdcEip712Name,
+      version: deps.usdcEip712Version,
+      chainId,
+      verifyingContract: deps.usdcAddress,
+    },
+    types: TRANSFER_WITH_AUTH_TYPES,
+    primaryType: "TransferWithAuthorization",
+    message: {
+      from: deps.account.address,
+      to: deps.escrowAddress,
+      value: amount,
+      validAfter,
+      validBefore,
+      nonce,
+    },
+  });
+  const sig = parseSignature(signature);
+
+  // 2. Single on-chain tx: escrow redeems the authorization and records the job.
   const createHash = await deps.walletClient.writeContract({
     address: deps.escrowAddress,
     abi: deps.escrowAbi,
-    functionName: "createJob",
-    args: [input.seller, taskTypeId, amount, inputsHash, apiId],
+    functionName: "createJobWithAuth",
+    args: [
+      input.seller,
+      taskTypeId,
+      amount,
+      inputsHash,
+      apiId,
+      validAfter,
+      validBefore,
+      nonce,
+      Number(sig.v),
+      sig.r,
+      sig.s,
+    ],
     account: deps.account,
     chain: deps.walletClient.chain,
   });
@@ -232,7 +260,7 @@ export async function requestHandler(
 export const requestToolDefinition = {
   name: "chain-lens.request",
   description:
-    "Create a paid ChainLens job. Approves USDC, calls createJob on the v2 escrow, then waits for the evidence to be recorded.",
+    "Create a paid ChainLens job. Signs a USDC EIP-3009 authorization, calls createJobWithAuth on the v2 escrow in a single tx, then waits for the evidence to be recorded.",
   inputSchema: {
     type: "object",
     required: ["seller", "task_type", "inputs", "amount"],

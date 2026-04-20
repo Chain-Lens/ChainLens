@@ -7,6 +7,7 @@
  * transport so Claude Desktop can consume the three tools.
  */
 
+import { randomBytes } from "node:crypto";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   createPublicClient,
@@ -30,19 +31,12 @@ import { connectDaemon, daemonAccount } from "@chain-lens/sign";
 import { loadMcpConfig, type McpConfig } from "./config.js";
 import { buildMcpServer } from "./server.js";
 
-// Minimal ERC-20 approve ABI (we only need approve for the escrow flow).
-const ERC20_APPROVE_ABI = [
-  {
-    type: "function",
-    name: "approve",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "spender", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bool" }],
-  },
-] as const satisfies Abi;
+// USDC EIP-712 domain for TransferWithAuthorization signing. FiatTokenV2 on
+// both Base Mainnet and Base Sepolia uses "USDC" / "2". Exposed via env vars
+// so forks/clones with different domains (e.g. custom stablecoin sellers) can
+// override without editing code.
+const DEFAULT_USDC_EIP712_NAME = "USDC";
+const DEFAULT_USDC_EIP712_VERSION = "2";
 
 function chainFor(chainId: number) {
   if (chainId === baseSepolia.id) return baseSepolia;
@@ -125,10 +119,13 @@ async function main() {
       escrowAddress,
       escrowAbi: ApiMarketEscrowV2Abi as Abi,
       usdcAddress,
-      usdcAbi: ERC20_APPROVE_ABI as Abi,
+      usdcEip712Name: process.env.USDC_EIP712_NAME || DEFAULT_USDC_EIP712_NAME,
+      usdcEip712Version:
+        process.env.USDC_EIP712_VERSION || DEFAULT_USDC_EIP712_VERSION,
       keccak256: (s: string) => keccak256(stringToBytes(s)),
       taskTypeId: bytes32FromName,
       inputsHash: canonicalInputsHash,
+      randomNonce: () => (`0x${randomBytes(32).toString("hex")}`) as `0x${string}`,
       pollIntervalMs: config.pollIntervalMs,
       pollTimeoutMs: config.pollTimeoutMs,
     };
