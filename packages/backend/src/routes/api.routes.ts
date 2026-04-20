@@ -8,19 +8,43 @@ import { assertSafeOutboundUrl } from "../utils/network.js";
 
 const router = Router();
 
-// GET /apis - List approved APIs (public)
+const listQuerySchema = z.object({
+  category: z.string().min(1).max(128).optional(),
+  // `task_type` is an alias for `category` — retained so MCP-tool discover
+  // (which will converge on task_type naming post-Phase-2) can call a single
+  // endpoint during the migration.
+  task_type: z.string().min(1).max(128).optional(),
+  search: z.string().min(1).max(200).optional(),
+  status: z.string().optional(),
+  // `active_only` is accepted but currently a no-op — public /apis always
+  // returns APPROVED rows. Kept so discover callers don't need to branch.
+  active_only: z.enum(["true", "false"]).optional(),
+  limit: z.coerce.number().int().optional(),
+  offset: z.coerce.number().int().optional(),
+});
+
+// GET /apis - List approved APIs (public, paginated)
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const category = req.query.category as string | undefined;
-    const search = req.query.search as string | undefined;
-    const status = req.query.status as string | undefined;
+    const parsed = listQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      throw new BadRequestError(
+        `Invalid query: ${JSON.stringify(parsed.error.flatten())}`,
+      );
+    }
+    const { category, task_type, search, status, limit, offset } = parsed.data;
 
     if (status && status !== ApiStatus.APPROVED) {
       throw new BadRequestError("Only approved APIs are publicly listable");
     }
 
-    const apis = await apiService.listApproved({ category, search });
-    res.json(apis);
+    const page = await apiService.listApproved({
+      category: category ?? task_type,
+      search,
+      limit,
+      offset,
+    });
+    res.json(page);
   } catch (err) {
     next(err);
   }

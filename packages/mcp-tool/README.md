@@ -1,7 +1,7 @@
 # @chain-lens/mcp-tool
 
 Model Context Protocol (MCP) server that lets Claude Desktop (and any other MCP
-client) discover [ChainLens](https://github.com/Chain-Lens/ChainLens) sellers
+client) discover [ChainLens](https://github.com/Chain-Lens/ChainLens) API listings
 and read on-chain-verified evidence for past jobs. Paid on-chain requests are
 opt-in; prefer the `@chain-lens/sign` daemon (spending limits + per-tx
 approval prompt) over the legacy `WALLET_PRIVATE_KEY` pattern — see
@@ -33,7 +33,7 @@ npm install -g @chain-lens/mcp-tool
 
 | Tool | Wallet? | Purpose |
 | --- | --- | --- |
-| `chain-lens.discover` | — | List sellers for a given task type (wraps `GET /api/sellers`). |
+| `chain-lens.discover` | — | List API listings for a given task type (wraps `GET /api/apis`). |
 | `chain-lens.status` | — | Fetch stored evidence for an on-chain job (wraps `GET /api/evidence/:jobId`). |
 | `chain-lens.request` | required | Approve USDC, call `ApiMarketEscrowV2.createJob`, poll for evidence. |
 
@@ -240,8 +240,8 @@ is set to make this opt-in visible.
 
 Read-only (works with the default config):
 
-> "Use `chain-lens.discover` to find sellers for `defillama_tvl`, then fetch
-> the evidence for my last job id 42 with `chain-lens.status`."
+> "Use `chain-lens.discover` to find API listings for `defillama_tvl`, then
+> fetch the evidence for my last job id 42 with `chain-lens.status`."
 
 Paid (requires `@chain-lens/sign` daemon or testnet `WALLET_PRIVATE_KEY`):
 

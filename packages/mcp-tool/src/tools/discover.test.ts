@@ -14,10 +14,15 @@ function fakeFetch(responder: (url: string) => { status: number; body: unknown }
 }
 
 describe("discoverHandler", () => {
-  it("builds URL with task_type and limit and returns the parsed body", async () => {
+  it("builds URL with task_type and limit and returns the parsed body with priceUsdc", async () => {
     const { fetch, calls } = fakeFetch(() => ({
       status: 200,
-      body: { items: [{ name: "A" }], total: 1, limit: 5, offset: 0 },
+      body: {
+        items: [{ name: "A", price: "50000" }],
+        total: 1,
+        limit: 5,
+        offset: 0,
+      },
     }));
     const deps: DiscoverDeps = { apiBaseUrl: "http://x/api", fetch };
     const out = await discoverHandler(
@@ -25,9 +30,14 @@ describe("discoverHandler", () => {
       deps,
     );
     assert.equal(calls.length, 1);
+    assert.ok(calls[0].startsWith("http://x/api/apis?"));
     assert.ok(calls[0].includes("task_type=blockscout_tx_info"));
     assert.ok(calls[0].includes("limit=5"));
     assert.equal(out.total, 1);
+    assert.equal(out.limit, 5);
+    assert.equal(out.offset, 0);
+    // priceUsdc is derived client-side from price (6-decimal USDC atomic units).
+    assert.equal((out.items[0] as { priceUsdc: string }).priceUsdc, "0.050000 USDC");
   });
 
   it("omits query string entirely when no filters supplied", async () => {
@@ -36,7 +46,7 @@ describe("discoverHandler", () => {
       body: { items: [], total: 0, limit: 20, offset: 0 },
     }));
     await discoverHandler({}, { apiBaseUrl: "http://x/api", fetch });
-    assert.equal(calls[0], "http://x/api/sellers");
+    assert.equal(calls[0], "http://x/api/apis");
   });
 
   it("passes active_only as 'true'/'false' strings", async () => {
@@ -48,6 +58,7 @@ describe("discoverHandler", () => {
       { active_only: false },
       { apiBaseUrl: "http://x/api", fetch },
     );
+    assert.ok(calls[0].startsWith("http://x/api/apis?"));
     assert.ok(calls[0].includes("active_only=false"));
   });
 

@@ -2,43 +2,73 @@ import prisma from "../config/prisma.js";
 import { ApiStatus } from "@chain-lens/shared";
 import { BadRequestError, NotFoundError } from "../utils/errors.js";
 
-export async function listApproved(filters?: {
+export const APIS_DEFAULT_LIMIT = 20;
+export const APIS_MAX_LIMIT = 100;
+
+export interface ListApprovedFilters {
   category?: string;
   search?: string;
-}) {
+  limit?: number;
+  offset?: number;
+}
+
+export interface ListApprovedPage<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+function normalizeListFilters(filters: ListApprovedFilters) {
+  const limit = Math.min(
+    Math.max(Math.floor(filters.limit ?? APIS_DEFAULT_LIMIT), 1),
+    APIS_MAX_LIMIT,
+  );
+  const offset = Math.max(Math.floor(filters.offset ?? 0), 0);
+  return { limit, offset };
+}
+
+export async function listApproved(filters: ListApprovedFilters = {}) {
   const where: Record<string, unknown> = { status: ApiStatus.APPROVED };
 
-  if (filters?.category) {
+  if (filters.category) {
     where.category = filters.category;
   }
 
-  if (filters?.search) {
+  if (filters.search) {
     where.OR = [
       { name: { contains: filters.search, mode: "insensitive" } },
       { description: { contains: filters.search, mode: "insensitive" } },
     ];
   }
 
-  const apis = await prisma.apiListing.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      onChainId: true,
-      name: true,
-      description: true,
-      price: true,
-      category: true,
-      sellerAddress: true,
-      status: true,
-      exampleRequest: true,
-      exampleResponse: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
+  const { limit, offset } = normalizeListFilters(filters);
 
-  return apis;
+  const [items, total] = await Promise.all([
+    prisma.apiListing.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      skip: offset,
+      select: {
+        id: true,
+        onChainId: true,
+        name: true,
+        description: true,
+        price: true,
+        category: true,
+        sellerAddress: true,
+        status: true,
+        exampleRequest: true,
+        exampleResponse: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.apiListing.count({ where }),
+  ]);
+
+  return { items, total, limit, offset };
 }
 
 export async function listByStatus(status: ApiStatus) {

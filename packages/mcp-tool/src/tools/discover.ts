@@ -1,7 +1,7 @@
 /**
- * `chain-lens.discover` — find registered sellers for a task type.
+ * `chain-lens.discover` — find registered API listings for a task type.
  *
- * Thin wrapper over `GET /api/sellers` so Claude Desktop (and other MCP clients)
+ * Thin wrapper over `GET /api/apis` so Claude Desktop (and other MCP clients)
  * can find who serves a given capability before requesting data.
  */
 
@@ -17,8 +17,21 @@ export interface DiscoverDeps {
   fetch: typeof fetch;
 }
 
+export interface ApiListingItem {
+  id: string;
+  onChainId: number;
+  name: string;
+  description: string;
+  price: string;
+  priceUsdc: string;
+  category: string;
+  sellerAddress: string;
+  status: string;
+  createdAt: string;
+}
+
 export interface DiscoverResult {
-  items: unknown[];
+  items: ApiListingItem[];
   total: number;
   limit: number;
   offset: number;
@@ -37,20 +50,30 @@ export async function discoverHandler(
 
   const qs = params.toString();
   const url = qs
-    ? `${deps.apiBaseUrl}/sellers?${qs}`
-    : `${deps.apiBaseUrl}/sellers`;
+    ? `${deps.apiBaseUrl}/apis?${qs}`
+    : `${deps.apiBaseUrl}/apis`;
 
   const res = await deps.fetch(url);
   if (!res.ok) {
     throw new Error(`chain-lens.discover: backend returned ${res.status} ${res.statusText}`);
   }
-  return (await res.json()) as DiscoverResult;
+  const page = (await res.json()) as {
+    items: ApiListingItem[];
+    total: number;
+    limit: number;
+    offset: number;
+  };
+  const items = page.items.map((item) => ({
+    ...item,
+    priceUsdc: (Number(item.price) / 1_000_000).toFixed(6) + " USDC",
+  }));
+  return { items, total: page.total, limit: page.limit, offset: page.offset };
 }
 
 export const discoverToolDefinition = {
   name: "chain-lens.discover",
   description:
-    "Find ChainLens sellers that serve a given task type. Returns endpoint, price per call, reputation stats.",
+    "Find ChainLens APIs listed on the marketplace. Returns name, category, seller address, price in wei and USDC (priceUsdc field). USDC has 6 decimals: 1000000 = 1.000000 USDC.",
   inputSchema: {
     type: "object",
     properties: {

@@ -48,8 +48,13 @@ export async function getMarketplaceApis(filters: MarketplaceFilters): Promise<{
       throw new Error(`Failed to load APIs: ${res.status}`);
     }
 
-    const apis = (await res.json()) as ApiListingPublic[];
-    return { apis, isMock: false };
+    const page = (await res.json()) as {
+      items: ApiListingPublic[];
+      total: number;
+      limit: number;
+      offset: number;
+    };
+    return { apis: page.items, isMock: false };
   } catch {
     return {
       apis: filterMockApis(filters),

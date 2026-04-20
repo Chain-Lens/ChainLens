@@ -44,7 +44,7 @@ every answer is independently verifiable.
 | Package | Purpose |
 | --- | --- |
 | [`packages/contracts`](packages/contracts) | `ApiMarketEscrowV2`, `SellerRegistry`, `TaskTypeRegistry`, `MockUSDC`. Hardhat + Ignition. |
-| [`packages/backend`](packages/backend) | Express gateway: `/api/sellers`, `/api/jobs`, `/api/evidence/:jobId`, `/api/reputation/:addr`. Listens for v2 events and finalizes jobs. |
+| [`packages/backend`](packages/backend) | Express gateway: `/api/apis`, `/api/jobs`, `/api/evidence/:jobId`, `/api/reputation/:addr`. Listens for v2 events and finalizes jobs. |
 | [`packages/frontend`](packages/frontend) | Next.js 15 marketplace, evidence explorer, reputation pages. |
 | [`packages/shared`](packages/shared) | Contract ABIs, addresses, task type registry, chain configs. |
 | [`packages/mcp-tool`](packages/mcp-tool) | `@chain-lens/mcp-tool` — MCP server for Claude Desktop with `chain-lens.discover` / `chain-lens.request` / `chain-lens.status`. |
@@ -122,7 +122,7 @@ can spend USDC on data. Install with `npx` — no clone required:
 
 Tools:
 
-- `chain-lens.discover` — find sellers for a task type
+- `chain-lens.discover` — find API listings for a task type
 - `chain-lens.request` — approve USDC → createJob → poll evidence
 - `chain-lens.status` — fetch stored evidence for a job id
 

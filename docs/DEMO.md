@@ -104,14 +104,15 @@ Best for showing the supply side of the market.
 2. **Register via the backend.** The seller calls the gateway's onboarding
    endpoint with the wallet that will be paid:
    ```bash
-   curl -X POST http://localhost:3001/api/sellers/register \
+   curl -X POST http://localhost:3001/api/apis/register \
      -H 'Content-Type: application/json' \
      -d '{
        "sellerAddress": "0x...",
        "name": "Demo DeFiLlama wrapper",
-       "endpointUrl": "http://localhost:8082/",
-       "capabilities": ["defillama_tvl"],
-       "pricePerCall": "0.050000"
+       "description": "DeFiLlama TVL lookup",
+       "endpoint": "http://localhost:8082/",
+       "category": "defillama_tvl",
+       "price": "50000"
      }'
    ```
 3. **Automated probe.** `seller-tester.service` POSTs the canonical test
