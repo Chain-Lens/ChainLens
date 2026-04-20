@@ -1,3 +1,7 @@
+// Kept for the on-chain SellerRegistry + event-listener path (roadmap C).
+// The `/api/sellers` route currently uses `apiListingSellersStore`; swap back
+// here once SellerProfile has a write pipeline.
+
 import type { Prisma } from "@prisma/client";
 import prisma from "../config/prisma.js";
 import type {

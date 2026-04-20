@@ -1,7 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
 import { listSellers } from "../services/sellers.service.js";
-import { prismaSellersStore } from "../services/sellers-store.js";
+import { apiListingSellersStore } from "../services/api-listing-sellers-store.js";
 
 const router = Router();
 
@@ -32,7 +32,7 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
         limit: parsed.data.limit,
         offset: parsed.data.offset,
       },
-      prismaSellersStore,
+      apiListingSellersStore,
     );
     res.json(page);
   } catch (err) {

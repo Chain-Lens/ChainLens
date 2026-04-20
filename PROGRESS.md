@@ -75,6 +75,22 @@
 
 ### 2026-04-20
 
+- **`GET /api/sellers` — ApiListing 집계로 전환 (`SellerProfile` 미채움 우회)**
+  - 증상: MCP `chain-lens.discover`가 셀러 0건 반환. 백엔드에 `ApiListing`은 등록돼 있으나 `SellerProfile`이 비어 있음 (스키마·리더·라우트는 존재, **작성 경로 없음** — 이벤트 리스너·`api.service.register` 어디에도 `sellerProfile.create/upsert/update` 호출 없음).
+  - 원인: 최초 스펙은 `on-chain SellerRegistry → event listener → SellerProfile` 파이프라인이 `/api/sellers`를 채우는 그림. 실제 구현은 프론트 `/register` → `api.service.register()` → `ApiListing` 직접 삽입으로 단축되었고 `SellerProfile` 라인은 미완으로 남음.
+  - 수정: 신규 store [packages/backend/src/services/api-listing-sellers-store.ts](packages/backend/src/services/api-listing-sellers-store.ts) — `ApiListing`(APPROVED)을 `sellerAddress`로 group by 하여 `SellerView` 집계. capabilities는 DISTINCT `category`, primary(name/endpoint/price)는 `task_type` 필터와 매칭되는 최신 listing(없으면 가장 최근), `jobsCompleted/Failed`·`totalEarnings`는 `PaymentRequest` COMPLETED/FAILED 집계. [packages/backend/src/routes/sellers.routes.ts](packages/backend/src/routes/sellers.routes.ts)가 `prismaSellersStore` → `apiListingSellersStore`로 주입 교체.
+  - `SellerProfile` 테이블·[sellers-store.ts](packages/backend/src/services/sellers-store.ts)는 **제거하지 않고 유지** — 추후 on-chain `SellerRegistry` + event listener 경로(로드맵 C) 구현 시 마이그레이션 없이 이 store로 다시 스왑만 하면 됨. sellers-store.ts 상단에 해당 의도 주석.
+  - 검증: `pnpm tsc --noEmit` 깨끗, `sellers.service.test.ts` 6/6 통과. 전체 79개 중 1개 pre-existing 실패(`schema-validator` outbound-block 정규식) — 본 변경 무관.
+
+- **`@chain-lens/sign` 0.0.1 알파 스캐폴드 — 암호화 keystore (geth v3)**
+  - 신규 워크스페이스 [packages/sign](packages/sign) — `@chain-lens/sign`. `WALLET_PRIVATE_KEY` 평문 env 패턴의 영구 대체를 향한 첫 커밋. 0.0.x는 알파(keystore 관리만), 0.1.0을 프로덕션 태그로 예약.
+  - **포맷: geth keystore v3** (`scrypt` + `aes-128-ctr` + `keccak256` MAC). `cast wallet import`, `ethers.Wallet.fromEncryptedJson`, `web3.eth.accounts.decrypt`와 교차 호환. 커스텀 포맷 대신 표준 선택 — 나중에 키 마이그레이션·툴 교체 여지 확보.
+  - [src/crypto/keystore.ts](packages/sign/src/crypto/keystore.ts) — `encryptKey` / `decryptKey` 순수 함수. scrypt 파라미터는 geth standard (`N=262144, r=8, p=1`) 기본, light preset (`N=4096, r=8, p=6`) 노출. MAC 비교는 `timingSafeEqual` (사이드채널 대비). Node `maxmem` 제한 회피 위해 `2 * 128 * N * r + 1024` 계산.
+  - 3개 명령 (`init` / `import` / `address`) 배선. `init`은 `generatePrivateKey()` + 비밀번호(8자+, 확인 2회) + `~/.chain-lens/keystore/<addr>.json` 저장 (`0600`, dir `0700`, `flag: "wx"`로 덮어쓰기 방지). `import`는 개인키 prompt + 동일 저장 경로. `address`는 파일명 → EIP-55 checksum 주소로 출력.
+  - [src/prompt.ts](packages/sign/src/prompt.ts) — raw-mode readline 직접 구현. `promptSecret`은 echo 끄고, `prompt`는 echo 켬. 외부 의존성(`prompts` 등) 추가 없이 viem만 의존.
+  - 테스트: keystore 라운드트립/오패스워드/주소 일치/버전·cipher·kdf 검증/salt+iv 신선도 — 5/5 pass (1.6s, FAST_SCRYPT `N=256`).
+  - **다음 릴리스 (0.0.2+)**: unix-socket unlock 데몬 + `send-tx` + `@chain-lens/mcp-tool` 통합 (`CHAIN_LENS_SIGN_SOCKET` env).
+
 - **`@chain-lens/mcp-tool` 0.0.4 — 0.0.3 긴급 수정: `workspace:*` publish 누출**
   - 0.0.3 tarball `dependencies["@chain-lens/shared"]`이 `workspace:*` 문자열 그대로 올라가 `npm install -g @chain-lens/mcp-tool` 시 `EUNSUPPORTEDPROTOCOL` — 신규 사용자 설치 전면 차단. 외부 사용자 신고로 발견.
   - 원인: 0.0.2는 `pnpm publish`(workspace:* → 실버전 변환 수행)를 썼는데, 0.0.3 releasing 때 `npm publish`로 바꿔서 변환이 일어나지 않음. 문서화된 사전 체크 누락 — 앞으로 workspace 의존 있는 패키지는 `pnpm publish --dry-run` 후 tarball의 manifest `dependencies` 실버전 여부 확인하는 걸 필수화.
