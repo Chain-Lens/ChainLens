@@ -10,7 +10,10 @@ type WriteCall = {
 };
 
 function fakeDeps(options: {
-  fetchImpl: (url: string) => { status: number; body?: unknown };
+  fetchImpl: (
+    url: string,
+    init?: RequestInit,
+  ) => { status: number; body?: unknown };
   jobIdTopic?: `0x${string}`;
   pollTimeoutMs?: number;
   pollIntervalMs?: number;
@@ -18,10 +21,10 @@ function fakeDeps(options: {
 }): { deps: RequestDeps; writes: WriteCall[]; fetchCalls: string[] } {
   const writes: WriteCall[] = [];
   const fetchCalls: string[] = [];
-  const fakeFetch = (async (input: RequestInfo | URL) => {
+  const fakeFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input.toString();
     fetchCalls.push(url);
-    const { status, body } = options.fetchImpl(url);
+    const { status, body } = options.fetchImpl(url, init);
     return new Response(body === undefined ? null : JSON.stringify(body), { status });
   }) as typeof fetch;
 
@@ -90,7 +93,11 @@ describe("requestHandler", () => {
   it("approves USDC then calls createJob and returns COMPLETED evidence", async () => {
     let polls = 0;
     const { deps, writes, fetchCalls } = fakeDeps({
-      fetchImpl: () => {
+      fetchImpl: (url, init) => {
+        if (url.endsWith("/jobs/execute")) {
+          assert.equal(init?.method, "POST");
+          return { status: 202, body: { accepted: true } };
+        }
         polls += 1;
         if (polls === 1) return { status: 404 };
         return { status: 200, body: { status: "COMPLETED", onchainJobId: "7" } };
@@ -110,13 +117,17 @@ describe("requestHandler", () => {
     assert.equal(writes[1].functionName, "createJob");
     assert.equal(out.status, "COMPLETED");
     assert.equal(out.jobId, "7");
-    assert.equal(fetchCalls.length, 2);
-    assert.ok(fetchCalls[0].endsWith("/evidence/7"));
+    assert.equal(fetchCalls.length, 3);
+    assert.ok(fetchCalls[0].endsWith("/jobs/execute"));
+    assert.ok(fetchCalls[1].endsWith("/evidence/7"));
   });
 
   it("resets stale allowance before approving again", async () => {
     const { deps, writes } = fakeDeps({
-      fetchImpl: () => ({ status: 200, body: { status: "COMPLETED", onchainJobId: "7" } }),
+      fetchImpl: (url) =>
+        url.endsWith("/jobs/execute")
+          ? { status: 202, body: { accepted: true } }
+          : { status: 200, body: { status: "COMPLETED", onchainJobId: "7" } },
       initialAllowance: 1n,
     });
     const out = await requestHandler(
@@ -139,7 +150,10 @@ describe("requestHandler", () => {
 
   it("skips approve when allowance is already sufficient", async () => {
     const { deps, writes } = fakeDeps({
-      fetchImpl: () => ({ status: 200, body: { status: "COMPLETED", onchainJobId: "7" } }),
+      fetchImpl: (url) =>
+        url.endsWith("/jobs/execute")
+          ? { status: 202, body: { accepted: true } }
+          : { status: 200, body: { status: "COMPLETED", onchainJobId: "7" } },
       initialAllowance: 50000n,
     });
     const out = await requestHandler(
@@ -158,7 +172,10 @@ describe("requestHandler", () => {
 
   it("returns TIMEOUT when evidence never finalizes within poll window", async () => {
     const { deps } = fakeDeps({
-      fetchImpl: () => ({ status: 200, body: { status: "PAID" } }),
+      fetchImpl: (url) =>
+        url.endsWith("/jobs/execute")
+          ? { status: 202, body: { accepted: true } }
+          : { status: 200, body: { status: "PAID" } },
       pollTimeoutMs: 30,
       pollIntervalMs: 5,
     });
@@ -198,6 +215,27 @@ describe("requestHandler", () => {
         deps,
       ),
       /amount must be a non-negative integer/,
+    );
+  });
+
+  it("fails fast when the backend execution trigger is rejected", async () => {
+    const { deps } = fakeDeps({
+      fetchImpl: (url) =>
+        url.endsWith("/jobs/execute")
+          ? { status: 500, body: { error: "boom" } }
+          : { status: 404 },
+    });
+    await assert.rejects(
+      requestHandler(
+        {
+          seller: ("0x" + "1".repeat(40)) as `0x${string}`,
+          task_type: "defillama_tvl",
+          inputs: { protocol: "uniswap" },
+          amount: "50000",
+        },
+        deps,
+      ),
+      /execution trigger failed 500/,
     );
   });
 });

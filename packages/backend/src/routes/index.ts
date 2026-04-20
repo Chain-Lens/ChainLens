@@ -9,6 +9,7 @@ import evidenceRoutes from "./evidence.routes.js";
 import reputationRoutes from "./reputation.routes.js";
 import jobsRoutes from "./jobs.routes.js";
 import sellersRoutes from "./sellers.routes.js";
+import jobExecuteRoutes from "./job-execute.routes.js";
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.use("/x402", x402Routes);
 router.use("/execute", executeRoutes);
 router.use("/evidence", evidenceRoutes);
 router.use("/reputation", reputationRoutes);
+router.use("/jobs/execute", jobExecuteRoutes);
 router.use("/jobs", jobsRoutes);
 router.use("/sellers", sellersRoutes);
 

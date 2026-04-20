@@ -29,9 +29,15 @@ export const prismaEvidenceStore: EvidenceStore = {
       where: { onchainJobId },
       data: {
         status: patch.status,
-        response: (patch.response ?? null) as Prisma.InputJsonValue,
-        responseHash: patch.responseHash ?? null,
-        errorReason: patch.errorReason ?? null,
+        ...(patch.response !== undefined
+          ? { response: (patch.response ?? null) as Prisma.InputJsonValue }
+          : {}),
+        ...(patch.responseHash !== undefined
+          ? { responseHash: patch.responseHash ?? null }
+          : {}),
+        ...(patch.errorReason !== undefined
+          ? { errorReason: patch.errorReason ?? null }
+          : {}),
         completedAt: new Date(),
       },
     });

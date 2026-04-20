@@ -7,7 +7,8 @@
  *      before setting the new allowance amount.
  *   2. Call `ApiMarketEscrowV2.createJob(seller, taskType, amount, inputsHash, apiId)`.
  *   3. Parse the `JobCreated` event from the receipt to get `jobId`.
- *   4. Poll `GET /api/evidence/:jobId` until the job reaches a terminal status
+ *   4. Tell the backend gateway to execute/finalize the new job.
+ *   5. Poll `GET /api/evidence/:jobId` until the job reaches a terminal status
  *      (COMPLETED / REFUNDED / FAILED) or the timeout elapses.
  *
  * The handler is dependency-injected so unit tests can supply fake clients and
@@ -98,6 +99,13 @@ export async function requestHandler(
   if (!/^0x[0-9a-fA-F]{40}$/.test(input.seller)) {
     throw new Error(`chain-lens.request: invalid seller address '${input.seller}'`);
   }
+  if (
+    !input.inputs ||
+    typeof input.inputs !== "object" ||
+    Array.isArray(input.inputs)
+  ) {
+    throw new Error("chain-lens.request: inputs must be a JSON object");
+  }
   if (!/^\d+$/.test(input.amount)) {
     throw new Error(`chain-lens.request: amount must be a non-negative integer string (USDC atomic units)`);
   }
@@ -151,6 +159,27 @@ export async function requestHandler(
 
   // 3. Parse jobId.
   const jobId = pickJobIdFromReceipt(receipt);
+
+  // 3.5 Trigger backend-side execution/finalization. Best effort: the evidence
+  // poll below remains the source of truth, so a transient 5xx here should not
+  // mask an already-running worker.
+  const executeRes = await deps.fetch(`${deps.apiBaseUrl}/jobs/execute`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jobId: jobId.toString(),
+      seller: input.seller,
+      taskType: input.task_type,
+      inputs: input.inputs,
+      amount: input.amount,
+      ...(input.api_id !== undefined ? { apiId: apiId.toString() } : {}),
+    }),
+  });
+  if (!executeRes.ok && executeRes.status !== 409) {
+    throw new Error(
+      `chain-lens.request: execution trigger failed ${executeRes.status} ${executeRes.statusText}`,
+    );
+  }
 
   // 4. Poll evidence until terminal or timeout.
   const wait = deps.wait ?? defaultWait;
