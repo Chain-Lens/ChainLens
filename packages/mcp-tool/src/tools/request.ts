@@ -78,18 +78,27 @@ const TERMINAL = new Set(["COMPLETED", "REFUNDED", "FAILED"]);
 
 const defaultWait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-function pickJobIdFromReceipt(receipt: TransactionReceipt): bigint {
+// keccak256("JobCreated(uint256,address,address,bytes32,uint256,bytes32,uint256)")
+// Pinned as a literal so this module stays side-effect-free; a unit test
+// cross-checks it against the ApiMarketEscrowV2 ABI so any ABI drift fails loudly.
+export const JOB_CREATED_TOPIC =
+  "0x87970d72e091e94cc30361952ba516be479a55c4add2c20b9e94165af942fd66" as const;
+
+export function pickJobIdFromReceipt(
+  receipt: TransactionReceipt,
+  escrowAddress: `0x${string}`,
+): bigint {
+  // Without filtering by escrow + event selector, earlier ERC20 Transfer/Approval
+  // logs (whose topics[1] is the buyer address) get picked up as the jobId,
+  // then overflow Prisma's int8 column on the backend and blow up /jobs/execute.
+  const wanted = escrowAddress.toLowerCase();
   for (const log of receipt.logs as Log[]) {
+    if (log.address.toLowerCase() !== wanted) continue;
     const topics = log.topics as readonly `0x${string}`[] | undefined;
-    if (!topics || topics.length < 2) continue;
-    // JobCreated(uint256 indexed jobId, address indexed buyer, address indexed seller, ...)
-    // topics[0] = event sig, topics[1] = jobId (indexed).
-    // The consumer must guarantee the receipt is for createJob — we trust it here.
-    if (topics[1]) {
-      return BigInt(topics[1]);
-    }
+    if (!topics || topics[0] !== JOB_CREATED_TOPIC || !topics[1]) continue;
+    return BigInt(topics[1]);
   }
-  throw new Error("chain-lens.request: failed to parse jobId from tx receipt");
+  throw new Error("chain-lens.request: JobCreated event not found in tx receipt");
 }
 
 export async function requestHandler(
@@ -158,7 +167,7 @@ export async function requestHandler(
   const receipt = await deps.publicClient.waitForTransactionReceipt({ hash: createHash });
 
   // 3. Parse jobId.
-  const jobId = pickJobIdFromReceipt(receipt);
+  const jobId = pickJobIdFromReceipt(receipt, deps.escrowAddress);
 
   // 3.5 Trigger backend-side execution/finalization. Best effort: the evidence
   // poll below remains the source of truth, so a transient 5xx here should not

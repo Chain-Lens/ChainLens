@@ -1,7 +1,21 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { Abi, Account } from "viem";
-import { requestHandler, type RequestDeps } from "./request.js";
+import { keccak256, toBytes } from "viem";
+import { ApiMarketEscrowV2Abi } from "@chain-lens/shared";
+import {
+  requestHandler,
+  pickJobIdFromReceipt,
+  JOB_CREATED_TOPIC,
+  type RequestDeps,
+} from "./request.js";
+
+const ESCROW = ("0x" + "b".repeat(40)) as `0x${string}`;
+const USDC_ADDR = ("0x" + "c".repeat(40)) as `0x${string}`;
+const TRANSFER_TOPIC = keccak256(toBytes("Transfer(address,address,uint256)"));
+// 0x-padded to 32 bytes, same shape as an indexed `address` topic.
+const BUYER_AS_TOPIC =
+  "0x000000000000000000000000d21de9470d8a0dbae0de0b5f705001a6482db580" as `0x${string}`;
 
 type WriteCall = {
   address: `0x${string}`;
@@ -48,14 +62,24 @@ function fakeDeps(options: {
     readContract: async () => options.initialAllowance ?? 0n,
     waitForTransactionReceipt: async ({ hash }: { hash: `0x${string}` }) => ({
       transactionHash: hash,
+      // Replicates real tx log ordering: USDC Transfer first (topics[1] = buyer
+      // address — the historic booby trap), then the actual JobCreated event.
+      // Picking the first log with ≥2 topics would return the buyer address.
       logs:
         hash === "0xbbb"
           ? [
               {
-                address: "0xdeadbeef" as `0x${string}`,
+                address: USDC_ADDR,
+                topics: [TRANSFER_TOPIC, BUYER_AS_TOPIC, BUYER_AS_TOPIC] as unknown as readonly `0x${string}`[],
+                data: "0x" as `0x${string}`,
+              },
+              {
+                address: ESCROW,
                 topics: [
-                  "0x1111111111111111111111111111111111111111111111111111111111111111",
+                  JOB_CREATED_TOPIC,
                   jobIdTopic,
+                  BUYER_AS_TOPIC,
+                  BUYER_AS_TOPIC,
                 ] as unknown as readonly `0x${string}`[],
                 data: "0x" as `0x${string}`,
               },
@@ -73,11 +97,11 @@ function fakeDeps(options: {
       address: ("0x" + "a".repeat(40)) as `0x${string}`,
       type: "local",
     } as unknown as Account,
-    escrowAddress: ("0x" + "b".repeat(40)) as `0x${string}`,
+    escrowAddress: ESCROW,
     escrowAbi: [] as unknown as Abi,
-    usdcAddress: ("0x" + "c".repeat(40)) as `0x${string}`,
+    usdcAddress: USDC_ADDR,
     usdcAbi: [] as unknown as Abi,
-    keccak256: (s) => (`0x${"f".repeat(64)}`) as `0x${string}`,
+    keccak256: () => (`0x${"f".repeat(64)}`) as `0x${string}`,
     taskTypeId: () => (`0x${"1".repeat(64)}`) as `0x${string}`,
     inputsHash: () => (`0x${"2".repeat(64)}`) as `0x${string}`,
     pollIntervalMs: options.pollIntervalMs ?? 10,
@@ -141,9 +165,9 @@ describe("requestHandler", () => {
     );
     assert.equal(writes.length, 3);
     assert.equal(writes[0].functionName, "approve");
-    assert.deepEqual(writes[0].args, [("0x" + "b".repeat(40)) as `0x${string}`, 0n]);
+    assert.deepEqual(writes[0].args, [ESCROW, 0n]);
     assert.equal(writes[1].functionName, "approve");
-    assert.deepEqual(writes[1].args, [("0x" + "b".repeat(40)) as `0x${string}`, 2000000n]);
+    assert.deepEqual(writes[1].args, [ESCROW, 2000000n]);
     assert.equal(writes[2].functionName, "createJob");
     assert.equal(out.status, "COMPLETED");
   });
@@ -237,5 +261,73 @@ describe("requestHandler", () => {
       ),
       /execution trigger failed 500/,
     );
+  });
+});
+
+describe("pickJobIdFromReceipt", () => {
+  const jobIdTopic = (`0x${"0".repeat(63)}7`) as `0x${string}`;
+
+  it("skips ERC20 Transfer logs and returns jobId from the JobCreated log", async () => {
+    // This is the regression that cost 1 USDC in v0.0.7: the old code returned
+    // topics[1] of the first log (= buyer address from USDC Transfer).
+    const receipt = {
+      logs: [
+        {
+          address: USDC_ADDR,
+          topics: [TRANSFER_TOPIC, BUYER_AS_TOPIC, BUYER_AS_TOPIC],
+          data: "0x",
+        },
+        {
+          address: ESCROW,
+          topics: [JOB_CREATED_TOPIC, jobIdTopic, BUYER_AS_TOPIC, BUYER_AS_TOPIC],
+          data: "0x",
+        },
+      ],
+    } as unknown as Parameters<typeof pickJobIdFromReceipt>[0];
+    assert.equal(pickJobIdFromReceipt(receipt, ESCROW), 7n);
+  });
+
+  it("ignores JobCreated-shaped logs emitted by a different contract", async () => {
+    const receipt = {
+      logs: [
+        {
+          address: USDC_ADDR, // wrong emitter
+          topics: [JOB_CREATED_TOPIC, jobIdTopic, BUYER_AS_TOPIC, BUYER_AS_TOPIC],
+          data: "0x",
+        },
+      ],
+    } as unknown as Parameters<typeof pickJobIdFromReceipt>[0];
+    assert.throws(
+      () => pickJobIdFromReceipt(receipt, ESCROW),
+      /JobCreated event not found/,
+    );
+  });
+
+  it("throws when no JobCreated log is present", async () => {
+    const receipt = {
+      logs: [
+        {
+          address: USDC_ADDR,
+          topics: [TRANSFER_TOPIC, BUYER_AS_TOPIC, BUYER_AS_TOPIC],
+          data: "0x",
+        },
+      ],
+    } as unknown as Parameters<typeof pickJobIdFromReceipt>[0];
+    assert.throws(
+      () => pickJobIdFromReceipt(receipt, ESCROW),
+      /JobCreated event not found/,
+    );
+  });
+
+  it("matches the keccak256 of the JobCreated event in the shipped ABI", () => {
+    // Drift guard: if someone changes the event shape in @chain-lens/shared,
+    // the pinned topic in request.ts must be updated or this test fires.
+    const event = ApiMarketEscrowV2Abi.find(
+      (item): item is typeof item & { type: "event"; name: string; inputs: Array<{ type: string }> } =>
+        item.type === "event" && item.name === "JobCreated",
+    );
+    if (!event) throw new Error("JobCreated event missing from ABI");
+    const sig = `JobCreated(${event.inputs.map((i) => i.type).join(",")})`;
+    assert.equal(keccak256(toBytes(sig)), JOB_CREATED_TOPIC);
   });
 });
