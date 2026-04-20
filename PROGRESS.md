@@ -75,6 +75,16 @@
 
 ### 2026-04-20
 
+- **`@chain-lens/sign` 0.0.2 — unlock 데몬 + `send-tx`**
+  - 0.0.1은 keystore 관리만 가능 (서명 불가). 0.0.2에서 데몬 + 단일 tx 서명·브로드캐스트 경로 완성. MCP 연동·승인 프롬프트·한도는 0.0.3으로 분리. 버전은 프로덕션(0.1.0) 도달 전까지 패치로만 증가 (사용자 결정: "어차피 고쳐야해").
+  - [src/daemon/protocol.ts](packages/sign/src/daemon/protocol.ts) — 길이 프리픽스(4B big-endian) + UTF-8 JSON 바디. BigInt은 `{__bigint__: "..."}` 태그로 직렬화 (viem tx 객체 직통). `MAX_FRAME_SIZE = 64 KiB`. 5/5 테스트.
+  - [src/daemon/server.ts](packages/sign/src/daemon/server.ts) — `startDaemon({privateKey, socketPath, ttlMs})`. 메서드 `address`/`status`/`sign-tx`/`lock`. TTL 타이머 + `SIGINT`/`SIGTERM` 핸들러가 모두 같은 `closeDaemon()` 경로로 정리 (소켓 unlink, server.close). 이미 존재하는 소켓은 거부(중복 기동 방지).
+  - [src/daemon/client.ts](packages/sign/src/daemon/client.ts) — `connectDaemon(path)` → `{address, status, signTransaction, lock, close}`. 응답 매칭은 id(UUID) 기반. 연결 끊기면 pending 모두 `connection_closed` 에러로 해소.
+  - [src/daemon/account.ts](packages/sign/src/daemon/account.ts) — viem `toAccount()` 기반 커스텀 account. `signTransaction`만 데몬 경유, `signMessage`/`signTypedData`는 0.0.2 스코프 밖이라 throw. 0.0.3 MCP 연동 때 그대로 주입 가능.
+  - 명령: [unlock](packages/sign/src/commands/unlock.ts) (foreground, `--ttl` 파싱, TTY를 "세션 터미널"로 유지), [lock](packages/sign/src/commands/lock.ts) (ENOENT 시 "no daemon" 정보 메시지), [status](packages/sign/src/commands/status.ts) (TTL 시분초 포맷), [send-tx](packages/sign/src/commands/send-tx.ts) (`--rpc`/`--to`/`--value`/`--data`/`--chain-id`/`--no-wait`, viem walletClient 경유).
+  - 테스트: 프로토콜 5 + 데몬 round-trip 7(address/status/sign-tx/unknown-method/lock/TTL 만료/중복 기동) + account 서명 복구 1 = **18/18 pass** (0.76s).
+  - 알려진 보안 제약(README 기재): 프라이빗 키는 데몬 메모리 상주 — V8 힙 상의 hex string은 진짜 zeroize 불가 (GC 의존). 소켓엔 인증 없음 — 파일시스템 권한(0600/0700)에 위임. 한도·프롬프트는 0.0.3.
+
 - **`GET /api/sellers` — ApiListing 집계로 전환 (`SellerProfile` 미채움 우회)**
   - 증상: MCP `chain-lens.discover`가 셀러 0건 반환. 백엔드에 `ApiListing`은 등록돼 있으나 `SellerProfile`이 비어 있음 (스키마·리더·라우트는 존재, **작성 경로 없음** — 이벤트 리스너·`api.service.register` 어디에도 `sellerProfile.create/upsert/update` 호출 없음).
   - 원인: 최초 스펙은 `on-chain SellerRegistry → event listener → SellerProfile` 파이프라인이 `/api/sellers`를 채우는 그림. 실제 구현은 프론트 `/register` → `api.service.register()` → `ApiListing` 직접 삽입으로 단축되었고 `SellerProfile` 라인은 미완으로 남음.

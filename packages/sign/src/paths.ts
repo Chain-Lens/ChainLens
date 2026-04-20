@@ -13,3 +13,7 @@ export function keystoreFilePath(address: string): string {
   const bare = address.toLowerCase().replace(/^0x/, "");
   return join(keystoreDir(), `${bare}.json`);
 }
+
+export function socketPath(): string {
+  return process.env.CHAIN_LENS_SIGN_SOCKET ?? join(chainLensHome(), "sign.sock");
+}

@@ -1,6 +1,6 @@
 {
   "name": "@chain-lens/sign",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Encrypted wallet keystore CLI for ChainLens — geth keystore v3 compatible. Planned replacement for WALLET_PRIVATE_KEY env pattern.",
   "license": "MIT",
   "repository": {
