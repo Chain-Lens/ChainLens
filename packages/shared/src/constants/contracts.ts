@@ -10,7 +10,7 @@ export const CONTRACT_ADDRESSES: Record<number, `0x${string}`> = {
  * Backward-compatible with v1 callers via taskType == bytes32(0).
  */
 export const CONTRACT_ADDRESSES_V2: Record<number, `0x${string}`> = {
-  84532: "0xD4c40710576f582c49e5E6417F6cA2023E30d3aD", // Base Sepolia
+  84532: "0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E", // Base Sepolia — Phase 3.5, adds createJobWithAuth
   8453: "0x0000000000000000000000000000000000000000",
   31337: "0x0000000000000000000000000000000000000000",
 };
