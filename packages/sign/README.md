@@ -4,8 +4,9 @@ Encrypted wallet keystore CLI + signing daemon for ChainLens. Planned replacemen
 for the `WALLET_PRIVATE_KEY` environment-variable pattern used by
 `@chain-lens/mcp-tool`.
 
-> **Status:** `0.0.x` **alpha**. 0.0.2 adds the unlock daemon and
-> `send-tx`. MCP integration and per-tx approval prompts land in 0.0.3.
+> **Status:** `0.0.x` **alpha**. 0.0.3 adds spending limits, per-tx
+> approval prompts, and `@chain-lens/mcp-tool` integration via
+> `CHAIN_LENS_SIGN_SOCKET`. Use on throwaway wallets while the API settles.
 
 ## Install
 
@@ -47,6 +48,63 @@ chain-lens-sign send-tx --rpc https://sepolia.base.org \
 The daemon auto-locks when the TTL elapses, on `lock`, or on Ctrl-C in the
 session terminal.
 
+## Spending limits & per-tx approval (0.0.3)
+
+Every `sign-tx` request goes through a three-step gate before the daemon
+signs anything:
+
+1. **Decode** — the transaction must match one of four known calldata
+   shapes: `USDC.approve`, `USDC.transfer`, `ApiMarketEscrow.pay`, or
+   `ApiMarketEscrowV2.createJob`. Anything else is denied as
+   `unknown_target`.
+2. **Limits** — per-tx and rolling 1-hour ceilings, both in USDC
+   (6-decimal atomic units). Defaults: **5 USDC per tx**, **50 USDC
+   per rolling hour**. The hour counter only increments once the tx is
+   actually signed (not just approved).
+3. **Prompt** — the unlock terminal prints a summary and waits for `y`
+   on stdin. **Any other input (including bare Enter) denies.** A 30-second
+   timeout also denies.
+
+Override the defaults via `~/.chain-lens/config.json`:
+
+```json
+{
+  "limits": {
+    "maxPerTx":   "5.00",
+    "maxPerHour": "50.00"
+  },
+  "approvalTimeoutSec": 30
+}
+```
+
+Denials never count against the hour window and are logged to stderr
+(`[denied] <code>: <message>`) so you can tell an expired prompt apart
+from a typo.
+
+## MCP integration
+
+Once the daemon is unlocked, point `@chain-lens/mcp-tool` at it via
+`CHAIN_LENS_SIGN_SOCKET` **instead of** the legacy `WALLET_PRIVATE_KEY`.
+Setting both at once is a hard error — see the mcp-tool README for the
+full MCP config example.
+
+```jsonc
+// claude_desktop_config.json  (simplified)
+{
+  "mcpServers": {
+    "chain-lens": {
+      "command": "npx",
+      "args": ["-y", "@chain-lens/mcp-tool"],
+      "env": {
+        "CHAIN_LENS_API_URL": "https://chainlens.pelicanlab.dev/api",
+        "CHAIN_ID": "84532",
+        "CHAIN_LENS_SIGN_SOCKET": "/home/you/.chain-lens/sign.sock"
+      }
+    }
+  }
+}
+```
+
 ## Storage
 
 Keystores live at `$CHAIN_LENS_HOME/keystore` (default: `~/.chain-lens/keystore`).
@@ -77,9 +135,9 @@ Length-prefixed JSON RPC over unix socket; permissions follow the process
 ## Roadmap
 
 - **0.0.1** — keystore management only (init/import/address)
-- **0.0.2** — unlock daemon (unix socket, TTL) + `send-tx` (current)
+- **0.0.2** — unlock daemon (unix socket, TTL) + `send-tx`
 - **0.0.3** — MCP integration (`@chain-lens/mcp-tool` reads
-  `CHAIN_LENS_SIGN_SOCKET`) + spending limits + per-tx approval prompt
+  `CHAIN_LENS_SIGN_SOCKET`) + spending limits + per-tx approval prompt (current)
 - **0.1.0** — first production-grade release, tagged when 0.0.x usage settles
 
 ## License

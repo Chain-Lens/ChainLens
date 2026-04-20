@@ -1,6 +1,10 @@
 import { readFile, readdir } from "node:fs/promises";
 import { decryptKey, type KeystoreV3 } from "../crypto/keystore.js";
 import { startDaemon } from "../daemon/server.js";
+import { buildPolicy } from "../daemon/policy.js";
+import { createLimitEnforcer } from "../daemon/limit-enforcer.js";
+import { createApprovalPrompt } from "../daemon/approval-prompt.js";
+import { loadConfig, atomicToUsdc } from "../config.js";
 import { keystoreDir, keystoreFilePath, socketPath } from "../paths.js";
 import { promptSecret } from "../prompt.js";
 import { fileExists } from "./shared.js";
@@ -13,20 +17,35 @@ export async function runUnlock(argv: string[]): Promise<void> {
   const password = await promptSecret(`Password for ${target.address}: `);
   const privateKey = decryptKey(target.keystore, password);
 
+  const config = await loadConfig();
+  const limits = createLimitEnforcer(config.limits);
+  const approvalPrompt = createApprovalPrompt();
+  const policy = buildPolicy({
+    limits,
+    approvalTimeoutSec: config.approvalTimeoutSec,
+    prompt: approvalPrompt,
+  });
+
   const sock = socketPath();
   const daemon = await startDaemon({
     privateKey,
     socketPath: sock,
     ttlMs,
+    policy,
     onEvent: (event) => {
       if (event.type === "listening") {
         process.stdout.write(
           `\n  Unlocked ${event.address}\n` +
             `  Socket:  ${event.socketPath}\n` +
-            `  TTL:     ${formatDuration(event.ttlMs)}\n\n` +
+            `  TTL:     ${formatDuration(event.ttlMs)}\n` +
+            `  Limits:  ${atomicToUsdc(config.limits.maxPerTxAtomic)}/tx, ${atomicToUsdc(config.limits.maxPerHourAtomic)}/hr (USDC)\n` +
+            `  Approve: ${config.approvalTimeoutSec}s timeout, default DENY\n\n` +
             `  export CHAIN_LENS_SIGN_SOCKET=${event.socketPath}\n\n` +
             `  Press Ctrl-C to lock, or run 'chain-lens-sign lock' from another shell.\n`,
         );
+      }
+      if (event.type === "denied") {
+        process.stderr.write(`  [denied] ${event.code}: ${event.message}\n`);
       }
       if (event.type === "closed") {
         process.stdout.write(`\n  Locked (${event.reason}).\n`);

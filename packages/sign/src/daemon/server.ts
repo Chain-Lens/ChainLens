@@ -12,16 +12,31 @@ import {
 
 export type LockReason = "ttl" | "client" | "signal" | "error";
 
+export type SignTxDecision =
+  | { type: "allow"; commit?: () => void }
+  | { type: "deny"; code: "unknown_target" | "limit_exceeded" | "denied" | "timeout" | "no_tty"; message: string };
+
+/**
+ * Policy gate invoked before signing. Returns allow/deny.
+ * Receives the raw viem transaction request. 0.0.2 allowed everything
+ * (no gate); 0.0.3 injects decoder + limits + approval prompt.
+ */
+export type SignTxPolicy = (tx: Record<string, unknown>) => Promise<SignTxDecision>;
+
 export interface DaemonOptions {
   privateKey: `0x${string}`;
   socketPath: string;
   ttlMs: number;
   onEvent?: (event: DaemonEvent) => void;
+  /** Pre-sign policy gate. Omit for no-gate (test/legacy). */
+  policy?: SignTxPolicy;
 }
 
 export type DaemonEvent =
   | { type: "listening"; address: `0x${string}`; socketPath: string; ttlMs: number }
   | { type: "request"; method: string }
+  | { type: "signed"; amountAtomic?: bigint; kind?: string }
+  | { type: "denied"; code: string; message: string }
   | { type: "closed"; reason: LockReason };
 
 export interface Daemon {
@@ -155,11 +170,22 @@ export async function startDaemon(opts: DaemonOptions): Promise<Daemon> {
       send(socket, rpcError(req.id, "invalid_params", "missing params.transaction"));
       return;
     }
+    let commit: (() => void) | undefined;
+    if (opts.policy) {
+      const decision = await opts.policy(tx as Record<string, unknown>);
+      if (decision.type === "deny") {
+        opts.onEvent?.({ type: "denied", code: decision.code, message: decision.message });
+        send(socket, rpcError(req.id, decision.code, decision.message));
+        return;
+      }
+      commit = decision.commit;
+    }
     try {
       const signed = await signTransaction({
         privateKey: opts.privateKey,
         transaction: tx as Parameters<typeof signTransaction>[0]["transaction"],
       });
+      commit?.();
       send(socket, rpcResult(req.id, { signedTransaction: signed }));
     } catch (err) {
       send(

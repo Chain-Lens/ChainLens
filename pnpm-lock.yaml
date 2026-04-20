@@ -185,6 +185,9 @@ importers:
       '@chain-lens/shared':
         specifier: workspace:*
         version: link:../shared
+      '@chain-lens/sign':
+        specifier: workspace:*
+        version: link:../sign
       '@modelcontextprotocol/sdk':
         specifier: ^1.0.0
         version: 1.29.0(zod@4.3.6)

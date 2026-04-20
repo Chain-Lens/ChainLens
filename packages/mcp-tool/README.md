@@ -3,8 +3,9 @@
 Model Context Protocol (MCP) server that lets Claude Desktop (and any other MCP
 client) discover [ChainLens](https://github.com/Chain-Lens/ChainLens) sellers
 and read on-chain-verified evidence for past jobs. Paid on-chain requests are
-opt-in and **testnet-only** while the safer `@chain-lens/sign` flow is in
-development (see [Wallet / signing](#wallet--signing) below).
+opt-in; prefer the `@chain-lens/sign` daemon (spending limits + per-tx
+approval prompt) over the legacy `WALLET_PRIVATE_KEY` pattern — see
+[Wallet / signing](#wallet--signing) below.
 
 ## Install
 
@@ -48,7 +49,8 @@ the recommended setup for everyday use.
 | `RPC_URL` | `https://sepolia.base.org` | Public Base Sepolia RPC. Rate-limited; swap for an Alchemy/Infura URL if the agent gets throttled. |
 | `CHAIN_LENS_POLL_INTERVAL_MS` | `2000` | How often `chain-lens.request` polls evidence. |
 | `CHAIN_LENS_POLL_TIMEOUT_MS` | `120000` | Gives up with `status: "TIMEOUT"` after this long. |
-| `WALLET_PRIVATE_KEY` | *unset* | **Testnet-only, see warnings below.** Enables `chain-lens.request`. |
+| `CHAIN_LENS_SIGN_SOCKET` | *unset* | Unix socket of a running `chain-lens-sign unlock` daemon. Preferred signing path — adds spending limits + per-tx approval prompt. Mutually exclusive with `WALLET_PRIVATE_KEY`. |
+| `WALLET_PRIVATE_KEY` | *unset* | **Legacy, testnet-only, see warnings below.** Plaintext key; enables `chain-lens.request` without prompts. Mutually exclusive with `CHAIN_LENS_SIGN_SOCKET`. |
 
 ## Claude Desktop integration (recommended, read-only)
 
@@ -132,23 +134,58 @@ between the two:
 
 ## Wallet / signing
 
-**Paid requests (`chain-lens.request`) are gated behind a private key today.**
-This is a known weak spot:
+Paid requests (`chain-lens.request`) need a signer. Two options:
 
-- `WALLET_PRIVATE_KEY` is stored **plaintext** in `claude_desktop_config.json`.
-  Any app that can read that file (backup tools, cloud sync, other MCP
-  servers) can exfiltrate the key.
-- Once the MCP process has the key it can sign **any** transaction without an
-  interactive confirmation — including `approve(unlimited)` or sends you did
-  not intend.
+### Option A — `@chain-lens/sign` daemon (recommended)
 
-The permanent fix is [`@chain-lens/sign`](https://github.com/Chain-Lens/ChainLens),
-a small CLI that keeps the key on disk encrypted and prompts the human for a
-password per transaction. It is planned for `0.1.x`. Until then:
+Install `@chain-lens/sign`, import or create a keystore, and run
+`chain-lens-sign unlock` in a dedicated terminal. That prints the socket path
+you pass to the MCP tool via `CHAIN_LENS_SIGN_SOCKET`. With the daemon:
+
+- The encrypted keystore lives on disk (geth v3, scrypt + AES-128-CTR).
+- The MCP tool sees **only a unix socket**, never the private key.
+- Every tx the MCP tool initiates hits the unlock terminal's **approval
+  prompt** (summary + `y`/Enter). Any input other than `y` denies.
+- Spending ceilings (default 5 USDC per tx, 50 USDC per rolling hour) reject
+  anything over the cap before the prompt even runs.
+- Unknown calldata (anything that isn't `USDC.approve|transfer`,
+  `ApiMarketEscrow.pay`, or `ApiMarketEscrowV2.createJob`) is denied outright.
+
+```jsonc
+{
+  "mcpServers": {
+    "chain-lens": {
+      "command": "npx",
+      "args": ["-y", "@chain-lens/mcp-tool"],
+      "env": {
+        "CHAIN_LENS_API_URL": "https://chainlens.pelicanlab.dev/api",
+        "CHAIN_ID": "84532",
+        "RPC_URL": "https://sepolia.base.org",
+        "CHAIN_LENS_SIGN_SOCKET": "/home/you/.chain-lens/sign.sock"
+      }
+    }
+  }
+}
+```
+
+See the [`@chain-lens/sign` README](https://github.com/Chain-Lens/ChainLens/tree/main/packages/sign)
+for keystore setup, `unlock --ttl`, and the config override file.
+
+### Option B — `WALLET_PRIVATE_KEY` (legacy, testnet-only)
+
+This path still works but has real weak spots:
+
+- The key is stored **plaintext** in `claude_desktop_config.json`. Any app
+  that can read that file (backup tools, cloud sync, other MCP servers) can
+  exfiltrate it.
+- Once the MCP process holds the key it can sign **any** transaction without
+  an interactive confirmation — including `approve(unlimited)` or sends you
+  didn't intend.
 
 > ⚠ **If you set `WALLET_PRIVATE_KEY`, use a throwaway Base Sepolia wallet
 > with only faucet funds.** Never paste a mainnet key or a key that controls
-> anything you care about.
+> anything you care about. Setting both `WALLET_PRIVATE_KEY` and
+> `CHAIN_LENS_SIGN_SOCKET` is a startup error — pick one.
 
 Opt-in config (testnet only):
 

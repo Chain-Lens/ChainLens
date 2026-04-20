@@ -17,6 +17,7 @@ import {
   type Abi,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import type { Account } from "viem";
 import {
   ApiMarketEscrowV2Abi,
   CONTRACT_ADDRESSES_V2,
@@ -24,8 +25,9 @@ import {
   baseSepolia,
   baseMainnet,
 } from "@chain-lens/shared";
+import { connectDaemon, daemonAccount } from "@chain-lens/sign";
 
-import { loadMcpConfig } from "./config.js";
+import { loadMcpConfig, type McpConfig } from "./config.js";
 import { buildMcpServer } from "./server.js";
 
 // Minimal ERC-20 approve ABI (we only need approve for the escrow flow).
@@ -68,14 +70,29 @@ function stableStringify(value: unknown): string {
   return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`).join(",")}}`;
 }
 
+async function resolveAccount(config: McpConfig): Promise<Account | undefined> {
+  // Prefer the sign daemon when its socket is set. Falls back to the plaintext
+  // WALLET_PRIVATE_KEY env for legacy setups; loadMcpConfig already rejects
+  // both being set simultaneously.
+  if (config.signSocketPath) {
+    const client = await connectDaemon(config.signSocketPath);
+    return daemonAccount(client);
+  }
+  if (config.walletPrivateKey) {
+    return privateKeyToAccount(config.walletPrivateKey);
+  }
+  return undefined;
+}
+
 async function main() {
   const config = loadMcpConfig();
   if (config.walletPrivateKey) {
     process.stderr.write(
       "⚠  chain-lens-mcp: WALLET_PRIVATE_KEY is set. This is a TESTNET-ONLY pattern — the key " +
         "lives in plaintext in your MCP config and the server can sign arbitrary txs without " +
-        "interactive confirmation. Use a throwaway Base Sepolia wallet only. A safer signing " +
-        "flow (@chain-lens/sign CLI) is planned for 0.1.x.\n",
+        "interactive confirmation. Use a throwaway Base Sepolia wallet only. Prefer " +
+        "`@chain-lens/sign` (unlock daemon + per-tx approval + spending limits) via " +
+        "CHAIN_LENS_SIGN_SOCKET.\n",
     );
   }
   const chain = chainFor(config.chainId);
@@ -95,9 +112,9 @@ async function main() {
     fetch: globalThis.fetch.bind(globalThis),
   };
 
-  const requestDeps = (() => {
-    if (!config.walletPrivateKey) return undefined;
-    const account = privateKeyToAccount(config.walletPrivateKey);
+  const requestDeps = await (async () => {
+    const account = await resolveAccount(config);
+    if (!account) return undefined;
     const walletClient = createWalletClient({ chain, transport: http(config.rpcUrl), account });
     return {
       apiBaseUrl: config.apiBaseUrl,

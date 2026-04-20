@@ -32,4 +32,18 @@ describe("loadMcpConfig", () => {
     const cfg = loadMcpConfig({ WALLET_PRIVATE_KEY: pk });
     assert.equal(cfg.walletPrivateKey, pk);
   });
+
+  it("reads CHAIN_LENS_SIGN_SOCKET", () => {
+    const cfg = loadMcpConfig({ CHAIN_LENS_SIGN_SOCKET: "/tmp/sign.sock" });
+    assert.equal(cfg.signSocketPath, "/tmp/sign.sock");
+    assert.equal(cfg.walletPrivateKey, undefined);
+  });
+
+  it("rejects when both WALLET_PRIVATE_KEY and CHAIN_LENS_SIGN_SOCKET are set", () => {
+    const pk = "0x" + "a".repeat(64);
+    assert.throws(
+      () => loadMcpConfig({ WALLET_PRIVATE_KEY: pk, CHAIN_LENS_SIGN_SOCKET: "/tmp/sign.sock" }),
+      /Both WALLET_PRIVATE_KEY and CHAIN_LENS_SIGN_SOCKET are set/,
+    );
+  });
 });
