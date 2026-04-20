@@ -1,6 +1,6 @@
 {
   "name": "@chain-lens/shared",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Shared types, ABIs, addresses, and task-type registry for ChainLens (Type 2 MVP).",
   "license": "MIT",
   "repository": {
