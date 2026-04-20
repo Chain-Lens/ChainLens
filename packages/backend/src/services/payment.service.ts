@@ -32,6 +32,7 @@ export async function prepare(apiId: string, buyer: string) {
     seller: api.sellerAddress,
     amount: api.price,
     contractAddress: env.CONTRACT_ADDRESS,
+    taskType: api.category,
   };
 }
 

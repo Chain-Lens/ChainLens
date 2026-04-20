@@ -75,6 +75,13 @@
 
 ### 2026-04-20
 
+- **결제 실패 2건 수정 — `@chain-lens/mcp-tool` 0.0.5 + 프론트 결제 경로**
+  - **증상 1 (mcp-tool)**: `request` 도구 호출 시 노드가 "unknown account" 리턴 → createJob tx 자체가 송신 안 됨. [packages/mcp-tool/src/index.ts:107](packages/mcp-tool/src/index.ts#L107)에서 `account: account.address`(주소 문자열)을 `writeContract`에 넘겨서 viem이 JSON-RPC account 경로(`eth_sendTransaction`)로 분기 → 노드가 키를 모르니 거절. 로컬 서명(`eth_sendRawTransaction`)으로 가려면 `Account` 객체 전체를 넘겨야 함. 수정: `account: account.address` → `account`, `RequestDeps.account` 타입 `\`0x\${string}\`` → viem `Account`, 테스트 fixture도 `{address, type: "local"}` 형태로. 17/17 pass. 버전 0.0.4 → 0.0.5, `server.ts`의 MCP handshake 버전 상수 동기.
+  - **증상 2 (프론트)**: `/api-detail` 결제 버튼에서 `pay()` tx가 on-chain revert (MetaMask Gas Limit 140M은 estimateGas 실패 후 wallet이 블록 한도로 폴백). [packages/frontend/src/hooks/usePayment.ts](packages/frontend/src/hooks/usePayment.ts)가 `taskType = inputsHash = ZERO_BYTES32`로 호출 → [ApiMarketEscrowV2.sol:186-188](packages/contracts/contracts/ApiMarketEscrowV2.sol#L186-L188) `if (taskType == bytes32(0)) require(approvedApis[apiId])` 게이트에 걸림. 해당 apiId는 admin approveApi() tx가 안 타거나 실패한 상태라 revert.
+  - 수정: **`taskType != 0` 경로로 이동** — mcp-tool이 쓰는 패턴과 동일. `api.category`를 keccak256(utf8) 해서 bytes32로 사용하면 `approvedApis` 체크가 스킵됨. 1) [packages/shared/src/types/payment.ts](packages/shared/src/types/payment.ts) `PreparePaymentResponse`에 `taskType: string` 추가. 2) [packages/backend/src/services/payment.service.ts](packages/backend/src/services/payment.service.ts) prepare 응답에 `taskType: api.category` 포함. 3) [packages/frontend/src/hooks/usePayment.ts](packages/frontend/src/hooks/usePayment.ts)가 `keccak256(stringToBytes(prepareData.taskType))`을 `pay()`의 4번째 인자로 전달 (`inputsHash`는 ZERO 유지 — 컨트랙트 미검증). 효과: 관리자 approveApi() 성공 여부와 독립적으로 결제 성공. 보너스: 게이트웨이 쪽 job 분류도 category와 일치.
+  - 검증: shared/backend/mcp-tool `tsc --noEmit` 깨끗, mcp-tool 17/17 pass. 프론트는 기존 테스트 없음.
+  - **후속**: mcp-tool 0.0.5 `pnpm publish` 필요 (workspace:\* 변환 주의 — 0.0.4 사건 재발 방지).
+
 - **`@chain-lens/sign` 0.0.2 — unlock 데몬 + `send-tx`**
   - 0.0.1은 keystore 관리만 가능 (서명 불가). 0.0.2에서 데몬 + 단일 tx 서명·브로드캐스트 경로 완성. MCP 연동·승인 프롬프트·한도는 0.0.3으로 분리. 버전은 프로덕션(0.1.0) 도달 전까지 패치로만 증가 (사용자 결정: "어차피 고쳐야해").
   - [src/daemon/protocol.ts](packages/sign/src/daemon/protocol.ts) — 길이 프리픽스(4B big-endian) + UTF-8 JSON 바디. BigInt은 `{__bigint__: "..."}` 태그로 직렬화 (viem tx 객체 직통). `MAX_FRAME_SIZE = 64 KiB`. 5/5 테스트.

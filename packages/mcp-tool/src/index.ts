@@ -104,7 +104,7 @@ async function main() {
       fetch: globalThis.fetch.bind(globalThis),
       publicClient,
       walletClient,
-      account: account.address,
+      account,
       escrowAddress,
       escrowAbi: ApiMarketEscrowV2Abi as Abi,
       usdcAddress,

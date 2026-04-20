@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { keccak256, stringToBytes } from "viem";
 import { apiClient } from "@/lib/api-client";
 import { ESCROW_ADDRESS, USDC_ADDRESS } from "@/config/contracts";
 import type { PreparePaymentResponse } from "@chain-lens/shared";
@@ -69,6 +70,9 @@ export function usePayment() {
   useEffect(() => {
     if (isApproveConfirmed && prepareData && step === "approving") {
       setStep("paying");
+      // taskType != 0 bypasses the `approvedApis[apiId]` gate — the listing
+      // doesn't need a per-API admin approveApi() tx for the buy flow to work.
+      const taskTypeBytes32 = keccak256(stringToBytes(prepareData.taskType));
       writePay({
         address: ESCROW_ADDRESS,
         abi: payAbi,
@@ -77,7 +81,7 @@ export function usePayment() {
           BigInt(prepareData.onChainApiId),
           prepareData.seller as `0x${string}`,
           BigInt(prepareData.amount),
-          ZERO_BYTES32,
+          taskTypeBytes32,
           ZERO_BYTES32,
         ],
       });

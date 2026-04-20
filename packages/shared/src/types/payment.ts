@@ -30,4 +30,11 @@ export interface PreparePaymentResponse {
   seller: string;
   amount: string;
   contractAddress: string;
+  /**
+   * Task type string (ApiListing.category). The buyer MUST pass
+   * `keccak256(utf8(taskType))` as the `taskType` arg to `pay()`. When taskType
+   * != 0, the contract skips the `approvedApis[apiId]` gate — which is what we
+   * want for listing-driven purchases (no per-API admin approval required).
+   */
+  taskType: string;
 }

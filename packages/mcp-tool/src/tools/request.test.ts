@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import type { Abi } from "viem";
+import type { Abi, Account } from "viem";
 import { requestHandler, type RequestDeps } from "./request.js";
 
 type WriteCall = {
@@ -64,7 +64,10 @@ function fakeDeps(options: {
     fetch: fakeFetch,
     publicClient,
     walletClient,
-    account: ("0x" + "a".repeat(40)) as `0x${string}`,
+    account: {
+      address: ("0x" + "a".repeat(40)) as `0x${string}`,
+      type: "local",
+    } as unknown as Account,
     escrowAddress: ("0x" + "b".repeat(40)) as `0x${string}`,
     escrowAbi: [] as unknown as Abi,
     usdcAddress: ("0x" + "c".repeat(40)) as `0x${string}`,

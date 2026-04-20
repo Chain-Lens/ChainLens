@@ -12,7 +12,7 @@
  * fake fetch without pulling in viem or the network.
  */
 
-import type { Abi, Log, PublicClient, TransactionReceipt, WalletClient } from "viem";
+import type { Abi, Account, Log, PublicClient, TransactionReceipt, WalletClient } from "viem";
 
 export interface RequestInput {
   seller: `0x${string}`;
@@ -28,7 +28,13 @@ export interface RequestDeps {
   fetch: typeof fetch;
   publicClient: PublicClient;
   walletClient: WalletClient;
-  account: `0x${string}`;
+  /**
+   * Account object (not bare address). viem routes bare addresses through
+   * `eth_sendTransaction` — fine for JSON-RPC wallets that hold the key, but
+   * broken for public RPC endpoints + local signer. Pass the full `Account`
+   * so viem uses `eth_sendRawTransaction` with the local signature.
+   */
+  account: Account;
   escrowAddress: `0x${string}`;
   escrowAbi: Abi;
   usdcAddress: `0x${string}`;
