@@ -3,6 +3,7 @@ import { env } from "../config/env.js";
 import { walletClient, publicClient } from "../config/viem.js";
 import prisma from "../config/prisma.js";
 import * as apiService from "./api.service.js";
+import { isTaskTypeEnabled } from "./task-type.service.js";
 import { logger } from "../utils/logger.js";
 import { BadRequestError } from "../utils/errors.js";
 
@@ -11,6 +12,25 @@ export async function approve(apiId: string, adminAddress: string, reason?: stri
 
   if (api.status !== "PENDING") {
     throw new BadRequestError(`API is ${api.status}, cannot approve`);
+  }
+
+  // Every approved listing's category IS the on-chain task type name. If
+  // the registry has the type disabled (or never registered it), approving
+  // creates a listing no buyer can use — the escrow auto-refunds any job
+  // pointed at it. Reject up front with a clear message rather than letting
+  // it through and surfacing later as silent refunds.
+  const taskTypeName = api.category;
+  const enabled = await isTaskTypeEnabled(taskTypeName).catch((err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new BadRequestError(
+      `Failed to verify task type '${taskTypeName}' against TaskTypeRegistry: ${msg}`,
+    );
+  });
+  if (!enabled) {
+    throw new BadRequestError(
+      `Task type '${taskTypeName}' is not enabled in TaskTypeRegistry. ` +
+        `Register/enable it on-chain before approving this listing.`,
+    );
   }
 
   const onChainId = await apiService.getNextOnChainId();
