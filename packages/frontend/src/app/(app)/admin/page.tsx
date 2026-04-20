@@ -9,8 +9,20 @@ import { apiClient } from "@/lib/api-client";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useAdminAllApis } from "@/hooks/useAdminAllApis";
 import ApprovalCard from "@/components/admin/ApprovalCard";
+import JobsTab from "@/components/admin/JobsTab";
+import SellersTab from "@/components/admin/SellersTab";
+import TasksTab from "@/components/admin/TasksTab";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import StatusBadge from "@/components/shared/StatusBadge";
+
+type AdminTab = "pending" | "all" | "tasks" | "sellers" | "jobs";
+const TABS: { id: AdminTab; label: string }[] = [
+  { id: "pending", label: "Pending" },
+  { id: "all", label: "All APIs" },
+  { id: "tasks", label: "Tasks" },
+  { id: "sellers", label: "Sellers" },
+  { id: "jobs", label: "Jobs" },
+];
 
 const ADMIN_ADDRESSES = (process.env.NEXT_PUBLIC_ADMIN_ADDRESSES || "")
   .split(",")
@@ -22,7 +34,7 @@ export default function AdminPage() {
   const { isAuthenticated, signIn, signOut, loading: authLoading, error: authError } = useAdminAuth();
   const { pendingApis, loading, error, approve, reject, testApi } = useAdmin();
   const { apis: allApis, loading: allLoading, error: allError, refetch: refetchAll } = useAdminAllApis(isAuthenticated);
-  const [tab, setTab] = useState<"pending" | "all">("pending");
+  const [tab, setTab] = useState<AdminTab>("pending");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const isAdminWallet = isConnected && address && ADMIN_ADDRESSES.includes(address.toLowerCase());
@@ -107,23 +119,23 @@ export default function AdminPage() {
 
       {/* 탭 */}
       <div className="mb-6 flex gap-1 border-b border-[var(--border)]">
-        {(["pending", "all"] as const).map((t) => (
+        {TABS.map(({ id, label }) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={id}
+            onClick={() => setTab(id)}
             className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-              tab === t
+              tab === id
                 ? "border-[var(--green)] text-[var(--green)]"
                 : "border-transparent text-[var(--text2)]"
             }`}
           >
-            {t === "pending" ? "Pending Review" : "All APIs"}
-            {t === "pending" && pendingApis.length > 0 && (
+            {label}
+            {id === "pending" && pendingApis.length > 0 && (
               <span className="ml-2 rounded-full bg-[rgba(227,179,65,0.2)] px-1.5 py-0.5 text-xs text-[#e3b341]">
                 {pendingApis.length}
               </span>
             )}
-            {t === "all" && allApis.length > 0 && (
+            {id === "all" && allApis.length > 0 && (
               <span className="ml-2 rounded-full bg-[var(--bg3)] px-1.5 py-0.5 text-xs text-[var(--text2)]">
                 {allApis.length}
               </span>
@@ -216,6 +228,10 @@ export default function AdminPage() {
           )}
         </>
       )}
+
+      {tab === "tasks" && <TasksTab enabled={tab === "tasks"} />}
+      {tab === "sellers" && <SellersTab enabled={tab === "sellers"} />}
+      {tab === "jobs" && <JobsTab enabled={tab === "jobs"} />}
     </div>
   );
 }
