@@ -1,19 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { parseUnits } from "viem";
 import { useRegister } from "@/hooks/useRegister";
+import { useTaskTypes } from "@/hooks/useTaskTypes";
 
 export default function RegisterForm() {
   const { address, isConnected } = useAccount();
   const { register, loading, error, result } = useRegister();
+  const { taskTypes, loading: taskTypesLoading, error: taskTypesError } = useTaskTypes();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [endpoint, setEndpoint] = useState("");
   const [priceInUsdc, setPriceInUsdc] = useState("");
-  const [category, setCategory] = useState("general");
+  const [category, setCategory] = useState("");
+
+  // Pick the first enabled task type as the default once it loads, so the
+  // form never submits an empty category.
+  useEffect(() => {
+    if (!category && taskTypes.length > 0) {
+      setCategory(taskTypes[0]!.name);
+    }
+  }, [taskTypes, category]);
 
   if (!isConnected) {
     return (
@@ -39,7 +49,7 @@ export default function RegisterForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!address) return;
+    if (!address || !category) return;
 
     try {
       const priceInWei = parseUnits(priceInUsdc, 6).toString();
@@ -55,6 +65,8 @@ export default function RegisterForm() {
       // Error handled in hook state
     }
   }
+
+  const canSubmit = !loading && !taskTypesLoading && taskTypes.length > 0 && !!category;
 
   return (
     <form onSubmit={handleSubmit} className="card space-y-4">
@@ -117,20 +129,28 @@ export default function RegisterForm() {
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--text2)]">
-            Category
+            Task type
           </label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="input"
+            required
+            disabled={taskTypesLoading || taskTypes.length === 0}
           >
-            <option value="general">General</option>
-            <option value="ai">AI / ML</option>
-            <option value="data">Data</option>
-            <option value="finance">Finance</option>
-            <option value="social">Social</option>
-            <option value="utility">Utility</option>
+            {taskTypesLoading && <option value="">Loading…</option>}
+            {!taskTypesLoading && taskTypes.length === 0 && (
+              <option value="">No task types enabled</option>
+            )}
+            {taskTypes.map((t) => (
+              <option key={t.id} value={t.name}>
+                {t.name}
+              </option>
+            ))}
           </select>
+          {taskTypesError && (
+            <p className="mt-1 text-xs text-[var(--red)]">{taskTypesError}</p>
+          )}
         </div>
       </div>
 
@@ -138,7 +158,7 @@ export default function RegisterForm() {
 
       <button
         type="submit"
-        disabled={loading}
+        disabled={!canSubmit}
         className="w-full btn-primary py-3"
       >
         {loading ? "Submitting..." : "Register API"}

@@ -1,16 +1,49 @@
 "use client";
 
-import { INITIAL_TASK_TYPE_NAMES } from "@chain-lens/shared";
+import { useEffect, useState } from "react";
+import { apiClient } from "@/lib/api-client";
+
+export interface TaskTypeItem {
+  id: string;
+  name: string;
+  schemaURI: string;
+  maxResponseTime: number;
+  minBudget: string;
+  enabled: boolean;
+  registeredAt: number;
+}
 
 /**
- * MVP: returns the static list of task types registered on deploy.
- * Later this can query a backend /api/task-types endpoint that reads
- * TaskTypeRegistry on-chain.
+ * Fetches enabled task types from the backend (/api/task-types), which in
+ * turn reads TaskTypeRegistry on-chain. Admin can register/toggle task
+ * types without a code change — the dropdown updates on next backend
+ * cache miss (30s TTL).
  */
 export function useTaskTypes() {
-  return {
-    taskTypes: INITIAL_TASK_TYPE_NAMES as readonly string[],
-    loading: false,
-    error: null as string | null,
-  };
+  const [taskTypes, setTaskTypes] = useState<TaskTypeItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    apiClient
+      .get<{ items: TaskTypeItem[] }>("/task-types")
+      .then((res) => {
+        if (!cancelled) setTaskTypes(res.items);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load task types");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { taskTypes, loading, error };
 }
