@@ -32,21 +32,36 @@ Run `chain-lens-sign --help` for flag reference.
 
 ## Unlock flow
 
+> **Two terminals, non-negotiable.** `unlock` must run in a foreground
+> terminal that stays open — that terminal owns the password, the TTL
+> timer, **and** every approval prompt. Any other process (`send-tx`, the
+> MCP tool, Claude Code) is a *client* that talks to it over a unix socket.
+
 ```bash
-# Terminal 1 — session terminal (keeps daemon alive)
+# Terminal A — unlock daemon (must stay open and visible)
 chain-lens-sign unlock --ttl 2h
 # → prompts password, prints:
 #   export CHAIN_LENS_SIGN_SOCKET=/home/you/.chain-lens/sign.sock
+# → then stays running. Approval prompts for every sign-tx request
+#   appear *here*, not in the client terminal.
 
-# Terminal 2 — uses the socket
+# Terminal B — any client (you, another shell, Claude Desktop, etc.)
 export CHAIN_LENS_SIGN_SOCKET=/home/you/.chain-lens/sign.sock
 chain-lens-sign status
 chain-lens-sign send-tx --rpc https://sepolia.base.org \
-  --to 0x0000000000000000000000000000000000000001 --value 0
+  --to 0x036CbD53842c5426634e7929541eC2318f3dCF7e \
+  --data 0x095ea7b3…   # any supported calldata
+# → Terminal B blocks waiting for the daemon.
+# → Terminal A shows:  approve? [y/N] (auto-deny in 30s) >
+#   Type `y` + Enter *in Terminal A* to approve. Any other input denies.
 ```
 
 The daemon auto-locks when the TTL elapses, on `lock`, or on Ctrl-C in the
 session terminal.
+
+> **Common gotcha.** If you type `y` in Terminal B (the client side), it
+> goes nowhere — the prompt lives in Terminal A. Keep Terminal A visible
+> or the 30-second timeout fires and the tx is denied.
 
 ## Spending limits & per-tx approval (0.0.3)
 
