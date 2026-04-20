@@ -1,0 +1,47 @@
+{
+  "name": "@chain-lens/sign",
+  "version": "0.0.1",
+  "description": "Encrypted wallet keystore CLI for ChainLens — geth keystore v3 compatible. Planned replacement for WALLET_PRIVATE_KEY env pattern.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Chain-Lens/ChainLens.git",
+    "directory": "packages/sign"
+  },
+  "keywords": [
+    "chain-lens",
+    "cli",
+    "keystore",
+    "ethereum",
+    "wallet",
+    "sign",
+    "web3"
+  ],
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "chain-lens-sign": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "tsx --test 'src/**/*.test.ts'",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
