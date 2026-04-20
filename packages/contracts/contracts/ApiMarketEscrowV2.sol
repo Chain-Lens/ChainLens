@@ -8,6 +8,24 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { ApiMarketEscrowV2Types } from "./types/ApiMarketEscrowV2Types.sol";
 
+/// @dev Minimal EIP-3009 surface. USDC (FiatTokenV2) implements this natively;
+///      we don't need the full interface, just the `transferWithAuthorization`
+///      entrypoint that lets us pull funds from a buyer via an off-chain signed
+///      authorization — no prior `approve` tx required.
+interface IERC20WithAuthorization {
+    function transferWithAuthorization(
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+}
+
 /// @title ApiMarketEscrowV2
 /// @notice Escrow for API / task-type jobs. Evolves v1 Payment into a Job that
 ///         carries taskType, inputsHash, responseHash, evidenceURI so gateways can
@@ -121,6 +139,49 @@ contract ApiMarketEscrowV2 is Ownable2Step, ReentrancyGuard {
         return _createJob(apiId, seller, amount, taskType, inputsHash);
     }
 
+    /// @notice Single-tx job creation using an EIP-3009 authorization signed
+    ///         off-chain by the buyer. Eliminates the separate `approve` tx
+    ///         and the approve+createJob race that breaks when RPC state
+    ///         lags between the two txs.
+    /// @dev    Buyer signs a TransferWithAuthorization message authorizing
+    ///         `amount` USDC to move to this escrow. We redeem it inline and
+    ///         then run the normal job-creation path with the buyer as
+    ///         `msg.sender`. Authorization replay protection lives in USDC's
+    ///         nonce bookkeeping; our nonReentrant guard stops recursive entry.
+    function createJobWithAuth(
+        address seller,
+        bytes32 taskType,
+        uint256 amount,
+        bytes32 inputsHash,
+        uint256 apiId,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external nonReentrant returns (uint256 jobId) {
+        require(seller != address(0), "invalid seller");
+        require(amount > 0, "amount zero");
+        if (taskType == bytes32(0)) {
+            require(approvedApis[apiId], "API not approved");
+        }
+
+        IERC20WithAuthorization(address(usdc)).transferWithAuthorization(
+            msg.sender,
+            address(this),
+            amount,
+            validAfter,
+            validBefore,
+            nonce,
+            v,
+            r,
+            s
+        );
+
+        return _recordJob(apiId, seller, amount, taskType, inputsHash, msg.sender);
+    }
+
     function complete(
         uint256 jobId,
         bytes32 responseHash,
@@ -188,10 +249,23 @@ contract ApiMarketEscrowV2 is Ownable2Step, ReentrancyGuard {
         }
 
         usdc.safeTransferFrom(msg.sender, address(this), amount);
+        return _recordJob(apiId, seller, amount, taskType, inputsHash, msg.sender);
+    }
 
+    /// @dev Assumes funds are already in the escrow (caller did the transfer).
+    ///      Shared between the approve+transferFrom path (`_createJob`) and the
+    ///      EIP-3009 auth path (`createJobWithAuth`).
+    function _recordJob(
+        uint256 apiId,
+        address seller,
+        uint256 amount,
+        bytes32 taskType,
+        bytes32 inputsHash,
+        address buyer
+    ) internal returns (uint256 jobId) {
         jobId = nextJobId++;
         _jobs[jobId] = ApiMarketEscrowV2Types.Job({
-            buyer: msg.sender,
+            buyer: buyer,
             seller: seller,
             apiId: apiId,
             amount: amount,
@@ -204,8 +278,8 @@ contract ApiMarketEscrowV2 is Ownable2Step, ReentrancyGuard {
             refunded: false
         });
 
-        emit JobCreated(jobId, msg.sender, seller, taskType, amount, inputsHash, apiId);
-        emit PaymentReceived(jobId, msg.sender, apiId, seller, amount);
+        emit JobCreated(jobId, buyer, seller, taskType, amount, inputsHash, apiId);
+        emit PaymentReceived(jobId, buyer, apiId, seller, amount);
     }
 
     function _complete(

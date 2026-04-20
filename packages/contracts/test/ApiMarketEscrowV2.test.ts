@@ -557,4 +557,195 @@ describe("ApiMarketEscrowV2", function () {
       expect(await escrow.read.approvedApis([7n])).to.be.true;
     });
   });
+
+  describe("createJobWithAuth (EIP-3009)", function () {
+    // Validity window constants picked wide enough to always cover the hardhat
+    // block clock during test execution; each test overrides when it needs
+    // to exercise the boundary.
+    const VALID_AFTER = 0n;
+    const VALID_BEFORE = 2_000_000_000n; // 2033-05-18
+    const NONCE_A = keccak256(stringToBytes("auth-nonce-a"));
+    const NONCE_B = keccak256(stringToBytes("auth-nonce-b"));
+    // MockUSDC ignores the signature, so any v/r/s are fine. Real USDC
+    // verifies EIP-712 — exercised in the mcp-tool integration tests.
+    const V = 27;
+    const R = keccak256(stringToBytes("dummy-r")) as `0x${string}`;
+    const S = keccak256(stringToBytes("dummy-s")) as `0x${string}`;
+
+    async function authFixture() {
+      const base = await deployFixture();
+      // Revoke the standard approve so we prove auth path doesn't rely on
+      // an existing allowance.
+      const usdcAsBuyer = await hre.viem.getContractAt(
+        "MockUSDC",
+        base.usdc.address,
+        { client: { wallet: base.buyer } },
+      );
+      await usdcAsBuyer.write.approve([base.escrow.address, 0n]);
+      return { ...base, usdcAsBuyer };
+    }
+
+    it("creates a job by redeeming the authorization — no approve needed", async function () {
+      const { escrow, usdc, buyer, seller } = await authFixture();
+      const asBuyer = await as(escrow, buyer);
+
+      const escrowBalBefore = await usdc.read.balanceOf([escrow.address]);
+      const buyerBalBefore = await usdc.read.balanceOf([buyer.account.address]);
+
+      await asBuyer.write.createJobWithAuth([
+        seller.account.address,
+        TASK_A,
+        USDC(5n),
+        INPUTS_A,
+        123n,
+        VALID_AFTER,
+        VALID_BEFORE,
+        NONCE_A,
+        V,
+        R,
+        S,
+      ]);
+
+      const job = await escrow.read.getJob([0n]);
+      expect(getAddress(job.buyer)).to.equal(getAddress(buyer.account.address));
+      expect(getAddress(job.seller)).to.equal(getAddress(seller.account.address));
+      expect(job.amount).to.equal(USDC(5n));
+      expect(job.apiId).to.equal(123n);
+
+      expect(await usdc.read.balanceOf([escrow.address])).to.equal(
+        escrowBalBefore + USDC(5n),
+      );
+      expect(await usdc.read.balanceOf([buyer.account.address])).to.equal(
+        buyerBalBefore - USDC(5n),
+      );
+    });
+
+    it("reverts when the authorization has expired", async function () {
+      const { escrow, buyer, seller } = await authFixture();
+      const asBuyer = await as(escrow, buyer);
+      await expect(
+        asBuyer.write.createJobWithAuth([
+          seller.account.address,
+          TASK_A,
+          USDC(1n),
+          INPUTS_A,
+          0n,
+          0n,
+          1n, // validBefore in the past
+          NONCE_A,
+          V,
+          R,
+          S,
+        ]),
+      ).to.be.rejectedWith(/auth expired/);
+    });
+
+    it("reverts when the same nonce is redeemed twice (replay protection)", async function () {
+      const { escrow, buyer, seller } = await authFixture();
+      const asBuyer = await as(escrow, buyer);
+
+      await asBuyer.write.createJobWithAuth([
+        seller.account.address,
+        TASK_A,
+        USDC(1n),
+        INPUTS_A,
+        0n,
+        VALID_AFTER,
+        VALID_BEFORE,
+        NONCE_A,
+        V,
+        R,
+        S,
+      ]);
+      await expect(
+        asBuyer.write.createJobWithAuth([
+          seller.account.address,
+          TASK_A,
+          USDC(1n),
+          INPUTS_A,
+          0n,
+          VALID_AFTER,
+          VALID_BEFORE,
+          NONCE_A, // same nonce — USDC rejects
+          V,
+          R,
+          S,
+        ]),
+      ).to.be.rejectedWith(/auth already used/);
+    });
+
+    it("rejects zero amount and zero seller", async function () {
+      const { escrow, buyer, seller } = await authFixture();
+      const asBuyer = await as(escrow, buyer);
+
+      await expect(
+        asBuyer.write.createJobWithAuth([
+          seller.account.address,
+          TASK_A,
+          0n,
+          INPUTS_A,
+          0n,
+          VALID_AFTER,
+          VALID_BEFORE,
+          NONCE_A,
+          V,
+          R,
+          S,
+        ]),
+      ).to.be.rejectedWith(/amount zero/);
+
+      await expect(
+        asBuyer.write.createJobWithAuth([
+          zeroAddress,
+          TASK_A,
+          USDC(1n),
+          INPUTS_A,
+          0n,
+          VALID_AFTER,
+          VALID_BEFORE,
+          NONCE_B,
+          V,
+          R,
+          S,
+        ]),
+      ).to.be.rejectedWith(/invalid seller/);
+    });
+
+    it("parallel nonces work — both independent auths redeem in sequence", async function () {
+      const { escrow, buyer, seller } = await authFixture();
+      const asBuyer = await as(escrow, buyer);
+
+      await asBuyer.write.createJobWithAuth([
+        seller.account.address,
+        TASK_A,
+        USDC(1n),
+        INPUTS_A,
+        0n,
+        VALID_AFTER,
+        VALID_BEFORE,
+        NONCE_A,
+        V,
+        R,
+        S,
+      ]);
+      await asBuyer.write.createJobWithAuth([
+        seller.account.address,
+        TASK_A,
+        USDC(1n),
+        INPUTS_A,
+        0n,
+        VALID_AFTER,
+        VALID_BEFORE,
+        NONCE_B,
+        V,
+        R,
+        S,
+      ]);
+
+      const j0 = await escrow.read.getJob([0n]);
+      const j1 = await escrow.read.getJob([1n]);
+      expect(j0.amount).to.equal(USDC(1n));
+      expect(j1.amount).to.equal(USDC(1n));
+    });
+  });
 });
