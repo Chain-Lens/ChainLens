@@ -182,6 +182,14 @@ export async function requestHandler(
   const sig = parseSignature(signature);
 
   // 2. Single on-chain tx: escrow redeems the authorization and records the job.
+  //
+  // Manual gas override: viem 2.48 on Base Sepolia occasionally returns a
+  // non-sensical estimate (block gas limit fallback) for createJobWithAuth
+  // and the node rejects the resulting tx with "intrinsic gas too high"
+  // before it ever gets simulated. A straight eth_call against the same
+  // calldata succeeds, confirming the call is valid — it's an estimation
+  // wart, not a revert. createJobWithAuth in practice consumes ~170-220k;
+  // 500k leaves a safe buffer without waste.
   const createHash = await deps.walletClient.writeContract({
     address: deps.escrowAddress,
     abi: deps.escrowAbi,
@@ -201,6 +209,7 @@ export async function requestHandler(
     ],
     account: deps.account,
     chain: deps.walletClient.chain,
+    gas: 500_000n,
   });
   const receipt = await deps.publicClient.waitForTransactionReceipt({ hash: createHash });
 
