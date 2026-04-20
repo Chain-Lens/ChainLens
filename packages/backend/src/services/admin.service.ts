@@ -3,7 +3,11 @@ import { env } from "../config/env.js";
 import { walletClient, publicClient } from "../config/viem.js";
 import prisma from "../config/prisma.js";
 import * as apiService from "./api.service.js";
-import { isTaskTypeEnabled } from "./task-type.service.js";
+import { isTaskTypeEnabled, taskTypeId } from "./task-type.service.js";
+import {
+  isSellerRegisteredOnChain,
+  registerSellerOnChain,
+} from "./on-chain.service.js";
 import { logger } from "../utils/logger.js";
 import { BadRequestError } from "../utils/errors.js";
 
@@ -33,6 +37,33 @@ export async function approve(apiId: string, adminAddress: string, reason?: stri
     );
   }
 
+  // Make sure the seller is on SellerRegistry before the listing goes live.
+  // Without this, buyers can createJob against the listing but the gateway's
+  // reputation/earnings accounting (recordJobResult) reverts with "not found"
+  // because SellerRegistry only exposes onlyGateway writers. We register the
+  // first time through; subsequent approvals for the same seller skip
+  // because registerSeller reverts with "already registered".
+  //
+  // Known MVP limitation: if the same seller has listings for different task
+  // types, only the first registration's capabilities get indexed in
+  // sellersByCapability. Contract doesn't expose an addCapability helper —
+  // tracked as future contract work.
+  const sellerAddress = api.sellerAddress as `0x${string}`;
+  const alreadyRegistered = await isSellerRegisteredOnChain(sellerAddress);
+  let sellerRegistrationTx: `0x${string}` | null = null;
+  if (!alreadyRegistered) {
+    sellerRegistrationTx = await registerSellerOnChain({
+      seller: sellerAddress,
+      name: api.name,
+      capabilities: [taskTypeId(taskTypeName)],
+      metadataURI: "",
+    });
+    logger.info(
+      { apiId, seller: sellerAddress, hash: sellerRegistrationTx },
+      "Seller registered on-chain",
+    );
+  }
+
   const onChainId = await apiService.getNextOnChainId();
 
   // Call approveApi on-chain
@@ -58,7 +89,11 @@ export async function approve(apiId: string, adminAddress: string, reason?: stri
 
   logger.info({ apiId, onChainId, hash }, "API approved on-chain");
 
-  return { onChainId, txHash: hash };
+  return {
+    onChainId,
+    txHash: hash,
+    sellerRegistrationTxHash: sellerRegistrationTx,
+  };
 }
 
 export async function reject(apiId: string, adminAddress: string, reason?: string) {

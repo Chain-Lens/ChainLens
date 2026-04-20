@@ -47,6 +47,33 @@ export async function refundJob(args: {
   return hash;
 }
 
+export async function registerSellerOnChain(args: {
+  seller: `0x${string}`;
+  name: string;
+  capabilities: readonly `0x${string}`[];
+  metadataURI?: string;
+}): Promise<`0x${string}`> {
+  const hash = await walletClient.writeContract({
+    address: addressFor(SELLER_REGISTRY_ADDRESSES, "SellerRegistry"),
+    abi: SellerRegistryAbi,
+    functionName: "registerSeller",
+    args: [args.seller, args.name, args.capabilities, args.metadataURI ?? ""],
+  });
+  await publicClient.waitForTransactionReceipt({ hash });
+  return hash;
+}
+
+export async function isSellerRegisteredOnChain(
+  seller: `0x${string}`,
+): Promise<boolean> {
+  return (await publicClient.readContract({
+    address: addressFor(SELLER_REGISTRY_ADDRESSES, "SellerRegistry"),
+    abi: SellerRegistryAbi,
+    functionName: "isRegistered",
+    args: [seller],
+  })) as boolean;
+}
+
 export async function recordSellerResult(args: {
   seller: `0x${string}`;
   success: boolean;
