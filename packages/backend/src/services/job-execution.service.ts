@@ -162,11 +162,17 @@ async function finalizeFailure(
   evidenceURI: string,
   err: unknown,
 ): Promise<"refunded" | "failed"> {
+  const errMsg = err instanceof Error ? err.message : String(err);
+  // The stub config (enabled:false) below is a hack to make finalizeJob
+  // refund regardless of task-type state — it does NOT mean the task type
+  // was disabled. The reason we override in errorReason below must reflect
+  // the real upstream failure (seller HTTP error, schema-fetch issue, etc.)
+  // or admins will chase phantom "task_type_disabled" incidents.
   const finalization = await finalizeJob({
     jobId: input.jobId,
     seller: input.seller,
     taskType: onchainTaskType,
-    response: { error: err instanceof Error ? err.message : String(err) },
+    response: { error: errMsg },
     amountUsdc: input.amount,
     evidenceURI,
   }, {
@@ -185,7 +191,7 @@ async function finalizeFailure(
       where: { onchainJobId: input.jobId },
       data: {
         status: "REFUNDED",
-        errorReason: finalization.reason,
+        errorReason: `execution_failed: ${errMsg}`,
         completedAt: new Date(),
       },
     });
@@ -196,7 +202,7 @@ async function finalizeFailure(
     where: { onchainJobId: input.jobId },
     data: {
       status: "FAILED",
-      errorReason: err instanceof Error ? err.message : String(err),
+      errorReason: errMsg,
       completedAt: new Date(),
     },
   });
