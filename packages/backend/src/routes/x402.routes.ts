@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { parseEventLogs } from "viem";
+import { parseEventLogs, keccak256, stringToBytes } from "viem";
 import {
   ApiMarketEscrowV2Abi,
   CONTRACT_ADDRESSES_V2,
@@ -10,6 +10,7 @@ import { env } from "../config/env.js";
 import prisma from "../config/prisma.js";
 import { getEvidence } from "../services/evidence.service.js";
 import { prismaEvidenceStore } from "../services/evidence-store.js";
+import { executeJob } from "../services/job-execution.service.js";
 import { logger } from "../utils/logger.js";
 
 const router = Router();
@@ -30,23 +31,97 @@ function usdcAddress(): `0x${string}` {
   return USDC_ADDRESSES[chainId] as `0x${string}`;
 }
 
+// Canonical JSON: object keys sorted; arrays preserve order. Must match the
+// mcp-tool's `stableStringify` so the inputsHash derived here equals the
+// one the buyer signed into createJobWithAuth.
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
+    a < b ? -1 : a > b ? 1 : 0,
+  );
+  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`).join(",")}}`;
+}
+
+function canonicalInputsHash(inputs: unknown): `0x${string}` {
+  return keccak256(stringToBytes(stableStringify(inputs)));
+}
+
+function build402Payload(api: {
+  id: string;
+  onChainId: number | null;
+  name: string;
+  price: string;
+  sellerAddress: string;
+  category: string;
+}): unknown {
+  const chainId = publicClient.chain?.id ?? 84532;
+  return {
+    error: "Payment Required",
+    x402Version: 1,
+    accepts: [
+      {
+        scheme: "exact",
+        network: chainId === 8453 ? "base" : "base-sepolia",
+        maxAmountRequired: api.price,
+        resource: `${env.PLATFORM_URL.replace(/\/+$/, "")}/api/x402/${api.id}`,
+        description: `ChainLens API listing "${api.name}"`,
+        mimeType: "application/json",
+        payTo: escrowAddress(),
+        asset: usdcAddress(),
+        maxTimeoutSeconds: POLL_TIMEOUT_MS / 1000,
+        extra: {
+          name: "USDC",
+          version: "2",
+          chainlens: {
+            apiId: api.onChainId,
+            seller: api.sellerAddress,
+            taskType: api.category,
+            escrow: escrowAddress(),
+            escrowFunction: "createJobWithAuth",
+            buyerInstructions:
+              "POST this same URL with body {inputs: {...}} and header " +
+              "X-Payment-Tx: 0x<createJobWithAuth tx hash>. The server " +
+              "verifies hash(inputs) matches the inputsHash you signed, " +
+              "calls the seller, and returns the response inline. " +
+              "Build inputsHash with canonical JSON + keccak256 (same as mcp-tool).",
+          },
+        },
+      },
+    ],
+  };
+}
+
 /**
  * x402-flavored HTTP facade over the V2 escrow job flow.
  *
- * GET /api/x402/:apiId
- *   no headers                    → 402 Payment Required + x402 accepts[]
- *   X-Payment-Tx: 0x<createJob tx> → verifies tx, waits for evidence, returns inline
+ * GET  /api/x402/:apiId        → 402 (discovery; always)
+ * POST /api/x402/:apiId        → 402 without X-Payment-Tx, or
+ *                                verifies + executes + returns 200 with it.
  *
- * The 402 response follows the Coinbase x402 v1 shape so standard x402
- * HTTP clients can parse it, but `payTo` points at the ChainLens escrow
- * (not the seller) and `extra.chainlens` describes the required escrow
- * call. A drop-in standard client that only knows "sign ERC-3009 to payTo"
- * can't complete our flow on its own — a ChainLens-aware client
- * (mcp-tool, or any agent wired to call `escrow.createJobWithAuth`)
- * is needed. A future Bridge contract can relax that constraint without
- * changing this endpoint's shape.
+ * The POST body carries the seller's inputs as JSON; the server
+ * canonical-hashes them and checks against the inputsHash the buyer signed
+ * into createJobWithAuth. If they match we kick the execution pipeline
+ * (same `executeJob` the mcp-tool hits via /jobs/execute) and poll the
+ * evidence store until a terminal state or the 120s wall clock.
  */
+
+// GET — 402 discovery only. Buyer follows up with POST.
 router.get("/:apiId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const api = await prisma.apiListing.findUnique({ where: { id: req.params["apiId"] as string } });
+    if (!api || api.status !== "APPROVED" || api.onChainId === null) {
+      res.status(404).json({ error: "API not found or not approved" });
+      return;
+    }
+    res.status(402).json(build402Payload(api));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST — 402 discovery (no header) OR verification + execution (with header).
+router.post("/:apiId", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const apiIdParam = req.params["apiId"] as string;
 
@@ -59,48 +134,22 @@ router.get("/:apiId", async (req: Request, res: Response, next: NextFunction) =>
     const txHashRaw = req.headers["x-payment-tx"];
     const txHash = Array.isArray(txHashRaw) ? txHashRaw[0] : txHashRaw;
 
-    // ─── Step 1: no payment header → 402 with x402 accepts[] ────────────
+    // ─── no payment header → 402 ────────────────────────────────────────
     if (!txHash) {
-      const chainId = publicClient.chain?.id ?? 84532;
-      res.status(402).json({
-        error: "Payment Required",
-        x402Version: 1,
-        accepts: [
-          {
-            scheme: "exact",
-            network: chainId === 8453 ? "base" : "base-sepolia",
-            maxAmountRequired: api.price,
-            resource: `${env.PLATFORM_URL.replace(/\/+$/, "")}/api/x402/${api.id}`,
-            description: `ChainLens API listing "${api.name}"`,
-            mimeType: "application/json",
-            payTo: escrowAddress(),
-            asset: usdcAddress(),
-            maxTimeoutSeconds: POLL_TIMEOUT_MS / 1000,
-            extra: {
-              name: "USDC",
-              version: "2",
-              chainlens: {
-                apiId: api.onChainId,
-                seller: api.sellerAddress,
-                taskType: api.category,
-                escrow: escrowAddress(),
-                escrowFunction: "createJobWithAuth",
-                buyerInstructions:
-                  "Sign an EIP-3009 TransferWithAuthorization with " +
-                  "`to` = payTo (escrow). Call " +
-                  "escrow.createJobWithAuth(seller, keccak256(taskType), " +
-                  "amount, inputsHash, apiId, validAfter, validBefore, " +
-                  "nonce, v, r, s). Retry this URL with the resulting tx " +
-                  "hash in X-Payment-Tx.",
-              },
-            },
-          },
-        ],
+      res.status(402).json(build402Payload(api));
+      return;
+    }
+
+    // inputs required when paying — server needs them to call the seller.
+    const inputs = (req.body as { inputs?: unknown })?.inputs;
+    if (!inputs || typeof inputs !== "object" || Array.isArray(inputs)) {
+      res.status(400).json({
+        error: "body must include { inputs: { ... } } (JSON object)",
       });
       return;
     }
 
-    // ─── Step 2: verify the payment tx is a JobCreated on our V2 escrow ──
+    // ─── verify tx ───────────────────────────────────────────────────────
     let receipt;
     try {
       receipt = await publicClient.getTransactionReceipt({
@@ -122,9 +171,7 @@ router.get("/:apiId", async (req: Request, res: Response, next: NextFunction) =>
       eventName: "JobCreated",
     });
     const escrow = escrowAddress().toLowerCase();
-    const match = jobLogs.find(
-      (l) => l.address.toLowerCase() === escrow,
-    );
+    const match = jobLogs.find((l) => l.address.toLowerCase() === escrow);
     if (!match) {
       res.status(400).json({
         error: "No JobCreated event from the v2 escrow in this tx",
@@ -137,9 +184,9 @@ router.get("/:apiId", async (req: Request, res: Response, next: NextFunction) =>
         jobId: bigint;
         buyer: string;
         seller: string;
-        taskType: string;
+        taskType: `0x${string}`;
         amount: bigint;
-        inputsHash: string;
+        inputsHash: `0x${string}`;
         apiId: bigint;
       };
     }).args;
@@ -157,12 +204,47 @@ router.get("/:apiId", async (req: Request, res: Response, next: NextFunction) =>
       return;
     }
 
-    // ─── Step 3: poll evidence until terminal ────────────────────────────
-    //
-    // The V2 event listener has already kicked off gateway execution on
-    // JobCreated, so we don't trigger it again — just wait for evidence
-    // to reach a terminal state. This is the single-HTTP-round x402 UX
-    // the spec calls for.
+    // hash(inputs) must match what the buyer signed.
+    const expectedHash = canonicalInputsHash(inputs);
+    if (expectedHash.toLowerCase() !== args.inputsHash.toLowerCase()) {
+      res.status(400).json({
+        error:
+          "Input hash mismatch: provided inputs don't match the inputsHash " +
+          "in the JobCreated event. Make sure canonical JSON stringify + " +
+          "keccak256(utf8) gives exactly the hash you signed.",
+        expected: args.inputsHash,
+        got: expectedHash,
+      });
+      return;
+    }
+
+    // ─── trigger execution ───────────────────────────────────────────────
+    // V2 listener only records the Job row; nothing auto-kicks the gateway
+    // pipeline. We invoke executeJob inline (same entrypoint mcp-tool uses
+    // via /jobs/execute). Duplicate calls are harmless — executeJob's
+    // PAID-only guard short-circuits if the pipeline is already running.
+    try {
+      await executeJob({
+        jobId: args.jobId,
+        seller: args.seller as `0x${string}`,
+        taskType: api.category,
+        inputs: inputs as Record<string, unknown>,
+        amount: args.amount,
+        apiId: BigInt(api.onChainId),
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // "expected PAID" means another path already kicked the pipeline;
+      // that's fine, fall through to polling.
+      if (!/expected PAID/i.test(msg)) {
+        logger.warn(
+          { jobId: args.jobId.toString(), err: msg },
+          "x402 executeJob trigger returned non-fatal error",
+        );
+      }
+    }
+
+    // ─── poll evidence until terminal ────────────────────────────────────
     const deadline = Date.now() + POLL_TIMEOUT_MS;
     while (Date.now() < deadline) {
       const evidence = await getEvidence(args.jobId, prismaEvidenceStore);

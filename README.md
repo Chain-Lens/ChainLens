@@ -135,20 +135,26 @@ An alternative to the MCP path is the plain-HTTP x402 facade. Any x402-aware
 HTTP client can negotiate payment without installing `@chain-lens/mcp-tool`.
 
 ```bash
-# 1. Ask for a listing — returns 402 with the accepts[] payload
+# 1. Discover the payment terms (GET or POST, both return 402 without header)
 curl -i https://chainlens.pelicanlab.dev/api/x402/<apiId>
 
-# 2. After paying on-chain (via createJobWithAuth on the ChainLens escrow)
-curl -H "X-Payment-Tx: 0x<tx hash>" \
-     https://chainlens.pelicanlab.dev/api/x402/<apiId>
+# 2. Sign + submit createJobWithAuth on-chain with inputsHash =
+#    keccak256(canonicalJSON(inputs)). Then POST back with body + header:
+curl -X POST https://chainlens.pelicanlab.dev/api/x402/<apiId> \
+  -H "Content-Type: application/json" \
+  -H "X-Payment-Tx: 0x<tx hash>" \
+  -d '{"inputs":{"protocol":"lido"}}'
 # → { jobId, status: "COMPLETED", response, responseHash, evidenceURI }
 ```
 
 The 402 payload follows the Coinbase x402 v1 shape; `payTo` is the ChainLens
 escrow address and `extra.chainlens` describes the required
-`createJobWithAuth` call. Standard x402 clients can parse the response but
-need ChainLens-aware signing logic to complete payment — the `mcp-tool`
-package bundles this.
+`createJobWithAuth` call. Server verifies `hash(inputs)` matches the
+`inputsHash` the buyer signed, kicks the gateway execution pipeline, and
+returns the seller's response inline once the job lands.
+
+Standard x402 clients can parse the 402 response but need ChainLens-aware
+signing logic to complete payment — the `mcp-tool` package bundles this.
 
 ---
 
