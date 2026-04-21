@@ -35,7 +35,13 @@ npm install -g @chain-lens/mcp-tool
 | --- | --- | --- |
 | `chain-lens.discover` | — | List API listings for a given task type (wraps `GET /api/apis`). |
 | `chain-lens.status` | — | Fetch stored evidence for an on-chain job (wraps `GET /api/evidence/:jobId`). |
-| `chain-lens.request` | required | Approve USDC, call `ApiMarketEscrowV2.createJob`, poll for evidence. |
+| `chain-lens.request` | required | Sign USDC EIP-3009 TransferWithAuthorization, call `ApiMarketEscrowV2.createJobWithAuth` in one tx, poll for evidence. |
+
+An HTTP-only alternative exists at `GET /api/x402/:apiId` on the gateway
+(returns 402 + Coinbase x402 v1 `accepts[]` on the first call, serves the
+response inline once retried with `X-Payment-Tx: 0x...`). Use that path
+if you'd rather not install this MCP server — you'll still need
+ChainLens-aware signing logic to craft the `createJobWithAuth` tx.
 
 The default configuration below only enables the two read-only tools. That is
 the recommended setup for everyday use.

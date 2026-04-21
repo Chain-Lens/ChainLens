@@ -129,6 +129,27 @@ Tools:
 `WALLET_PRIVATE_KEY` is optional; without it the agent can still `discover`
 and read `status`, just not spend.
 
+## HTTP x402 endpoint
+
+An alternative to the MCP path is the plain-HTTP x402 facade. Any x402-aware
+HTTP client can negotiate payment without installing `@chain-lens/mcp-tool`.
+
+```bash
+# 1. Ask for a listing — returns 402 with the accepts[] payload
+curl -i https://chainlens.pelicanlab.dev/api/x402/<apiId>
+
+# 2. After paying on-chain (via createJobWithAuth on the ChainLens escrow)
+curl -H "X-Payment-Tx: 0x<tx hash>" \
+     https://chainlens.pelicanlab.dev/api/x402/<apiId>
+# → { jobId, status: "COMPLETED", response, responseHash, evidenceURI }
+```
+
+The 402 payload follows the Coinbase x402 v1 shape; `payTo` is the ChainLens
+escrow address and `extra.chainlens` describes the required
+`createJobWithAuth` call. Standard x402 clients can parse the response but
+need ChainLens-aware signing logic to complete payment — the `mcp-tool`
+package bundles this.
+
 ---
 
 ## Security posture
