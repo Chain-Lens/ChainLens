@@ -17,7 +17,7 @@ import {
   clearTaskTypeListCache,
   taskTypeId as computeTaskTypeId,
 } from "../services/task-type.service.js";
-import { BadRequestError, NotFoundError } from "../utils/errors.js";
+import { BadRequestError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 
 const router = Router();
@@ -253,6 +253,13 @@ router.post(
 // Admin triggers via an authenticated REST call; we call refund on-chain.
 // State transitions to REFUNDED will also flow through the PaymentRefunded
 // event listener, so the DB write here is idempotent with that path.
+//
+// Works even when we have no DB row for this job — e.g. the listener
+// dropped the JobCreated event (unique-constraint collision after an
+// escrow redeploy) and the on-chain escrow still holds the buyer's
+// funds. The contract's refund() itself reverts on completed/refunded,
+// so we keep short-circuit guards only when a row exists; when absent
+// we trust the on-chain state check.
 router.post(
   "/jobs/:jobId/refund",
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -265,11 +272,10 @@ router.post(
       const existing = await prisma.job.findFirst({
         where: { onchainJobId },
       });
-      if (!existing) throw new NotFoundError(`job ${jobId} not found`);
-      if (existing.status === "REFUNDED") {
+      if (existing?.status === "REFUNDED") {
         throw new BadRequestError(`job ${jobId} is already refunded`);
       }
-      if (existing.status === "COMPLETED") {
+      if (existing?.status === "COMPLETED") {
         throw new BadRequestError(
           `job ${jobId} is completed, cannot refund`,
         );
@@ -277,10 +283,12 @@ router.post(
 
       const hash = await refundJob({ jobId: onchainJobId });
       logger.info(
-        { jobId, hash, admin: req.adminAddress },
-        "Admin-triggered refund submitted on-chain",
+        { jobId, hash, admin: req.adminAddress, orphan: !existing },
+        existing
+          ? "Admin-triggered refund submitted on-chain"
+          : "Admin-triggered refund submitted on-chain for orphan job (no DB row)",
       );
-      res.json({ jobId, txHash: hash });
+      res.json({ jobId, txHash: hash, orphan: !existing });
     } catch (err) {
       next(err);
     }
