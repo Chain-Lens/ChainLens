@@ -82,6 +82,41 @@ export async function registerSellerOnChain(args: {
   return hash;
 }
 
+export interface OnChainJob {
+  buyer: `0x${string}`;
+  seller: `0x${string}`;
+  apiId: bigint;
+  amount: bigint;
+  taskType: `0x${string}`;
+  inputsHash: `0x${string}`;
+  responseHash: `0x${string}`;
+  evidenceURI: string;
+  createdAt: bigint;
+  completed: boolean;
+  refunded: boolean;
+}
+
+/**
+ * Read a Job struct directly from the escrow. Used by admin recovery paths
+ * (e.g. refunding an orphan job whose JobCreated event was dropped by the
+ * listener) to reconstruct enough state to seed a DB row.
+ */
+export async function getJobOnChain(jobId: bigint): Promise<OnChainJob | null> {
+  try {
+    const raw = (await publicClient.readContract({
+      address: addressFor(CONTRACT_ADDRESSES_V2, "ApiMarketEscrowV2"),
+      abi: ApiMarketEscrowV2Abi,
+      functionName: "getJob",
+      args: [jobId],
+    })) as OnChainJob;
+    return raw;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/job not found/i.test(msg)) return null;
+    throw err;
+  }
+}
+
 export async function isSellerRegisteredOnChain(
   seller: `0x${string}`,
 ): Promise<boolean> {

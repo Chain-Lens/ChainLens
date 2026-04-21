@@ -12,6 +12,7 @@ import {
   isSellerRegisteredOnChain,
   getSellerInfo,
   getSellerStats,
+  getJobOnChain,
 } from "../services/on-chain.service.js";
 import {
   clearTaskTypeListCache,
@@ -281,12 +282,47 @@ router.post(
         );
       }
 
+      // Seed a skeleton Job row for orphans so the PaymentRefunded listener
+      // has something to update (and the admin dashboard reflects the refund
+      // afterwards). Pulls buyer/seller/apiId from escrow.getJob().
+      if (!existing) {
+        const onchain = await getJobOnChain(onchainJobId);
+        if (!onchain) {
+          throw new BadRequestError(
+            `job ${jobId} not found on-chain either; nothing to refund`,
+          );
+        }
+        if (onchain.refunded) {
+          throw new BadRequestError(`job ${jobId} is already refunded on-chain`);
+        }
+        if (onchain.completed) {
+          throw new BadRequestError(
+            `job ${jobId} is completed on-chain, cannot refund`,
+          );
+        }
+        const platformBase = process.env.PLATFORM_URL?.replace(/\/+$/, "")
+          ?? "http://localhost:3001";
+        await prisma.job.create({
+          data: {
+            onchainJobId,
+            buyer: onchain.buyer.toLowerCase(),
+            seller: onchain.seller.toLowerCase(),
+            apiId: onchain.apiId,
+            taskType: null, // on-chain stores the keccak'd id; string name unrecoverable here
+            amount: onchain.amount.toString(),
+            inputsHash: onchain.inputsHash,
+            evidenceURI: `${platformBase}/api/evidence/${jobId}`,
+            status: "PAID",
+          },
+        });
+      }
+
       const hash = await refundJob({ jobId: onchainJobId });
       logger.info(
         { jobId, hash, admin: req.adminAddress, orphan: !existing },
         existing
           ? "Admin-triggered refund submitted on-chain"
-          : "Admin-triggered refund submitted on-chain for orphan job (no DB row)",
+          : "Admin-triggered refund submitted on-chain (orphan; skeleton row seeded)",
       );
       res.json({ jobId, txHash: hash, orphan: !existing });
     } catch (err) {
