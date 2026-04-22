@@ -172,6 +172,29 @@ export async function finalizeJob(
   };
 }
 
+/**
+ * Public refund shortcut for callers that already know the job has to be
+ * refunded without running the normal finalizeJob pipeline (e.g. the
+ * execution pipeline threw before a response could be produced). Wraps
+ * the same refundAndRecord path `finalizeJob` uses internally, so all
+ * refund reasons flow through one codepath with the same on-chain
+ * refund + reputation-recording semantics.
+ */
+export async function refundFailedJob(
+  input: JobFinalizationInput,
+  reason: string,
+  details?: unknown,
+  deps: JobGatewayDeps = {},
+): Promise<JobFinalization> {
+  return refundAndRecord(
+    input,
+    deps.refundJobOnChain ?? defaultRefundJob,
+    deps.recordSellerResult ?? defaultRecordSellerResult,
+    reason,
+    details,
+  );
+}
+
 async function refundAndRecord(
   input: JobFinalizationInput,
   refundJobOnChain: NonNullable<JobGatewayDeps["refundJobOnChain"]>,

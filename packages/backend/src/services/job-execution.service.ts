@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import prisma from "../config/prisma.js";
-import { finalizeJob } from "./job-gateway.service.js";
+import { finalizeJob, refundFailedJob } from "./job-gateway.service.js";
 import { assertSafeOutboundUrl } from "../utils/network.js";
 import { logger } from "../utils/logger.js";
 
@@ -163,35 +163,29 @@ async function finalizeFailure(
   err: unknown,
 ): Promise<"refunded" | "failed"> {
   const errMsg = err instanceof Error ? err.message : String(err);
-  // The stub config (enabled:false) below is a hack to make finalizeJob
-  // refund regardless of task-type state — it does NOT mean the task type
-  // was disabled. The reason we override in errorReason below must reflect
-  // the real upstream failure (seller HTTP error, schema-fetch issue, etc.)
-  // or admins will chase phantom "task_type_disabled" incidents.
-  const finalization = await finalizeJob({
-    jobId: input.jobId,
-    seller: input.seller,
-    taskType: onchainTaskType,
-    response: { error: errMsg },
-    amountUsdc: input.amount,
-    evidenceURI,
-  }, {
-    getConfigById: async () => ({
-      name: "execution_failure",
-      schemaURI: "",
-      maxResponseTime: 0n,
-      minBudget: 0n,
-      enabled: false,
-      registeredAt: 0n,
-    }),
-  });
+  // Go straight to refund — no need to thread the happy-path finalizeJob
+  // state machine (task-type check, injection scan, schema validation)
+  // when we already know the execution itself errored. refundFailedJob
+  // wraps the same refundAndRecord path finalizeJob uses internally, so
+  // on-chain refund + reputation-recording semantics stay consistent.
+  const finalization = await refundFailedJob(
+    {
+      jobId: input.jobId,
+      seller: input.seller,
+      taskType: onchainTaskType,
+      response: { error: errMsg },
+      amountUsdc: input.amount,
+      evidenceURI,
+    },
+    `execution_failed: ${errMsg}`,
+  );
 
   if (finalization.status === "refunded") {
     await prisma.job.update({
       where: { onchainJobId: input.jobId },
       data: {
         status: "REFUNDED",
-        errorReason: `execution_failed: ${errMsg}`,
+        errorReason: finalization.reason,
         completedAt: new Date(),
       },
     });
