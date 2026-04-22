@@ -81,7 +81,12 @@ describe("E2E: register → job request → settle (in-memory)", () => {
   it("propagates through JobCreated → gateway finalize → JobSubmitted → JobResultRecorded", async () => {
     const store = makeMemoryStore();
     const platformUrl = "http://localhost:3001";
-    const listenerDeps: V2ListenerDeps = { store, platformUrl, logger: silentLogger };
+    const listenerDeps: V2ListenerDeps = {
+      store,
+      platformUrl,
+      escrowAddress: "0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E",
+      logger: silentLogger,
+    };
 
     // 1) Buyer pays on-chain → contract emits JobCreated → listener writes PAID row.
     await handleJobCreated(
@@ -185,6 +190,7 @@ describe("E2E: register → job request → settle (in-memory)", () => {
     const listenerDeps: V2ListenerDeps = {
       store,
       platformUrl: "http://localhost:3001",
+      escrowAddress: "0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E",
       logger: silentLogger,
     };
 

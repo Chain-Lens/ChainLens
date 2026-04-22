@@ -12,6 +12,7 @@ export const prismaEvidenceStore: EvidenceStore = {
     await prisma.job.create({
       data: {
         onchainJobId: data.onchainJobId,
+        escrowAddress: data.escrowAddress.toLowerCase(),
         buyer: data.buyer.toLowerCase(),
         seller: data.seller.toLowerCase(),
         apiId: data.apiId,
@@ -24,8 +25,13 @@ export const prismaEvidenceStore: EvidenceStore = {
       },
     });
   },
+  // `update` lost its bare unique-by-onchainJobId after we switched to
+  // a compound (escrowAddress, onchainJobId) unique, so writes here use
+  // updateMany. The compound unique still guarantees at most one match,
+  // just with looser Prisma typing. Note we scope to current escrow
+  // only — stale rows from a prior escrow redeploy stay untouched.
   async complete(onchainJobId, patch) {
-    await prisma.job.update({
+    await prisma.job.updateMany({
       where: { onchainJobId },
       data: {
         status: patch.status,
@@ -43,7 +49,7 @@ export const prismaEvidenceStore: EvidenceStore = {
     });
   },
   async findByOnchainId(onchainJobId) {
-    const row = await prisma.job.findUnique({ where: { onchainJobId } });
+    const row = await prisma.job.findFirst({ where: { onchainJobId } });
     if (!row) return null;
     return {
       onchainJobId: row.onchainJobId.toString(),

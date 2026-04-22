@@ -48,6 +48,10 @@ export interface JobResultRecordedArgs {
 export interface V2ListenerDeps {
   store: EvidenceStore;
   platformUrl: string;
+  // Address of the escrow this listener watches. Carried into every Job
+  // row we create so the DB's compound (escrowAddress, onchainJobId)
+  // unique stays meaningful across future escrow redeploys.
+  escrowAddress: string;
   logger: ListenerLogger;
 }
 
@@ -67,6 +71,7 @@ export async function handleJobCreated(
     await recordJobPaid(
       {
         onchainJobId: args.jobId,
+        escrowAddress: deps.escrowAddress,
         buyer: args.buyer,
         seller: args.seller,
         apiId: args.apiId,

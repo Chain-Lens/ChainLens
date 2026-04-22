@@ -73,6 +73,7 @@ describe("handleJobCreated", () => {
     deps = {
       store: makeStore(calls),
       platformUrl: "http://localhost:3001/",
+      escrowAddress: "0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E",
       logger: makeLogger(log),
     };
   });
@@ -156,6 +157,7 @@ describe("handleJobSubmitted", () => {
     deps = {
       store: makeStore(calls),
       platformUrl: "http://localhost:3001",
+      escrowAddress: "0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E",
       logger: makeLogger(log),
     };
   });
@@ -208,6 +210,7 @@ describe("handlePaymentRefunded", () => {
     deps = {
       store: makeStore(calls),
       platformUrl: "http://localhost:3001",
+      escrowAddress: "0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E",
       logger: makeLogger(log),
     };
   });
@@ -230,6 +233,7 @@ describe("handleJobResultRecorded", () => {
     const deps: V2ListenerDeps = {
       store: makeStore(calls),
       platformUrl: "http://x",
+      escrowAddress: "0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E",
       logger: makeLogger(log),
     };
     handleJobResultRecorded(

@@ -33,7 +33,16 @@ enum JobStatus {
 
 model Job {
   id               Int       @id @default(autoincrement())
-  onchainJobId     BigInt    @unique
+  // On-chain jobId emitted by ApiMarketEscrowV2.JobCreated. Not unique on
+  // its own — the Phase-3.5 escrow redeploy restarted jobId counters
+  // from 0 and collided with leftover rows from the old escrow, which
+  // stalled the listener on "unique constraint failed." The compound
+  // unique below scopes jobIds to the specific escrow that emitted them.
+  onchainJobId     BigInt
+  // Address of the escrow that emitted JobCreated. Empty string means
+  // the row predates the v0.1.1 migration; new writes from the listener
+  // always populate this.
+  escrowAddress    String    @default("")
   buyer            String
   seller           String
   apiId            BigInt
@@ -49,6 +58,8 @@ model Job {
   createdAt        DateTime  @default(now())
   completedAt      DateTime?
 
+  @@unique([escrowAddress, onchainJobId])
+  @@index([onchainJobId])
   @@index([buyer])
   @@index([seller])
   @@index([taskType])

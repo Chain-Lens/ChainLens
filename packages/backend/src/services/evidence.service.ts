@@ -18,6 +18,7 @@ export function buildEvidenceURI(
 
 export interface EvidenceRecordInput {
   onchainJobId: bigint;
+  escrowAddress: string;
   buyer: string;
   seller: string;
   apiId: bigint;

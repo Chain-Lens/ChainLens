@@ -71,6 +71,7 @@ describe("startV2EventListener", () => {
     const deps: V2ListenerDeps = {
       store,
       platformUrl: "http://localhost:3001",
+      escrowAddress: "0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E",
       logger: { info: () => {}, warn: () => {}, error: () => {} },
     };
     assert.throws(
@@ -106,6 +107,7 @@ describe("startV2EventListener", () => {
     const deps: V2ListenerDeps = {
       store,
       platformUrl: "http://localhost:3001",
+      escrowAddress: "0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E",
       logger: {
         info: (_obj, msg) => infos.push(msg),
         warn: () => {},

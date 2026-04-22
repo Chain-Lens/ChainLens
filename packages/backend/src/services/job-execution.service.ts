@@ -31,7 +31,7 @@ export async function executeJob(input: ExecuteJobInput): Promise<ExecuteJobResu
     throw new Error(`job ${input.jobId} is in ${job.status} state, expected PAID`);
   }
 
-  await prisma.job.update({
+  await prisma.job.updateMany({
     where: { onchainJobId: input.jobId },
     data: {
       status: "PENDING",
@@ -48,7 +48,7 @@ export async function executeJob(input: ExecuteJobInput): Promise<ExecuteJobResu
       },
       "Job execution crashed before settlement",
     );
-    await prisma.job.update({
+    await prisma.job.updateMany({
       where: { onchainJobId: input.jobId },
       data: {
         status: "FAILED",
@@ -109,7 +109,7 @@ async function queueExecution(input: ExecuteJobInput): Promise<void> {
     });
 
     if (finalization.status === "submitted") {
-      await prisma.job.update({
+      await prisma.job.updateMany({
         where: { onchainJobId: input.jobId },
         data: {
           response: result as never,
@@ -120,7 +120,7 @@ async function queueExecution(input: ExecuteJobInput): Promise<void> {
     }
 
     if (finalization.status === "refunded") {
-      await prisma.job.update({
+      await prisma.job.updateMany({
         where: { onchainJobId: input.jobId },
         data: {
           status: "REFUNDED",
@@ -131,7 +131,7 @@ async function queueExecution(input: ExecuteJobInput): Promise<void> {
       return;
     }
 
-    await prisma.job.update({
+    await prisma.job.updateMany({
       where: { onchainJobId: input.jobId },
       data: {
         status: "FAILED",
@@ -181,7 +181,7 @@ async function finalizeFailure(
   );
 
   if (finalization.status === "refunded") {
-    await prisma.job.update({
+    await prisma.job.updateMany({
       where: { onchainJobId: input.jobId },
       data: {
         status: "REFUNDED",
@@ -192,7 +192,7 @@ async function finalizeFailure(
     return "refunded";
   }
 
-  await prisma.job.update({
+  await prisma.job.updateMany({
     where: { onchainJobId: input.jobId },
     data: {
       status: "FAILED",
@@ -207,7 +207,7 @@ async function resolveListing(input: ExecuteJobInput): Promise<{
   endpoint: string;
   job: { buyer: string; taskType: string | null };
 }> {
-  const job = await prisma.job.findUnique({
+  const job = await prisma.job.findFirst({
     where: { onchainJobId: input.jobId },
     select: { buyer: true, taskType: true },
   });
@@ -243,7 +243,7 @@ async function resolveListing(input: ExecuteJobInput): Promise<{
 }
 
 async function getEvidenceUri(jobId: bigint): Promise<string> {
-  const job = await prisma.job.findUnique({
+  const job = await prisma.job.findFirst({
     where: { onchainJobId: jobId },
     select: { evidenceURI: true },
   });
@@ -270,9 +270,9 @@ function stringifyDetails(details: unknown): string {
 async function waitForJobRecord(jobId: bigint) {
   const deadline = Date.now() + JOB_READY_TIMEOUT_MS;
   while (Date.now() < deadline) {
-    const job = await prisma.job.findUnique({ where: { onchainJobId: jobId } });
+    const job = await prisma.job.findFirst({ where: { onchainJobId: jobId } });
     if (job) return job;
     await new Promise<void>((resolve) => setTimeout(resolve, JOB_READY_POLL_MS));
   }
-  return prisma.job.findUnique({ where: { onchainJobId: jobId } });
+  return prisma.job.findFirst({ where: { onchainJobId: jobId } });
 }

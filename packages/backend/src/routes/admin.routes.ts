@@ -4,6 +4,8 @@ import * as adminService from "../services/admin.service.js";
 import { requireAdmin, type AuthenticatedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import prisma from "../config/prisma.js";
+import { publicClient } from "../config/viem.js";
+import { CONTRACT_ADDRESSES_V2 } from "@chain-lens/shared";
 import { scanResponse } from "../services/injection-filter.service.js";
 import { assertSafeOutboundUrl } from "../utils/network.js";
 import {
@@ -302,9 +304,12 @@ router.post(
         }
         const platformBase = process.env.PLATFORM_URL?.replace(/\/+$/, "")
           ?? "http://localhost:3001";
+        const chainId = publicClient.chain?.id;
+        const escrowAddr = chainId ? CONTRACT_ADDRESSES_V2[chainId] ?? "" : "";
         await prisma.job.create({
           data: {
             onchainJobId,
+            escrowAddress: escrowAddr.toLowerCase(),
             buyer: onchain.buyer.toLowerCase(),
             seller: onchain.seller.toLowerCase(),
             apiId: onchain.apiId,

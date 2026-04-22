@@ -5,6 +5,7 @@ import { startEventListener } from "./services/event-listener.service.js";
 import { startV2EventListener } from "./services/v2-event-listener.service.js";
 import { prismaEvidenceStore } from "./services/evidence-store.js";
 import { logger } from "./utils/logger.js";
+import { CONTRACT_ADDRESSES_V2 } from "@chain-lens/shared";
 
 async function main() {
   const port = Number(env.PORT);
@@ -25,12 +26,17 @@ async function main() {
   try {
     const chainId = publicClient.chain?.id;
     if (chainId === undefined) throw new Error("publicClient.chain not configured");
+    const escrowAddress = CONTRACT_ADDRESSES_V2[chainId];
+    if (!escrowAddress || escrowAddress === "0x0000000000000000000000000000000000000000") {
+      throw new Error(`ApiMarketEscrowV2 not deployed for chainId=${chainId}`);
+    }
     startV2EventListener({
       chainId,
       publicClient,
       deps: {
         store: prismaEvidenceStore,
         platformUrl: env.PLATFORM_URL,
+        escrowAddress,
         logger,
       },
     });
