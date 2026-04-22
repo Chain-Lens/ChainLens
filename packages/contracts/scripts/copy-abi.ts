@@ -21,6 +21,10 @@ const MAP: Array<{ artifact: string; out: string }> = [
     artifact: "TaskTypeRegistry.sol/TaskTypeRegistry.json",
     out: "TaskTypeRegistry.json",
   },
+  {
+    artifact: "ChainLensMarket.sol/ChainLensMarket.json",
+    out: "ChainLensMarket.json",
+  },
 ];
 
 for (const { artifact, out } of MAP) {

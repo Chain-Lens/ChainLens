@@ -1,8 +1,10 @@
 "use client";
 
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { escrowConfig } from "@/config/contracts";
+import { chainLensMarketConfig } from "@/config/contracts";
 
+// v3 ChainLensMarket exposes `claimable(address) → uint256` and `claim()`.
+// v2 used `pendingWithdrawals` — same shape, renamed in v3 for clarity.
 const claimAbi = [
   {
     inputs: [],
@@ -13,7 +15,7 @@ const claimAbi = [
   },
   {
     inputs: [{ name: "", type: "address" }],
-    name: "pendingWithdrawals",
+    name: "claimable",
     outputs: [{ name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
@@ -22,9 +24,9 @@ const claimAbi = [
 
 export function useClaim(address: `0x${string}` | undefined) {
   const { data: pendingAmount, refetch } = useReadContract({
-    address: escrowConfig.address,
+    address: chainLensMarketConfig.address,
     abi: claimAbi,
-    functionName: "pendingWithdrawals",
+    functionName: "claimable",
     args: address ? [address] : undefined,
     query: { enabled: !!address },
   });
@@ -43,7 +45,7 @@ export function useClaim(address: `0x${string}` | undefined) {
 
   function claim() {
     writeContract({
-      address: escrowConfig.address,
+      address: chainLensMarketConfig.address,
       abi: claimAbi,
       functionName: "claim",
     });

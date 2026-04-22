@@ -17,19 +17,20 @@ import {
   stringToBytes,
   type Abi,
 } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import type { Account } from "viem";
 import {
   ApiMarketEscrowV2Abi,
   CONTRACT_ADDRESSES_V2,
+  CHAIN_LENS_MARKET_ADDRESSES,
   USDC_ADDRESSES,
   baseSepolia,
   baseMainnet,
 } from "@chain-lens/shared";
-import { connectDaemon, daemonAccount } from "@chain-lens/sign";
 
 import { loadMcpConfig, type McpConfig } from "./config.js";
 import { buildMcpServer } from "./server.js";
+import { resolveSigner } from "./signer.js";
+import type { RequestDeps } from "./tools/request.js";
+import type { CallDeps } from "./tools/call.js";
 
 // USDC EIP-712 domain for TransferWithAuthorization signing. FiatTokenV2 on
 // both Base Mainnet and Base Sepolia uses "USDC" / "2". Exposed via env vars
@@ -64,18 +65,8 @@ function stableStringify(value: unknown): string {
   return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`).join(",")}}`;
 }
 
-async function resolveAccount(config: McpConfig): Promise<Account | undefined> {
-  // Prefer the sign daemon when its socket is set. Falls back to the plaintext
-  // WALLET_PRIVATE_KEY env for legacy setups; loadMcpConfig already rejects
-  // both being set simultaneously.
-  if (config.signSocketPath) {
-    const client = await connectDaemon(config.signSocketPath);
-    return daemonAccount(client);
-  }
-  if (config.walletPrivateKey) {
-    return privateKeyToAccount(config.walletPrivateKey);
-  }
-  return undefined;
+function isZero(addr: string | undefined): boolean {
+  return !addr || /^0x0+$/.test(addr);
 }
 
 async function main() {
@@ -90,14 +81,12 @@ async function main() {
     );
   }
   const chain = chainFor(config.chainId);
-  const escrowAddress = CONTRACT_ADDRESSES_V2[config.chainId];
   const usdcAddress = USDC_ADDRESSES[config.chainId];
-  if (!escrowAddress || escrowAddress === "0x0000000000000000000000000000000000000000") {
-    throw new Error(`No ApiMarketEscrowV2 deployed for chainId ${config.chainId}`);
-  }
-  if (!usdcAddress || usdcAddress === "0x0000000000000000000000000000000000000000") {
+  if (isZero(usdcAddress)) {
     throw new Error(`No USDC address configured for chainId ${config.chainId}`);
   }
+  const escrowAddress = CONTRACT_ADDRESSES_V2[config.chainId];
+  const marketAddress = CHAIN_LENS_MARKET_ADDRESSES[config.chainId];
 
   const publicClient = createPublicClient({ chain, transport: http(config.rpcUrl) });
 
@@ -106,19 +95,24 @@ async function main() {
     fetch: globalThis.fetch.bind(globalThis),
   };
 
-  const requestDeps = await (async () => {
-    const account = await resolveAccount(config);
-    if (!account) return undefined;
-    const walletClient = createWalletClient({ chain, transport: http(config.rpcUrl), account });
-    return {
+  // One Signer resolution, shared by both v2 request and v3 call tools.
+  const signer = await resolveSigner(config);
+
+  // v2 RequestDeps — only when we have a signer AND the v2 escrow is deployed
+  // on the configured chain. Otherwise chain-lens.request is silently omitted
+  // from the tool list.
+  let requestDeps: RequestDeps | undefined;
+  if (signer && !isZero(escrowAddress)) {
+    const walletClient = createWalletClient({ chain, transport: http(config.rpcUrl), account: signer });
+    requestDeps = {
       apiBaseUrl: config.apiBaseUrl,
       fetch: globalThis.fetch.bind(globalThis),
       publicClient,
       walletClient,
-      account,
-      escrowAddress,
+      account: signer,
+      escrowAddress: escrowAddress as `0x${string}`,
       escrowAbi: ApiMarketEscrowV2Abi as Abi,
-      usdcAddress,
+      usdcAddress: usdcAddress as `0x${string}`,
       usdcEip712Name: process.env.USDC_EIP712_NAME || DEFAULT_USDC_EIP712_NAME,
       usdcEip712Version:
         process.env.USDC_EIP712_VERSION || DEFAULT_USDC_EIP712_VERSION,
@@ -129,12 +123,30 @@ async function main() {
       pollIntervalMs: config.pollIntervalMs,
       pollTimeoutMs: config.pollTimeoutMs,
     };
-  })();
+  }
+
+  // v3 CallDeps — only when we have a signer AND ChainLensMarket is deployed
+  // on the configured chain.
+  let callDeps: CallDeps | undefined;
+  if (signer && !isZero(marketAddress)) {
+    callDeps = {
+      apiBaseUrl: config.apiBaseUrl,
+      fetch: globalThis.fetch.bind(globalThis),
+      signer,
+      marketAddress: marketAddress as `0x${string}`,
+      usdcAddress: usdcAddress as `0x${string}`,
+      chainId: config.chainId,
+      usdcEip712Name: process.env.USDC_EIP712_NAME || DEFAULT_USDC_EIP712_NAME,
+      usdcEip712Version:
+        process.env.USDC_EIP712_VERSION || DEFAULT_USDC_EIP712_VERSION,
+    };
+  }
 
   const server = buildMcpServer({
     discover: sharedReadDeps,
     status: sharedReadDeps,
     request: requestDeps,
+    call: callDeps,
   });
 
   const transport = new StdioServerTransport();

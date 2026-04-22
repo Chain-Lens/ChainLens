@@ -8,6 +8,9 @@ const envSchema = z.object({
   PORT: z.string().default("3001"),
   PRIVATE_KEY: z.string().startsWith("0x"),
   CONTRACT_ADDRESS: z.string().startsWith("0x"),
+  // v3 ChainLensMarket. Optional during the v2→v3 transition; required once
+  // the /api/market routes are hit.
+  CHAIN_LENS_MARKET_ADDRESS: z.string().startsWith("0x").optional(),
   RPC_URL: z.string().url(),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
   ADMIN_ADDRESSES: z.string().default(""),

@@ -5,4 +5,5 @@ export {
   ApiMarketEscrowV2Abi,
   SellerRegistryAbi,
   TaskTypeRegistryAbi,
+  ChainLensMarketAbi,
 } from "./abi/index.js";

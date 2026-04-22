@@ -43,4 +43,29 @@ contract MockUSDC is ERC20 {
         _transfer(from, to, value);
         emit AuthorizationUsed(from, nonce);
     }
+
+    /// @notice Minimal receiveWithAuthorization for v3 ChainLensMarket tests.
+    /// @dev    Same sig-verification stub as transferWithAuthorization, plus the
+    ///         real-USDC invariant that msg.sender must equal `to` (prevents
+    ///         relay front-running). Exercised end-to-end with real EIP-712
+    ///         sigs in the mcp-tool / gateway integration suites.
+    function receiveWithAuthorization(
+        address from,
+        address to,
+        uint256 value,
+        uint256 validAfter,
+        uint256 validBefore,
+        bytes32 nonce,
+        uint8 /* v */,
+        bytes32 /* r */,
+        bytes32 /* s */
+    ) external {
+        require(msg.sender == to, "caller must be payee");
+        require(block.timestamp > validAfter, "auth not yet valid");
+        require(block.timestamp < validBefore, "auth expired");
+        require(!authorizationState[from][nonce], "auth already used");
+        authorizationState[from][nonce] = true;
+        _transfer(from, to, value);
+        emit AuthorizationUsed(from, nonce);
+    }
 }

@@ -13,12 +13,15 @@ import {
 import { discoverHandler, discoverToolDefinition, type DiscoverDeps } from "./tools/discover.js";
 import { statusHandler, statusToolDefinition, type StatusDeps } from "./tools/status.js";
 import { requestHandler, requestToolDefinition, type RequestDeps } from "./tools/request.js";
+import { callHandler, callToolDefinition, type CallDeps } from "./tools/call.js";
 
 export interface McpServerDeps {
   discover: DiscoverDeps;
   status: StatusDeps;
-  /** Omit to disable chain-lens.request (no wallet configured). */
+  /** Omit to disable chain-lens.request (no wallet or no v2 escrow on this chain). */
   request?: RequestDeps;
+  /** Omit to disable chain-lens.call (no wallet or no v3 market on this chain). */
+  call?: CallDeps;
 }
 
 export function buildMcpServer(deps: McpServerDeps): Server {
@@ -30,6 +33,7 @@ export function buildMcpServer(deps: McpServerDeps): Server {
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     const tools: unknown[] = [discoverToolDefinition, statusToolDefinition];
     if (deps.request) tools.push(requestToolDefinition);
+    if (deps.call) tools.push(callToolDefinition);
     return { tools };
   });
 
@@ -47,10 +51,19 @@ export function buildMcpServer(deps: McpServerDeps): Server {
       if (name === requestToolDefinition.name) {
         if (!deps.request) {
           throw new Error(
-            "chain-lens.request is not configured — set WALLET_PRIVATE_KEY to enable paid requests.",
+            "chain-lens.request is not configured — set WALLET_PRIVATE_KEY (or CHAIN_LENS_SIGN_SOCKET) and point CHAIN_ID at a chain where v2 escrow is deployed.",
           );
         }
         const result = await requestHandler(args as never, deps.request);
+        return toolTextResult(result);
+      }
+      if (name === callToolDefinition.name) {
+        if (!deps.call) {
+          throw new Error(
+            "chain-lens.call is not configured — set WALLET_PRIVATE_KEY (or CHAIN_LENS_SIGN_SOCKET) and point CHAIN_ID at a chain where ChainLensMarket is deployed.",
+          );
+        }
+        const result = await callHandler(args as never, deps.call);
         return toolTextResult(result);
       }
       throw new Error(`Unknown tool: ${name}`);

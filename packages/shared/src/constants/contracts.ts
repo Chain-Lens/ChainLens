@@ -29,6 +29,18 @@ export const TASK_TYPE_REGISTRY_ADDRESSES: Record<number, `0x${string}`> = {
   31337: "0x0000000000000000000000000000000000000000",
 };
 
+/**
+ * ChainLensMarket (v3). Single-contract marketplace replacing the v2
+ * Escrow+SellerRegistry+TaskTypeRegistry trio. Gateway-only settlement,
+ * pull-pattern seller payouts, mutable fee knobs (default 0).
+ * See docs/RFC-v3.md.
+ */
+export const CHAIN_LENS_MARKET_ADDRESSES: Record<number, `0x${string}`> = {
+  84532: "0x45bB56fDB0E6bb14d178E417b67Ed7B3323ffFf7", // Base Sepolia — deployed 2026-04-22
+  8453: "0x0000000000000000000000000000000000000000",
+  31337: "0x0000000000000000000000000000000000000000",
+};
+
 export const USDC_ADDRESSES: Record<number, `0x${string}`> = {
   84532: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", // Base Sepolia USDC
   8453: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // Base Mainnet USDC
