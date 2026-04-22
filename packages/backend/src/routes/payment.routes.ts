@@ -101,12 +101,16 @@ router.post(
       }
 
       // 온체인 refund 호출
+      // `request.onChainPaymentId` is `number | null` on the Prisma type
+      // but we already narrowed to non-null just above. The closure here
+      // loses control-flow narrowing, so assert with `!`.
+      const onChainPaymentId = request.onChainPaymentId!;
       const hash = await enqueueWrite(() =>
         walletClient.writeContract({
           address: env.CONTRACT_ADDRESS as `0x${string}`,
           abi: ApiMarketEscrowAbi as readonly unknown[],
           functionName: "refund",
-          args: [BigInt(request.onChainPaymentId)],
+          args: [BigInt(onChainPaymentId)],
         }),
       );
 

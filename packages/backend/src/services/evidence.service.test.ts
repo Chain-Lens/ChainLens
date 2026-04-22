@@ -75,6 +75,7 @@ describe("recordJobPaid", () => {
     await recordJobPaid(
       {
         onchainJobId: 1n,
+        escrowAddress: "0xEscrow",
         buyer: "0xBuyer",
         seller: "0xSeller",
         apiId: 2n,
@@ -93,6 +94,7 @@ describe("recordJobPaid", () => {
     await recordJobPaid(
       {
         onchainJobId: 2n,
+        escrowAddress: "0xEscrow",
         buyer: "0xB",
         seller: "0xS",
         apiId: 1n,

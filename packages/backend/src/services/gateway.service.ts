@@ -83,13 +83,16 @@ export async function execute(requestId: string, agentPayload?: Record<string, u
     }
 
     // On-chain complete (V2: jobId, responseHash, evidenceURI)
+    // `request.onChainPaymentId` narrowed to non-null at line 30; closure
+    // loses that narrowing so capture into a local.
+    const onChainPaymentId = request.onChainPaymentId!;
     const responseHash = keccak256(stringToBytes(JSON.stringify(result)));
     const hash = await enqueueWrite(() =>
       walletClient.writeContract({
         address: env.CONTRACT_ADDRESS as `0x${string}`,
         abi: ApiMarketEscrowV2Abi as readonly unknown[],
         functionName: "complete",
-        args: [BigInt(request.onChainPaymentId), responseHash, ""],
+        args: [BigInt(onChainPaymentId), responseHash, ""],
       }),
     );
 
