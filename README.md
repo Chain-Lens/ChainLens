@@ -158,6 +158,45 @@ signing logic to complete payment — the `mcp-tool` package bundles this.
 
 ---
 
+## Becoming a seller — wrapper contract
+
+The `endpoint` registered in a listing is called **by the ChainLens gateway**,
+not directly by buyers. Every job the gateway receives gets forwarded to
+the seller as:
+
+```http
+POST <your endpoint>
+Content-Type: application/json
+
+{
+  "task_type": "defillama_tvl",
+  "inputs": { "protocol": "lido" },
+  "jobId": "42",
+  "buyer": "0x..."
+}
+```
+
+The response must be JSON matching the task type's `schemaURI` registered
+in `TaskTypeRegistry`. A response that doesn't parse, doesn't match the
+schema, or trips the prompt-injection scan is refunded to the buyer
+automatically.
+
+Pointing `endpoint` at a raw upstream (e.g. `api.llama.fi/...`,
+`blockscout.com/api/...`) is the most common cause of refunds right
+after registration — those services don't accept this POST shape.
+Use one of the wrappers in
+[`packages/sample-sellers`](packages/sample-sellers) as a template, or
+scaffold a new one with `npx @chain-lens/create-seller`. Both deploy
+as a small HTTP service (Docker or otherwise) that translates the
+gateway's call into whatever your upstream actually expects, normalizes
+the response, and returns it.
+
+The gateway sends a single POST per buyer request — no streaming, no
+long-polling. Default timeout is 30 seconds (configurable per task type
+via `TaskTypeRegistry.maxResponseTime`).
+
+---
+
 ## Security posture
 
 | Layer | Control |

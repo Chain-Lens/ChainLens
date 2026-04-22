@@ -59,3 +59,24 @@ pnpm --filter @chain-lens/sample-sellers test
 
 Handlers are written as `makeXxxHandler(deps)` where `deps.fetch` is
 injected, so every handler test runs without network access.
+
+## Building your own wrapper
+
+Fork the pattern in `src/defillama/` (simplest) for any upstream that
+speaks HTTP + JSON:
+
+1. Write a `makeMyHandler(deps: { fetch })` function that accepts
+   `{ task_type, inputs }` and returns the normalized response object
+   your task type's `schemaURI` expects.
+2. Wrap it in Express via `src/defillama/server.ts` as a template.
+3. Add a `dev:mytask` script to `package.json` and a Dockerfile in
+   `docker/` if you want a container image.
+4. Deploy anywhere reachable from the ChainLens gateway
+   (`chainlens.pelicanlab.dev` for the hosted instance). Register the
+   public URL on `/register` with the matching task type.
+
+Keep in mind the gateway also appends `jobId` and `buyer` to the POST
+body at runtime; your handler can ignore them if it doesn't need
+per-request context. Responses must stay free of prompt-injection
+patterns (backticks, `{{ }}` templating, `<script>` tags, etc.) — the
+gateway scans before committing on-chain.

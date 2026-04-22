@@ -106,9 +106,38 @@ export default function RegisterForm() {
           value={endpoint}
           onChange={(e) => setEndpoint(e.target.value)}
           className="input"
-          placeholder="https://your-api.com/endpoint"
+          placeholder="https://your-seller-wrapper.com/endpoint"
           required
         />
+        <div className="mt-2 rounded border border-[var(--border)] bg-[var(--bg3)] p-3 text-xs text-[var(--text2)]">
+          <p className="mb-1 font-medium text-[var(--text)]">
+            This URL is called by the ChainLens gateway — not a raw upstream API.
+          </p>
+          <p className="mb-2 leading-relaxed">
+            Your endpoint must accept <code className="rounded bg-[var(--bg2)] px-1 text-[var(--cyan)]">POST</code>
+            {" "}with body{" "}
+            <code className="rounded bg-[var(--bg2)] px-1 text-[var(--cyan)]">
+              {`{ task_type, inputs, jobId, buyer }`}
+            </code>
+            {" "}and return JSON matching the task type&apos;s schema.
+            Pointing this at a raw upstream (e.g. <code>api.llama.fi</code>,{" "}
+            <code>blockscout.com/api</code>) will cause every job to be refunded.
+          </p>
+          <p className="text-[var(--text3)]">
+            Need a template?{" "}
+            <a
+              href="https://github.com/Chain-Lens/ChainLens/tree/main/packages/sample-sellers"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--cyan)] hover:underline"
+            >
+              packages/sample-sellers
+            </a>
+            {" "}has ready-made wrappers (DefiLlama, Blockscout, Sourcify) you
+            can fork and deploy. Or scaffold a fresh one with{" "}
+            <code>npx @chain-lens/create-seller</code>.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
