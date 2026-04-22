@@ -6,7 +6,7 @@ import {
   SELLER_REGISTRY_ADDRESSES,
   TASK_TYPE_REGISTRY_ADDRESSES,
 } from "@chain-lens/shared";
-import { publicClient, walletClient } from "../config/viem.js";
+import { publicClient, walletClient, enqueueWrite } from "../config/viem.js";
 
 // Manual gas pins for every write path targeting the Phase-3.5 escrow +
 // SellerRegistry. viem's gas estimation over public sepolia.base.org
@@ -40,13 +40,15 @@ export async function submitJob(args: {
   responseHash: `0x${string}`;
   evidenceURI: string;
 }): Promise<`0x${string}`> {
-  const hash = await walletClient.writeContract({
-    address: addressFor(CONTRACT_ADDRESSES_V2, "ApiMarketEscrowV2"),
-    abi: ApiMarketEscrowV2Abi,
-    functionName: "submit",
-    args: [args.jobId, args.responseHash, args.evidenceURI],
-    gas: GAS_SUBMIT,
-  });
+  const hash = await enqueueWrite(() =>
+    walletClient.writeContract({
+      address: addressFor(CONTRACT_ADDRESSES_V2, "ApiMarketEscrowV2"),
+      abi: ApiMarketEscrowV2Abi,
+      functionName: "submit",
+      args: [args.jobId, args.responseHash, args.evidenceURI],
+      gas: GAS_SUBMIT,
+    }),
+  );
   await publicClient.waitForTransactionReceipt({ hash });
   return hash;
 }
@@ -54,13 +56,15 @@ export async function submitJob(args: {
 export async function refundJob(args: {
   jobId: bigint;
 }): Promise<`0x${string}`> {
-  const hash = await walletClient.writeContract({
-    address: addressFor(CONTRACT_ADDRESSES_V2, "ApiMarketEscrowV2"),
-    abi: ApiMarketEscrowV2Abi,
-    functionName: "refund",
-    args: [args.jobId],
-    gas: GAS_REFUND,
-  });
+  const hash = await enqueueWrite(() =>
+    walletClient.writeContract({
+      address: addressFor(CONTRACT_ADDRESSES_V2, "ApiMarketEscrowV2"),
+      abi: ApiMarketEscrowV2Abi,
+      functionName: "refund",
+      args: [args.jobId],
+      gas: GAS_REFUND,
+    }),
+  );
   await publicClient.waitForTransactionReceipt({ hash });
   return hash;
 }
@@ -71,13 +75,15 @@ export async function registerSellerOnChain(args: {
   capabilities: readonly `0x${string}`[];
   metadataURI?: string;
 }): Promise<`0x${string}`> {
-  const hash = await walletClient.writeContract({
-    address: addressFor(SELLER_REGISTRY_ADDRESSES, "SellerRegistry"),
-    abi: SellerRegistryAbi,
-    functionName: "registerSeller",
-    args: [args.seller, args.name, args.capabilities, args.metadataURI ?? ""],
-    gas: GAS_REGISTER_SELLER,
-  });
+  const hash = await enqueueWrite(() =>
+    walletClient.writeContract({
+      address: addressFor(SELLER_REGISTRY_ADDRESSES, "SellerRegistry"),
+      abi: SellerRegistryAbi,
+      functionName: "registerSeller",
+      args: [args.seller, args.name, args.capabilities, args.metadataURI ?? ""],
+      gas: GAS_REGISTER_SELLER,
+    }),
+  );
   await publicClient.waitForTransactionReceipt({ hash });
   return hash;
 }
@@ -132,13 +138,15 @@ export async function setTaskTypeEnabled(args: {
   taskTypeId: `0x${string}`;
   enabled: boolean;
 }): Promise<`0x${string}`> {
-  const hash = await walletClient.writeContract({
-    address: addressFor(TASK_TYPE_REGISTRY_ADDRESSES, "TaskTypeRegistry"),
-    abi: TaskTypeRegistryAbi,
-    functionName: "setEnabled",
-    args: [args.taskTypeId, args.enabled],
-    gas: GAS_SET_ENABLED,
-  });
+  const hash = await enqueueWrite(() =>
+    walletClient.writeContract({
+      address: addressFor(TASK_TYPE_REGISTRY_ADDRESSES, "TaskTypeRegistry"),
+      abi: TaskTypeRegistryAbi,
+      functionName: "setEnabled",
+      args: [args.taskTypeId, args.enabled],
+      gas: GAS_SET_ENABLED,
+    }),
+  );
   await publicClient.waitForTransactionReceipt({ hash });
   return hash;
 }
@@ -148,13 +156,15 @@ export async function recordSellerResult(args: {
   success: boolean;
   earningsUsdc: bigint;
 }): Promise<`0x${string}`> {
-  const hash = await walletClient.writeContract({
-    address: addressFor(SELLER_REGISTRY_ADDRESSES, "SellerRegistry"),
-    abi: SellerRegistryAbi,
-    functionName: "recordJobResult",
-    args: [args.seller, args.success, args.earningsUsdc],
-    gas: GAS_RECORD_JOB_RESULT,
-  });
+  const hash = await enqueueWrite(() =>
+    walletClient.writeContract({
+      address: addressFor(SELLER_REGISTRY_ADDRESSES, "SellerRegistry"),
+      abi: SellerRegistryAbi,
+      functionName: "recordJobResult",
+      args: [args.seller, args.success, args.earningsUsdc],
+      gas: GAS_RECORD_JOB_RESULT,
+    }),
+  );
   await publicClient.waitForTransactionReceipt({ hash });
   return hash;
 }

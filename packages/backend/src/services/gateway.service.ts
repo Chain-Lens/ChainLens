@@ -1,7 +1,7 @@
 import { PaymentStatus, ApiMarketEscrowV2Abi } from "@chain-lens/shared";
 import { keccak256, stringToBytes } from "viem";
 import { env } from "../config/env.js";
-import { walletClient, publicClient } from "../config/viem.js";
+import { walletClient, publicClient, enqueueWrite } from "../config/viem.js";
 import prisma from "../config/prisma.js";
 import * as paymentService from "./payment.service.js";
 import { logger } from "../utils/logger.js";
@@ -84,12 +84,14 @@ export async function execute(requestId: string, agentPayload?: Record<string, u
 
     // On-chain complete (V2: jobId, responseHash, evidenceURI)
     const responseHash = keccak256(stringToBytes(JSON.stringify(result)));
-    const hash = await walletClient.writeContract({
-      address: env.CONTRACT_ADDRESS as `0x${string}`,
-      abi: ApiMarketEscrowV2Abi as readonly unknown[],
-      functionName: "complete",
-      args: [BigInt(request.onChainPaymentId), responseHash, ""],
-    });
+    const hash = await enqueueWrite(() =>
+      walletClient.writeContract({
+        address: env.CONTRACT_ADDRESS as `0x${string}`,
+        abi: ApiMarketEscrowV2Abi as readonly unknown[],
+        functionName: "complete",
+        args: [BigInt(request.onChainPaymentId), responseHash, ""],
+      }),
+    );
 
     await publicClient.waitForTransactionReceipt({ hash });
 
@@ -105,12 +107,14 @@ export async function execute(requestId: string, agentPayload?: Record<string, u
     logger.error({ requestId, error }, "API execution failed, refunding");
 
     try {
-      const hash = await walletClient.writeContract({
-        address: env.CONTRACT_ADDRESS as `0x${string}`,
-        abi: ApiMarketEscrowV2Abi as readonly unknown[],
-        functionName: "refund",
-        args: [BigInt(request.onChainPaymentId!)],
-      });
+      const hash = await enqueueWrite(() =>
+        walletClient.writeContract({
+          address: env.CONTRACT_ADDRESS as `0x${string}`,
+          abi: ApiMarketEscrowV2Abi as readonly unknown[],
+          functionName: "refund",
+          args: [BigInt(request.onChainPaymentId!)],
+        }),
+      );
 
       await publicClient.waitForTransactionReceipt({ hash });
 

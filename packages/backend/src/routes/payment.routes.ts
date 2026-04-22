@@ -4,7 +4,7 @@ import * as paymentService from "../services/payment.service.js";
 import * as gatewayService from "../services/gateway.service.js";
 import { validate } from "../middleware/validate.js";
 import { PaymentStatus } from "@chain-lens/shared";
-import { walletClient, publicClient } from "../config/viem.js";
+import { walletClient, publicClient, enqueueWrite } from "../config/viem.js";
 import { ApiMarketEscrowAbi } from "@chain-lens/shared";
 import { env } from "../config/env.js";
 import { BadRequestError, UnauthorizedError } from "../utils/errors.js";
@@ -101,12 +101,14 @@ router.post(
       }
 
       // 온체인 refund 호출
-      const hash = await walletClient.writeContract({
-        address: env.CONTRACT_ADDRESS as `0x${string}`,
-        abi: ApiMarketEscrowAbi as readonly unknown[],
-        functionName: "refund",
-        args: [BigInt(request.onChainPaymentId)],
-      });
+      const hash = await enqueueWrite(() =>
+        walletClient.writeContract({
+          address: env.CONTRACT_ADDRESS as `0x${string}`,
+          abi: ApiMarketEscrowAbi as readonly unknown[],
+          functionName: "refund",
+          args: [BigInt(request.onChainPaymentId)],
+        }),
+      );
 
       await publicClient.waitForTransactionReceipt({ hash });
 
