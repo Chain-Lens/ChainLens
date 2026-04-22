@@ -1,18 +1,22 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import Link from "next/link";
 import { formatUnits } from "viem";
 import StatusBadge from "@/components/shared/StatusBadge";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import { useSellerApis, type SellerApi } from "@/hooks/useSellerApis";
+import { useSellerAuth } from "@/hooks/useSellerAuth";
 import { useClaim } from "@/hooks/useClaim";
 import { apiClient } from "@/lib/api-client";
 
 export default function SellerPage() {
   const { address, isConnected } = useAccount();
-  const { apis, loading, error, refetch } = useSellerApis(address);
+  const sellerAuth = useSellerAuth();
+  const { apis, loading, error, refetch } = useSellerApis(address, {
+    authenticated: sellerAuth.isAuthenticated,
+  });
   const { pendingAmount, claim, isPending, isConfirming, isConfirmed, refetch: refetchClaim } =
     useClaim(address);
 
@@ -47,6 +51,11 @@ export default function SellerPage() {
     refetch();
   }
 
+  async function handleEdit(apiId: string, patch: SellerPatch) {
+    await apiClient.patch(`/seller/listings/${apiId}`, patch);
+    refetch();
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-8">
@@ -58,6 +67,10 @@ export default function SellerPage() {
           + Register New API
         </Link>
       </div>
+
+      {/* Seller sign-in — reveals endpoint + unlocks editing. Stays a
+          thin banner so sellers can still browse status without signing. */}
+      <SellerAuthBanner auth={sellerAuth} />
 
       {/* Claim earnings */}
       <div
@@ -116,7 +129,13 @@ export default function SellerPage() {
       {!loading && apis.length > 0 && (
         <div className="space-y-4">
           {apis.map((api) => (
-            <ApiRow key={api.id} api={api} onDelete={handleDelete} />
+            <ApiRow
+              key={api.id}
+              api={api}
+              editable={sellerAuth.isAuthenticated}
+              onDelete={handleDelete}
+              onEdit={handleEdit}
+            />
           ))}
         </div>
       )}
@@ -142,9 +161,66 @@ function StatCard({ label, value, color }: { label: string; value: number; color
   );
 }
 
-function ApiRow({ api, onDelete }: { api: SellerApi; onDelete: (id: string) => void }) {
+type SellerAuthState = ReturnType<typeof useSellerAuth>;
+
+function SellerAuthBanner({ auth }: { auth: SellerAuthState }) {
+  if (auth.isAuthenticated) {
+    return (
+      <div className="card mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-[var(--text2)]">
+          Signed in as seller — endpoint URLs and edit controls unlocked.
+        </p>
+        <button
+          onClick={auth.signOut}
+          className="whitespace-nowrap text-xs font-medium text-[var(--text3)] transition-colors hover:text-[var(--text)]"
+        >
+          Sign out
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="card mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="text-sm font-medium text-[var(--text)]">Sign in as seller</p>
+        <p className="mt-1 text-xs text-[var(--text2)]">
+          Sign a message with this wallet to reveal your registered endpoint URLs and edit listings.
+        </p>
+        {auth.error && (
+          <p className="mt-1 text-xs text-[var(--red)]">{auth.error}</p>
+        )}
+      </div>
+      <button
+        onClick={auth.signIn}
+        disabled={auth.loading}
+        className="btn-primary px-4 py-2 text-sm"
+      >
+        {auth.loading ? "Signing..." : "Sign in"}
+      </button>
+    </div>
+  );
+}
+
+type SellerPatch = {
+  name?: string;
+  description?: string;
+  endpoint?: string;
+};
+
+function ApiRow({
+  api,
+  editable,
+  onDelete,
+  onEdit,
+}: {
+  api: SellerApi;
+  editable: boolean;
+  onDelete: (id: string) => void;
+  onEdit: (id: string, patch: SellerPatch) => Promise<void>;
+}) {
   const priceInUsdc = formatUnits(BigInt(api.price), 6);
   const canDelete = api.status === "APPROVED" || api.status === "REJECTED" || api.status === "REVOKED";
+  const [editing, setEditing] = useState(false);
 
   return (
     <div className="card flex flex-col gap-3">
@@ -162,6 +238,14 @@ function ApiRow({ api, onDelete }: { api: SellerApi; onDelete: (id: string) => v
               View →
             </Link>
           )}
+          {editable && !editing && (
+            <button
+              onClick={() => setEditing(true)}
+              className="whitespace-nowrap text-xs font-medium text-[var(--text3)] transition-colors hover:text-[var(--cyan)]"
+            >
+              Edit
+            </button>
+          )}
           {canDelete && (
             <button
               onClick={() => onDelete(api.id)}
@@ -174,6 +258,13 @@ function ApiRow({ api, onDelete }: { api: SellerApi; onDelete: (id: string) => v
       </div>
 
       <p className="line-clamp-2 text-sm text-[var(--text2)]">{api.description}</p>
+
+      {api.endpoint && !editing && (
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="shrink-0 text-xs text-[var(--text3)]">Endpoint</span>
+          <code className="truncate font-mono text-xs text-[var(--text2)]">{api.endpoint}</code>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <span className="rounded border border-[var(--border2)] bg-[var(--bg3)] px-2 py-0.5 text-xs font-medium capitalize text-[var(--text2)]">
@@ -195,6 +286,101 @@ function ApiRow({ api, onDelete }: { api: SellerApi; onDelete: (id: string) => v
           {api.rejectionReason ?? "이유 없음"}
         </div>
       )}
+
+      {editing && (
+        <SellerEditForm
+          api={api}
+          onCancel={() => setEditing(false)}
+          onSubmit={async (patch) => {
+            await onEdit(api.id, patch);
+            setEditing(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function SellerEditForm({
+  api,
+  onCancel,
+  onSubmit,
+}: {
+  api: SellerApi;
+  onCancel: () => void;
+  onSubmit: (patch: SellerPatch) => Promise<void>;
+}) {
+  const [name, setName] = useState(api.name);
+  const [description, setDescription] = useState(api.description);
+  const [endpoint, setEndpoint] = useState(api.endpoint ?? "");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function save() {
+    setSaving(true);
+    setErr(null);
+    try {
+      const patch: SellerPatch = {};
+      if (name !== api.name) patch.name = name;
+      if (description !== api.description) patch.description = description;
+      if (endpoint !== (api.endpoint ?? "")) patch.endpoint = endpoint;
+      if (Object.keys(patch).length === 0) {
+        onCancel();
+        return;
+      }
+      await onSubmit(patch);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded border border-[var(--border2)] bg-[var(--bg2)] p-3">
+      <label className="flex flex-col gap-1 text-xs text-[var(--text2)]">
+        Name
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="rounded border border-[var(--border2)] bg-[var(--bg3)] px-2 py-1 text-sm text-[var(--text)]"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-xs text-[var(--text2)]">
+        Description
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+          className="rounded border border-[var(--border2)] bg-[var(--bg3)] px-2 py-1 text-sm text-[var(--text)]"
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-xs text-[var(--text2)]">
+        Endpoint
+        <input
+          value={endpoint}
+          onChange={(e) => setEndpoint(e.target.value)}
+          placeholder="https://..."
+          className="rounded border border-[var(--border2)] bg-[var(--bg3)] px-2 py-1 font-mono text-xs text-[var(--text)]"
+        />
+      </label>
+      {err && <p className="text-xs text-[var(--red)]">{err}</p>}
+      <div className="flex items-center gap-2 justify-end">
+        <button
+          onClick={onCancel}
+          disabled={saving}
+          className="text-xs font-medium text-[var(--text3)] hover:text-[var(--text)]"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={save}
+          disabled={saving}
+          className="btn-primary px-3 py-1 text-xs"
+        >
+          {saving ? "Saving..." : "Save"}
+        </button>
+      </div>
     </div>
   );
 }

@@ -10,6 +10,11 @@ small v0.1.x patches and larger v0.2+ directions.
 Self-contained reliability + UX items. Ship as ready, no announcement
 needed.
 
+_(#5 + #6 landed — see Resolved.)_
+
+<details>
+<summary>Shipped: #5 Seller endpoint visibility + #6 Seller listing edit</summary>
+
 ### 5. Seller endpoint visibility for the owner
 
 Seller registers an API, then can't see the `endpoint` URL they typed.
@@ -118,6 +123,8 @@ URL without going through admin delete + re-register.
 
 **Scope**: +2 hours on top of #5.
 
+</details>
+
 ---
 
 ## v0.2+ feature track — needs design
@@ -159,18 +166,368 @@ the gap, revisit when external agents start probing.
 **Scope**: ~1.5 days. ~100 LOC Solidity + tests, shared constants,
 x402 route payload update.
 
-### C. Optimistic model experiment
+### C. Optimistic settlement — "guarantees outcomes, not transport"
 
-Different architecture direction: drop gateway-mediated settlement,
-move to pure x402 (buyer pays seller directly), add staking +
-challenge game for disputes. Platform = discovery + stake management
-+ challenge market.
+The current MVP is a **central-relay** model: every buyer call goes
+Agent → ChainLens gateway → Seller → ChainLens → Agent. This is fine
+at MVP scale but becomes the limiting factor as the marketplace grows:
 
-**Why not now**: big conceptual pivot; needs economic-security
-modeling, reviewer bandwidth, actual seller interest. File under
-"Phase 5."
+| Pressure | Symptom |
+| --- | --- |
+| Latency | 2× hop vs direct call; unacceptable for realtime agents |
+| Bandwidth | Image/video/stream responses fill ChainLens egress before they fill sellers' |
+| Privacy | Every buyer query passes through ChainLens — blocks adoption for finance/medical sellers |
+| SPOF | Gateway outage halts every trade; contradicts the on-chain escrow story |
+| Unit cost | 5% fee stops covering infra as traffic grows |
 
-**Scope**: RFC-level work before any code. 1–2 weeks of design.
+The reframe: **"ChainLens guarantees outcomes, not transport."**
+Buyers and sellers can talk directly; the platform enforces the
+contract only when it's broken. Put another way — the gateway's
+current job is *both* middleman and referee, and the middleman role
+is what doesn't scale. We keep the referee.
+
+**Critical distinction — registration gate vs operational validation**
+
+These two often get lumped under "validation" and must stay separate
+in the design, because they have opposite decentralization paths:
+
+| | A. Registration gate (listing approval) | B. Operational validation (per-call enforcement) |
+| --- | --- | --- |
+| Frequency | Once per listing | Every call, or on dispute |
+| Nature | Subjective curation ("does this look legit?") | Rule application ("does the response match the schema?") |
+| Decentralization path | Stays **central curation for a long time** — permissionless-registration opens supply-side to sybil/spam, and quality collapse at cold start is fatal | Moves to **optimistic + validator network** — rules are objective, and individual calls are cheap to let through |
+| Failure mode if flipped wrong | Spam flood, no agent trust | Either central bottleneck (if kept central) or dishonest sellers go unpunished (if opened before stake economics work) |
+
+Any proposal under this item that says "decentralize validation"
+needs to be explicit which one — conflating them is the fastest way
+to ship a broken redesign. See **E** for how we keep the
+registration gate central without giving up the censorship-resistance
+story.
+
+**Operational-validation mechanics (the B half)**
+
+- Base assumption: sellers are honest; staking backs the assumption.
+- Default flow: no challenge within window (e.g. 7d) → escrow auto-releases. 99% of calls never touch ChainLens infra.
+- Challenge path: buyer submits evidence; validator network (or, initially, ChainLens team) adjudicates; slashed stake pays the buyer + validator.
+- What stays in the central stack: registry (A), escrow contract (on-chain, not central), dispute layer (fires only on challenge), reputation graph, validation rule publication.
+
+**Cryptographic proof menu — "response was actually delivered"**
+
+In a direct-delivery world the gateway no longer witnesses responses,
+so we need a way for a buyer to prove *what* the seller sent. Options,
+in order of maturity:
+
+1. **Seller response signature** — seller signs the response body; buyer attaches the signed response to a challenge. Seller can't later deny a signed response. Sufficient for MVP of the dispute layer.
+2. **Response commitment on-chain** — seller commits a hash of the response to the escrow at delivery time; actual response revealed only on challenge. Prevents after-the-fact tampering.
+3. **zkTLS / TLS notary** — buyer proves the response originated from the seller's actual TLS endpoint. Emerging tech; cost/latency high but trustless.
+4. **Merkle batching** — seller anchors a period's worth of response hashes in a single on-chain root. Amortizes the cost of (2) for high-volume sellers.
+
+**Phased migration (central → direct)**
+
+1. **Phase 1 — today.** Central relay; simple, demo-friendly, keep.
+2. **Phase 2 — opt-in direct mode.** Buyers can choose direct delivery per call. Seller commits a response hash on-chain; gateway does not witness the response body. Large-payload task types (image/stream) default to direct mode.
+3. **Phase 3 — direct by default, relay as legacy.** Most listings run direct; the old relay path stays available for low-trust / unverified sellers.
+4. **Phase 4 — retire relay.** ChainLens infra = registry + escrow + dispute layer + reputation. Gateway bandwidth no longer scales with traffic.
+
+**Relationship to the rest of the backlog**
+
+- **D (seller dev surface)** is the migration lever. Shipping D's spec + `chain-lens-seller upgrade` codemod *before* Phase 2 means seller migration is a re-template (+ one narrow utility bump for the crypto primitives via **D.3**); shipping Phase 2 without D means every seller hand-patches signatures/commitments into their own `server.ts`.
+- **B (X402Bridge)** is cooperating, not competing: standard x402 headers sit on top of whatever transport (relay or direct) the buyer picks.
+- **E (decentralization boundaries)** defines what stays central forever; C must honor those boundaries or the supply side destabilizes.
+
+**Non-goals**
+
+- Don't decentralize the registration gate here (see C/A distinction above — that's E territory).
+- Don't ship the validator network before response-signature disputes work end-to-end with the ChainLens team as the sole adjudicator. Economic security modeling for validator selection/slashing is a separate RFC downstream.
+
+**Scope**: RFC + economic-security model (~1–2 weeks of design, no
+code). After RFC: Phase 2 opt-in direct mode is ~2–3 weeks of
+implementation (escrow contract changes for response commitments +
+dispute-submission flow + SDK hook). Phase 3/4 are downstream of
+seller adoption data, not a fixed timeline.
+
+### D. Seller dev surface — spec-first, narrow utilities
+
+**The reframe that replaces the earlier "seller SDK" pitch**
+
+Earlier drafts of this item proposed `@chain-lens/seller-sdk` as a
+framework (`createSeller({...})`, runtime adapters, compat
+machinery). That framing assumed **human-coded sellers**, where
+~105 LOC of Express boilerplate in the scaffold
+([`server.ts.tmpl`](../packages/create-seller/src/templates/basic/src/server.ts.tmpl) + siblings)
+is meaningful friction and SDK abstraction saves typing. In practice
+ChainLens seller onboarding is already agent-driven — the CLI ships
+[`SKILL.md`](../packages/create-seller/SKILL.md) so Claude Code /
+Cursor / Aider orchestrate the full flow. The target reader of
+seller code is an LLM, not a keyboard.
+
+Three traditional SDK value-props weaken in that world:
+
+| SDK value-prop | Human-primary | Agent-primary |
+| --- | --- | --- |
+| Hide complexity | High — docs are a cost | Low — agent reads 1000 LOC of spec in seconds |
+| Save typing | High | ~Zero |
+| Maintenance centralization (one bump = many apps) | High | **Inverts.** Agents trained pre-release regenerate against old API from training data; docs-read-per-invocation is often *more* current than a library "known" from training |
+
+What actually remains valuable as a library, regardless of reader:
+**things that must be correct at runtime** — output schema
+validation (silent wrong-shape → auto-refund is the highest-cost
+bug), and future cryptographic primitives (B/C signing, commitment,
+challenge). Everything else is better served by a spec the agent
+regenerates from.
+
+So this item becomes three concrete deliverables, not one SDK:
+
+**D.1 — `SELLER_SPEC.md` (primary surface, docs-first)**
+
+A single Markdown spec living beside the template. Contents:
+
+- Envelope: `POST /` takes `{ task_type, inputs }`; response is the
+  task-type-specific output JSON.
+- `/health` shape (aligned with what the gateway approval probe
+  expects).
+- Error taxonomy: `BadInputError` → 400, `UpstreamError` →
+  upstream status, uncaught → 500; body shape `{ error, message }`.
+- Output schema references — one link per task type into
+  `@chain-lens/shared/task-types`.
+- Protocol additions as B/C land (x402 headers for B, response
+  signing for C). The spec itself is the version control — no
+  library version game.
+
+An agent handed `SELLER_SPEC.md` regenerates the same ~105 LOC of
+server/handler scaffolding every time. When the spec changes, the
+next `init` / `upgrade` produces current code — no stranded-SDK-pin
+problem.
+
+**Scope**: ~1 day to draft, living document after.
+
+**D.2 — `@chain-lens/task-types-validator` (narrow runtime utility)**
+
+One responsibility: check a seller handler's output against the
+task-type schema. One exported function:
+
+```ts
+validateOutput(taskType: string, output: unknown):
+  | { ok: true }
+  | { ok: false; errors: ZodError }
+```
+
+Why this is runtime, not spec:
+
+- Agents regenerating "check output shape" from prose write
+  inconsistent / incomplete guards.
+- The failure without it is *silent* — wrong shape ships, gateway
+  auto-refunds, seller sees no error. Needs dev-time catch.
+- Zero framework opinions; drops into any template, any runtime.
+
+Public API stays one function forever; versioning noise ≈ zero.
+
+**Scope**: ~2–3 days including task-type coverage tests.
+
+**D.3 — `@chain-lens/seller-crypto` (deferred, gated on C)**
+
+The only thing future protocols genuinely require a library for:
+response signing, commitment generation, challenge response. Don't
+build speculatively — D.1 handles B's header changes by text, and
+C's RFC has to concretize what primitives are needed before this
+package has a shape worth freezing.
+
+**Scope**: sized against C; explicitly out of scope until C lands.
+
+**What we're explicitly NOT building**
+
+- **A framework SDK** with `createSeller({...})`. Walked back from
+  earlier drafts. Agent-coded sellers don't benefit enough from the
+  abstraction to justify perpetual compat maintenance.
+- **Runtime adapters** (Vercel / CF Workers / Bun) as a library
+  feature. These become template *variants* — generate a different
+  `server.ts` per runtime via the scaffold, not a polymorphic
+  library. Fewer moving parts.
+- **Compatibility machinery** (min-version gateway enforcement,
+  canary periods, codemods for a published library). Not needed
+  when we're not shipping a framework. A `chain-lens-seller upgrade`
+  codemod still makes sense (see Sequencing #3 below) but it's a
+  CLI feature, not an SDK obligation.
+
+**The 5-operation adapter contract lives on the MCP side, not here**
+
+An earlier draft of this item listed `discover / pay / call / verify
+/ challenge` as a stable semantic surface for both seller SDK and
+MCP. That was right for MCP (buyer-facing) and wrong for a seller
+library — on the seller side the surface is just "handler + output
+validation + (future) signing," not five operations. Relocating:
+
+- **[`@chain-lens/mcp-tool`](../packages/mcp-tool/)** is where the
+  5-op contract belongs. Today it exposes `discover` / `request` /
+  `status`; as B and C land, `request` splits into `pay` / `call` /
+  (optional) `verify` / `challenge` with pluggable backends.
+  E's "what adapters can't hide" 4 leak points still apply there.
+- **Seller side** stays tiny. Handler, schema validator (D.2),
+  crypto when C lands (D.3). No five-op framework.
+
+**Relationship to other items**
+
+- **B (X402Bridge)**: new request headers. Handled by D.1 text
+  update + MCP-side backend swap; no seller library change.
+- **C (optimistic settlement)**: signing/commitment. D.3 lands here
+  once the RFC concretizes the primitives. D.1 updates for the new
+  flow. MCP side grows `challenge` operation.
+- **E (decentralization boundaries)**: E's layer map justifies "SDK
+  + UI can be central-but-replaceable" — D now reads as
+  "docs-central + utility-central," same principle, smaller surface.
+  E's adapter-caveat 4 leak points apply identically to MCP here
+  (and to future D.3) — the seller library's tiny surface just has
+  less room to leak.
+- **A (wrapper-as-a-service)**: still complementary. A is
+  seller-writes-config; D is seller-writes-code. The spec-first
+  framing nudges D closer to A's declarative spirit — both are
+  contract-driven, differing only in the level of declarativeness.
+
+**Sequencing**
+
+1. Write `SELLER_SPEC.md`; ship it beside the template via
+   `chain-lens-seller init`. ~1 day.
+2. Build + publish `@chain-lens/task-types-validator` as `0.x`
+   (internal-stable, one function, no framework claims). ~2–3 days.
+3. Build `chain-lens-seller upgrade` — a codemod the CLI runs
+   against an existing seller project to re-template it against the
+   current `SELLER_SPEC.md`. This is how protocol updates reach
+   deployed sellers without a published-library pin: poor-man's SDK,
+   zero semver liability. ~2–3 days, probably pays off by the second
+   spec change.
+4. D.3 (crypto utility) deferred until C's RFC lands.
+
+**Overall scope**: D.1 + D.2 + D.3-minus-crypto ≈ 1 week. D.3
+proper sized against C. Much smaller than the full-framework SDK
+this item used to propose, and better matched to an agent-primary
+seller path.
+
+### E. Decentralization boundaries — what stays central, what moves, what's replaceable
+
+**Why this is its own item**: **C** ships an architecture migration;
+this one ships the *principles* that migration must obey. Without E,
+C gets re-litigated every time someone argues "but shouldn't X also
+be decentralized?" This is the north-star document, not a feature.
+
+**The operational definition we commit to**
+
+A ChainLens component is "decentralized enough" if, when the
+ChainLens team / UI / domain disappears tomorrow:
+
+- Registered sellers keep their on-chain identity and stake.
+- Buyers can still find listings (via an alternative indexer).
+- Escrow contracts keep operating without gateway intervention.
+- Reputation history is reconstructable from on-chain data.
+
+Note what's *not* on that list: running the official UI, running the
+canonical indexer, running the registration gate. Those can be central
+**as long as they're replaceable** — the litmus is "does the system
+survive without them?", not "are they hosted by ChainLens?"
+
+**Layer map — where each concern lives**
+
+| Layer | Location | Reason |
+| --- | --- | --- |
+| Listing metadata (endpoint hash, price, stake) | **On-chain** (contract) + IPFS CID for long text | Write-decentralized — the team can't silently mutate or delete listings |
+| Staking deposit | **On-chain** (escrow / stake contract) | Non-negotiable; without this, staking has no meaning |
+| Validation attestation | **On-chain log, signed by attester** | Phase 1: ChainLens signs. Phase 3+: validator set signs. Migration is a key rotation, not a data migration |
+| Discovery index (search / filter / rank) | **Off-chain** (current ChainLens backend), with an **open-source indexer** spec | On-chain search is too expensive and UX-hostile. Replaceability = censorship resistance, not "must run on-chain." The Graph model. |
+| Registration UI / forms | **Central** (ChainLens web) + public SDK | Seller onboarding friction is the bottleneck; lab-grade UX matters. SDK + OpenAPI leave room for alternative frontends |
+| Registration gate (approval decision) | **Central curation** — stays this way for years | Subjective; permissionless opens the marketplace to sybil/spam at cold start. See C's A-vs-B table |
+
+Summary principle: **writes on-chain, reads off-chain, experience
+central, gate central, everything replaceable.**
+
+**Censorship resistance without permissionless registration**
+
+The fear behind "shouldn't registration be decentralized?" is usually
+censorship — ChainLens team rejecting a legitimate listing. That is
+solvable without opening the gate:
+
+- **Rejection log on-chain.** Every `REJECT` action writes the
+  listing hash, admin address, reason, timestamp to a public log.
+  Arbitrary rejection leaves an audit trail.
+- **Appeal path.** A rejected seller can escalate; review is done by
+  a different party (initially a second ChainLens reviewer, later
+  validator-set members or a DAO committee). Documented SLA.
+- **`unverified` tier.** A listing rejected from the curated tier can
+  still register as `unverified`. Hidden by default in UIs, not
+  returned by MCP `discover` unless explicitly opted into by the
+  buyer. Preserves the "curated marketplace" UX for 99% of traffic
+  while making the gate impossible to weaponize as a full ban.
+- **Replaceable indexer.** If the official indexer filters a listing,
+  a second indexer — running the open-source spec against the same
+  on-chain data — can surface it. "Filtering = invisibility, not
+  removal."
+
+These four together are the **correct operational meaning** of
+"decentralized registration" for a curated marketplace. Shipping
+permissionless registration without them would actually be worse
+for sellers (no appeal, no audit trail, just cold rejection with no
+record).
+
+**When (if ever) does the registration gate decentralize?**
+
+Two preconditions must both hold, and we should assume neither holds
+for years:
+
+1. **Validation rules are fully objectified.** The gate decision can
+   be expressed as a checklist / program that any honest reviewer
+   would reach the same answer on. Until then, decentralizing it
+   produces inconsistent decisions.
+2. **Stake economics discourage spam.** The cost to register + lose
+   a stake on a bad-faith listing exceeds the expected gain from
+   scamming buyers. Requires real usage data to calibrate.
+
+This item explicitly does **not** promise a decentralized gate. It
+promises that when the gate is central, it's central in a way that
+doesn't cost the marketplace its censorship-resistance story.
+
+**The adapter-pattern caveat — what MCP / narrow-utility abstractions do not buy us**
+
+The [`@chain-lens/mcp-tool`](../packages/mcp-tool/) buyer surface is
+designed to expose a stable 5-operation contract (`discover` / `pay`
+/ `call` / `verify` / `challenge`) with pluggable backends so
+protocol migrations stay transparent to the LLM. **D** further
+argues the seller surface should be even thinner — a docs spec plus
+narrow runtime utilities, not a framework. Both benefit from the
+same abstraction discipline, and both have the same ceiling — worth
+naming here so this document isn't cited to justify "the adapter
+will handle it" when it won't:
+
+| Leak point | Why it escapes adapter coverage |
+| --- | --- |
+| Trust-model / dispute semantics | The LLM's / seller's decision surface changes (new tool, new deadline, new escalation). Not a transport swap. |
+| On-chain economic preconditions | Staking deposits, fee-split changes, slashing rules are contract interface changes — every caller hits new preconditions. |
+| Cryptographic primitives requiring caller-side work | zkTLS proof generation, seller signing key custody. A narrow runtime utility (**D.3**) can ship the submission plumbing; the caller still owns the key material. |
+| Operation *shape* changes (not implementation) | Streaming, multi-seller aggregation, live challenge during call — these extend the semantic surface, not just swap backends. |
+
+Design implication: when proposing a change under **C** (or any
+future protocol item), classify it as "adapter swap" vs
+"interface extension" at the proposal stage. Adapter swaps stay
+cheap — on the buyer side the MCP backend rotates, on the seller
+side `SELLER_SPEC.md` updates and the CLI's `chain-lens-seller
+upgrade` codemod re-templates deployed sellers (see **D.3** for
+the limited case where a narrow runtime utility is involved).
+Interface extensions are coordinated migrations — the LLM's tool
+surface grows, the spec grows, and deployed sellers need to pull
+the new template. Call these out in the RFC; don't let them
+masquerade as transparent swaps.
+
+**What this item produces**
+
+- A short doc (`docs/architecture/decentralization-boundaries.md`)
+  that the layer map above links into, with concrete examples for
+  each row and the thresholds at which any layer would move.
+- Contract interface sketches for the on-chain pieces that don't
+  exist yet: listing-metadata registry, stake contract, rejection
+  log, attestation log.
+- An alignment check against **C** and **D** — if either RFC
+  contradicts this document, either the RFC changes or this
+  document does (explicitly, via amendment), not silently.
+
+**Scope**: ~3–5 days of writing + review. No code. Blocks nothing
+directly, but every significant C/D design decision should cite it.
 
 ---
 
@@ -180,6 +537,9 @@ modeling, reviewer bandwidth, actual seller interest. File under
 - ✅ v0.1.1 #2 — `finalizeFailure` refund-direct refactor, dropped stub config (1b350fd)
 - ✅ v0.1.1 #3 — `Job` compound unique on `(escrowAddress, onchainJobId)` + backfill (358b233, e656e2b)
 - ✅ v0.1.1 #4 — Register form wrapper guidance + README + sample-sellers docs (da47ecc)
+- ✅ v0.1.1 #5 — SIWE-style seller auth + `GET /seller/listings` (endpoint visible to owner only)
+- ✅ v0.1.1 #6 — `PATCH /seller/listings/:id` with whitelisted fields, `invalid_field` error for locked keys, SELF_EDIT AdminAction with diff
+- ✅ v0.1.1 follow-up — `chain-lens-seller status` listings table (name/status/onChainId/price/sales) + `register`/`status` now print the `/seller` dashboard URL (fixes old `/marketplace` hint); README + SKILL.md mention the dashboard as the canonical place to verify endpoint URLs
 - ✅ v0.1.1 hotfix — orphan refund recovery via `escrow.getJob()` skeleton seed (86e47c2, dcbbb4c)
 - ✅ v0.1.1 hotfix — x402 POST variant with inputs body + inputsHash verification (aa16db3)
 - ✅ v0.1.1 hotfix — `finalizeFailure` real-error surfacing (5ae667c)

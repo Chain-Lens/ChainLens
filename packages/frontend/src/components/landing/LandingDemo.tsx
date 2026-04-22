@@ -28,7 +28,7 @@ export default function LandingDemo() {
               </TLine>
               <TLine>
                 <T.prompt>$</T.prompt>{" "}
-                <T.cmd>curl https://monapi.pelicanlab.dev/apis</T.cmd>
+                <T.cmd>curl https://chainlens.pelicanlab.dev/api/apis</T.cmd>
               </TLine>
               <TLine />
               <TLine>
@@ -36,7 +36,7 @@ export default function LandingDemo() {
               </TLine>
               <TLine>
                 <T.prompt>$</T.prompt>{" "}
-                <T.cmd>{"curl -X POST https://monapi.pelicanlab.dev/prepare \\"}</T.cmd>
+                <T.cmd>{"curl -X POST https://chainlens.pelicanlab.dev/prepare \\"}</T.cmd>
               </TLine>
               <TLine indent={1}>
                 <T.cmd>
@@ -60,7 +60,7 @@ export default function LandingDemo() {
               <TLine indent={1}>
                 <T.key>&quot;price&quot;</T.key>
                 <T.out>{": "}</T.out>
-                <T.str>&quot;0.001 MON&quot;</T.str>
+                <T.str>&quot;0.05 USDC&quot;</T.str>
                 <T.out>,</T.out>
               </TLine>
               <TLine indent={1}>
@@ -77,7 +77,7 @@ export default function LandingDemo() {
               </TLine>
               <TLine />
               <TLine>
-                <T.ok>→ Full UI available at https://monapi.pelicanlab.dev</T.ok>{" "}
+                <T.ok>→ Full UI available at https://chainlens.pelicanlab.dev</T.ok>{" "}
                 <Cursor />
               </TLine>
             </TerminalWindow>
@@ -87,7 +87,7 @@ export default function LandingDemo() {
         <FadeIn delay={300}>
           <div className={styles.cta}>
             <a
-              href="https://monapi.pelicanlab.dev"
+              href="https://chainlens.pelicanlab.dev"
               target="_blank"
               rel="noopener noreferrer"
               className={styles.btn}

@@ -47,7 +47,7 @@
 | ApiMarketEscrow (v1, legacy) | `contracts/ApiMarketEscrow.sol` | 기존 457L | `0xDAa04e9BD451F9D27EcEd569303181c71F0A7b27` (Base Sepolia) |
 | TaskTypeRegistry | `contracts/TaskTypeRegistry.sol` + `types/TaskTypeRegistryTypes.sol` | 30/30 passing | ✅ `0xD2ab227417B26f4d8311594C27c59adcA046501F` (Base Sepolia) |
 | SellerRegistry | `contracts/SellerRegistry.sol` + `types/SellerRegistryTypes.sol` | 40/40 passing | ✅ `0xcF36b76b5Da55471D4EBB5349A0653624371BE2c` (Base Sepolia) |
-| ApiMarketEscrow v2 | `contracts/ApiMarketEscrowV2.sol` + `types/ApiMarketEscrowV2Types.sol` + `mocks/MockUSDC.sol` | 34/34 passing | ✅ `0xD4c40710576f582c49e5E6417F6cA2023E30d3aD` (Base Sepolia) |
+| ApiMarketEscrow v2 | `contracts/ApiMarketEscrowV2.sol` + `types/ApiMarketEscrowV2Types.sol` + `mocks/MockUSDC.sol` | 34/34 passing | ✅ `0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E` (Base Sepolia) |
 
 ---
 
@@ -299,7 +299,7 @@
   - [packages/shared/src/types/seller.ts](packages/shared/src/types/seller.ts) — 기존 `Seller` 유지 + `OnChainSeller` + `REPUTATION_NEUTRAL_BPS`/`REPUTATION_MAX_BPS` 추가
   - `pnpm build` @ `packages/shared` 성공. 백엔드 pre-existing 타입 에러(`api.service.ts:106`)는 이번 변경과 무관 (stash 후 재현 확인)
 - **Week 1 Day 3-4 배포: ApiMarketEscrowV2 → Base Sepolia**
-  - 주소: `0xD4c40710576f582c49e5E6417F6cA2023E30d3aD`
+  - 주소: `0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E`
   - Owner/Gateway: `0xD21dE9470d8A0dbae0dE0b5f705001a6482Db580` (deployer)
   - USDC: `0x036CbD53842c5426634e7929541eC2318f3dCF7e` (Base Sepolia 공식)
   - feeRate: 500 bps (5%, v1과 동일)

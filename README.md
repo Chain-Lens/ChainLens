@@ -9,7 +9,7 @@
 
 | Contract | Address |
 | --- | --- |
-| `ApiMarketEscrowV2` | `0xD4c40710576f582c49e5E6417F6cA2023E30d3aD` |
+| `ApiMarketEscrowV2` | `0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E` |
 | `SellerRegistry` (ERC-8004 compatible) | `0xcF36b76b5Da55471D4EBB5349A0653624371BE2c` |
 | `TaskTypeRegistry` | `0xD2ab227417B26f4d8311594C27c59adcA046501F` |
 | USDC (payment token) | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |

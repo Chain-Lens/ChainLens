@@ -9,6 +9,7 @@ export interface RegisterOptions {
   sellerAddress: string;
   endpoint: string;
   gatewayUrl: string;
+  webUrl: string;
 }
 
 export interface RegisterDeps {
@@ -69,6 +70,28 @@ export function parsePriceToWei(price: string): string {
 
 export function normalizeGatewayUrl(raw: string): string {
   return raw.replace(/\/+$/, "");
+}
+ 
+// Best-effort mapping from the backend API URL to the frontend web URL
+// so the CLI can print a clickable link after register/status. The
+// override envs take precedence for people running mismatched setups.
+//
+//   public:         https://chainlens.pelicanlab.dev/api  → https://chainlens.pelicanlab.dev
+//   local dev:      http://localhost:3001/api             → http://localhost:3000  (frontend runs on 3000)
+//   other self-host: https://api.foo.com/api              → https://api.foo.com     (assume same origin serves UI)
+export function deriveWebUrl(
+  gatewayUrl: string,
+  env: NodeJS.ProcessEnv,
+): string {
+  const override = env.CHAIN_LENS_WEB_URL?.trim();
+  if (override) return override.replace(/\/+$/, "");
+
+  const localDev = gatewayUrl.match(
+    /^(https?:\/\/(?:localhost|127\.0\.0\.1)):3001(\/.*)?$/,
+  );
+  if (localDev) return `${localDev[1]}:3000`;
+
+  return gatewayUrl.replace(/\/api\/?$/, "");
 }
 
 export async function parseRegisterArgs(
@@ -141,6 +164,7 @@ export async function parseRegisterArgs(
   gatewayUrl = normalizeGatewayUrl(
     gatewayUrl ?? deps.env.CHAIN_LENS_API_URL ?? DEFAULT_PUBLIC_GATEWAY,
   );
+  const webUrl = deriveWebUrl(gatewayUrl, deps.env);
 
   return {
     name,
@@ -150,6 +174,7 @@ export async function parseRegisterArgs(
     sellerAddress: wallet,
     endpoint,
     gatewayUrl,
+    webUrl,
   };
 }
 
@@ -199,8 +224,15 @@ export async function runRegister(
     );
   }
 
+  // Direct sellers at their own dashboard, not /marketplace (which is
+  // the buyer-facing discovery view and omits endpoint URLs). After
+  // Sign in at /seller they see approval status, the stored endpoint
+  // URL, and can edit name/description/endpoint inline.
   deps.stdout(
-    `\nRegistered. Awaiting admin approval + automated probe (see /marketplace).\n${JSON.stringify(parsed, null, 2)}\n`,
+    `\nRegistered. Awaiting admin approval + automated probe.\n` +
+      `Track status + view endpoint: ${opts.webUrl}/seller  (connect wallet → Sign in as seller)\n` +
+      `Or via CLI: chain-lens-seller status --wallet ${opts.sellerAddress}\n` +
+      `${JSON.stringify(parsed, null, 2)}\n`,
   );
   return parsed;
 }

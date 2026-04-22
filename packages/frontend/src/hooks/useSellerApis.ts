@@ -8,17 +8,29 @@ export interface SellerApi {
   onChainId: number | null;
   name: string;
   description: string;
+  // Only populated from the authenticated /seller/listings endpoint.
+  // Public /apis/seller/:address omits it.
+  endpoint?: string;
   price: string;
   category: string;
   sellerAddress: string;
   status: "PENDING" | "APPROVED" | "REJECTED" | "REVOKED";
+  exampleRequest?: unknown;
+  exampleResponse?: unknown;
   createdAt: string;
   updatedAt: string;
   _count: { payments: number };
   rejectionReason: string | null;
 }
 
-export function useSellerApis(address: string | undefined) {
+// When `authenticated` flips true, we re-fetch from the owner-scoped
+// endpoint so `endpoint` becomes visible. Going false (sign-out) drops
+// back to the public endpoint so the page still renders.
+export function useSellerApis(
+  address: string | undefined,
+  options?: { authenticated?: boolean },
+) {
+  const authenticated = !!options?.authenticated;
   const [apis, setApis] = useState<SellerApi[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,14 +40,15 @@ export function useSellerApis(address: string | undefined) {
     if (!address) return;
     setLoading(true);
     setError(null);
+    const path = authenticated ? `/seller/listings` : `/apis/seller/${address}`;
     apiClient
-      .get<SellerApi[]>(`/apis/seller/${address}`)
+      .get<SellerApi[]>(path)
       .then(setApis)
       .catch((err) =>
-        setError(err instanceof Error ? err.message : "Failed to load APIs")
+        setError(err instanceof Error ? err.message : "Failed to load APIs"),
       )
       .finally(() => setLoading(false));
-  }, [address, tick]);
+  }, [address, authenticated, tick]);
 
   const refetch = () => setTick((t) => t + 1);
 

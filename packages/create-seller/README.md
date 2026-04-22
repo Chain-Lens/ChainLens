@@ -53,14 +53,27 @@ chain-lens-seller register \
   --price 0.05 \
   --wallet 0xYourPayoutAddress
 
-# 5. Monitor jobs + health.
+# 5. Check approval + monitor. `status` lists every listing under this
+#    wallet (name/status/onChainId/price/sales), plus on-chain reputation
+#    and a /health ping. Re-run periodically until status flips PENDING
+#    → APPROVED.
 chain-lens-seller status --wallet 0xYourPayoutAddress
+
+# 6. (Optional) View/edit the stored endpoint URL on the web dashboard.
+#    The public API omits endpoint URLs on purpose (fee-capture hinge).
+#    To see the URL you actually registered — useful to catch typos
+#    before approval — visit the web dashboard, connect this wallet,
+#    and click "Sign in as seller":
+#      https://chainlens.pelicanlab.dev/seller
+#    The same page lets you edit name / description / endpoint after
+#    approval. `chain-lens-seller status` prints this URL at the end.
 ```
 
 > Tip: if you'll run `register` / `status` a lot, set
 > `export CHAIN_LENS_PAYOUT_ADDRESS=0x...` in your shell once and drop the
 > `--wallet` flag. The CLI also reads `$CHAIN_LENS_API_URL` for custom
-> gateways.
+> gateways. For self-hosted UIs, `$CHAIN_LENS_WEB_URL` overrides the
+> dashboard link the CLI prints (default: strip `/api` from the gateway).
 
 > One-shot alternative without global install:
 > `npx -p @chain-lens/create-seller chain-lens-seller <cmd>`
@@ -74,7 +87,7 @@ chain-lens-seller status --wallet 0xYourPayoutAddress
 | `init <name>` | Copy a minimal Express seller template into `./<name>/` with `task_type`, `port`, and handler stub pre-filled. |
 | `deploy` | Check `vercel --version` + `vercel whoami`, then run `vercel --prod --yes`. Saves the production URL to `.chain-lens-deploy.json`. |
 | `register` | POST to `<gateway>/apis/register` with the deployed URL, task type, and price-per-call. `--wallet` is the public payout address (falls back to `$CHAIN_LENS_PAYOUT_ADDRESS`). `--gateway` defaults to the public MVP, or `$CHAIN_LENS_API_URL`. |
-| `status` | GET `<gateway>/reputation/<seller>` + `<deployed-url>/health` for jobsCompleted/jobsFailed + uptime. Same wallet/gateway resolution as `register`. |
+| `status` | Lists every listing under the wallet (name/status/onChainId/price/sales) via `/apis/seller/<wallet>`, then reputation + `/health`. Prints the web dashboard URL for endpoint inspection/edit. Same wallet/gateway resolution as `register`. |
 
 ## Disable Vercel deployment protection
 

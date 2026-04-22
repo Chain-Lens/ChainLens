@@ -1,6 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { fetchHealth, fetchReputation, parseStatusArgs, runStatus } from "./status.js";
+import {
+  fetchHealth,
+  fetchListings,
+  fetchReputation,
+  parseStatusArgs,
+  renderListingsTable,
+  runStatus,
+  type ListingView,
+} from "./status.js";
 
 function baseDeps(overrides: { cwd?: string; env?: NodeJS.ProcessEnv; deployState?: { url: string } | null } = {}) {
   return {
@@ -134,12 +142,30 @@ test("fetchHealth: returns ok=false on network error", async () => {
   assert.match(h.error ?? "", /ECONNREFUSED/);
 });
 
-test("runStatus: prints both sections when health URL is set", async () => {
+test("runStatus: prints all sections when health URL is set", async () => {
   const out: string[] = [];
   const fakeFetch: typeof fetch = async (url) => {
     const u = String(url);
     if (u.endsWith("/health")) {
       return new Response(JSON.stringify({ status: "ok" }), { status: 200 });
+    }
+    if (u.includes("/apis/seller/")) {
+      return new Response(
+        JSON.stringify([
+          {
+            id: "abc",
+            onChainId: 7,
+            name: "my-seller",
+            price: "50000",
+            category: "defillama_tvl",
+            status: "APPROVED",
+            createdAt: "2026-04-22T10:00:00Z",
+            _count: { payments: 3 },
+            rejectionReason: null,
+          },
+        ]),
+        { status: 200 },
+      );
     }
     return new Response(
       JSON.stringify({ jobsCompleted: "1", jobsFailed: "0", totalEarnings: "50000" }),
@@ -150,30 +176,147 @@ test("runStatus: prints both sections when health URL is set", async () => {
     {
       sellerAddress: "0x".padEnd(42, "d"),
       gatewayUrl: "http://x/api",
+      webUrl: "http://x",
       healthUrl: "https://seller.vercel.app/health",
     },
     { fetch: fakeFetch, stdout: (m) => out.push(m) },
   );
   const joined = out.join("");
+  assert.match(joined, /Listings \(1\)/);
+  assert.match(joined, /my-seller\s+APPROVED\s+7\s+0\.05 USDC\s+3/);
   assert.match(joined, /Reputation/);
   assert.match(joined, /jobsCompleted: 1/);
   assert.match(joined, /Health \(https:\/\/seller\.vercel\.app\/health\)/);
+  assert.match(joined, /Web dashboard: http:\/\/x\/seller/);
 });
 
 test("runStatus: skips health when no deploy state", async () => {
   const out: string[] = [];
-  const fakeFetch: typeof fetch = async () =>
-    new Response(
+  const fakeFetch: typeof fetch = async (url) => {
+    if (String(url).includes("/apis/seller/")) {
+      return new Response("[]", { status: 200 });
+    }
+    return new Response(
       JSON.stringify({ jobsCompleted: "0", jobsFailed: "0", totalEarnings: "0" }),
       { status: 200 },
     );
+  };
   await runStatus(
     {
       sellerAddress: "0x".padEnd(42, "d"),
       gatewayUrl: "http://x/api",
+      webUrl: "http://x",
       healthUrl: null,
     },
     { fetch: fakeFetch, stdout: (m) => out.push(m) },
   );
-  assert.match(out.join(""), /Health: no \.chain-lens-deploy\.json — skip/);
+  const joined = out.join("");
+  assert.match(joined, /Health: no \.chain-lens-deploy\.json — skip/);
+  assert.match(joined, /\(no listings registered/);
+});
+
+test("fetchListings: returns array on 200", async () => {
+  const fakeFetch: typeof fetch = async () =>
+    new Response(
+      JSON.stringify([
+        {
+          id: "a",
+          onChainId: 1,
+          name: "n",
+          price: "50000",
+          category: "defillama_tvl",
+          status: "PENDING",
+          createdAt: "2026-04-22T00:00:00Z",
+          _count: { payments: 0 },
+          rejectionReason: null,
+        },
+      ]),
+      { status: 200 },
+    );
+  const r = await fetchListings(
+    { sellerAddress: "0x".padEnd(42, "a"), gatewayUrl: "http://x/api" },
+    { fetch: fakeFetch },
+  );
+  assert.ok(Array.isArray(r));
+  assert.equal((r as ListingView[])[0]?.name, "n");
+});
+
+test("fetchListings: surfaces error body on 400", async () => {
+  const fakeFetch: typeof fetch = async () =>
+    new Response(JSON.stringify({ error: { message: "Invalid address" } }), {
+      status: 400,
+    });
+  const r = await fetchListings(
+    { sellerAddress: "0x".padEnd(42, "a"), gatewayUrl: "http://x/api" },
+    { fetch: fakeFetch },
+  );
+  assert.deepEqual(r, { error: "Invalid address", status: 400 });
+});
+
+test("fetchListings: hits the correct URL", async () => {
+  const seen: string[] = [];
+  const fakeFetch: typeof fetch = async (url) => {
+    seen.push(String(url));
+    return new Response("[]", { status: 200 });
+  };
+  await fetchListings(
+    { sellerAddress: "0xDEAD".padEnd(42, "0"), gatewayUrl: "http://cl/api" },
+    { fetch: fakeFetch },
+  );
+  assert.equal(
+    seen[0],
+    "http://cl/api/apis/seller/0xDEAD000000000000000000000000000000000000",
+  );
+});
+
+test("renderListingsTable: empty state", () => {
+  const out = renderListingsTable([]);
+  assert.match(out, /no listings registered/);
+});
+
+test("renderListingsTable: surfaces rejection reason under the table", () => {
+  const out = renderListingsTable([
+    {
+      id: "a",
+      onChainId: null,
+      name: "n",
+      price: "1000000",
+      category: "defillama_tvl",
+      status: "REJECTED",
+      createdAt: "2026-04-22T00:00:00Z",
+      _count: { payments: 0 },
+      rejectionReason: "endpoint unreachable",
+    },
+  ]);
+  assert.match(out, /NAME\s+STATUS/);
+  assert.match(out, /REJECTED/);
+  assert.match(out, /↳ latest rejection \(n\): endpoint unreachable/);
+});
+
+test("renderListingsTable: formats USDC price without trailing zeros", () => {
+  const out = renderListingsTable([
+    {
+      id: "a",
+      onChainId: 1,
+      name: "cheap",
+      price: "50000", // 0.05 USDC
+      category: "defillama_tvl",
+      status: "APPROVED",
+      createdAt: "2026-04-22T00:00:00Z",
+      _count: { payments: 0 },
+    },
+    {
+      id: "b",
+      onChainId: 2,
+      name: "whole",
+      price: "1000000", // 1 USDC, no fractional part
+      category: "defillama_tvl",
+      status: "APPROVED",
+      createdAt: "2026-04-22T00:00:00Z",
+      _count: { payments: 0 },
+    },
+  ]);
+  assert.match(out, /0\.05 USDC/);
+  assert.match(out, /1 USDC/);
+  assert.doesNotMatch(out, /1\.000000 USDC/);
 });

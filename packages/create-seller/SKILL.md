@@ -145,15 +145,37 @@ The CLI POSTs to `/apis/register` on the gateway. The seller then sits
 in `PENDING` while the automated probe runs (schema validation +
 prompt-injection scan) and an admin approves.
 
-### 4. Monitor
+**After `register` succeeds, share the dashboard link the CLI prints
+(`<web>/seller`) with the user.** That page is where they — not you —
+verify the endpoint URL they registered (the public API omits it on
+purpose) and watch the approval flip. Tell them: "connect this same
+wallet, click Sign in as seller, and you'll see status + endpoint +
+edit buttons." Don't re-run `register` to re-check status; use step 4.
+
+### 4. Monitor (approval check + operational health)
 
 ```bash
 chain-lens-seller status --wallet <0x...>
 ```
 
-Prints `jobsCompleted` / `jobsFailed` / `totalEarnings` from the
-gateway's reputation endpoint, and pings `/health` on the deployed
-seller if `.chain-lens-deploy.json` is present.
+Prints in order:
+
+1. **Listings table** — name / status / onChainId / price / sales for
+   every listing this wallet registered. Look at the `STATUS` column
+   first: `PENDING` means the admin hasn't approved yet (normal, wait).
+   `APPROVED` means it's live — `onChainId` will be populated.
+   `REJECTED` prints the admin's reason under the table.
+2. **Reputation** — `jobsCompleted` / `jobsFailed` / `totalEarnings`
+   from `/reputation/<seller>`.
+3. **Health** — pings the deployed seller's `/health` if
+   `.chain-lens-deploy.json` is present.
+4. **Web dashboard URL** — `<web>/seller`. If the user asks "what URL
+   did I register?" or "how do I fix a typo in the endpoint?", send
+   them there — CLI doesn't show endpoint URLs (public API omits them),
+   and PATCH of `endpoint` / `name` / `description` is a browser flow
+   gated by wallet-sign. `price` and `category` are locked post-approval
+   by design — if the user wants to change those, they need to delete
+   and re-register.
 
 ## Secrets and safety
 

@@ -1,6 +1,19 @@
 import prisma from "../config/prisma.js";
 import { ApiStatus } from "@chain-lens/shared";
-import { BadRequestError, NotFoundError } from "../utils/errors.js";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from "../utils/errors.js";
+
+export const SELLER_EDITABLE_FIELDS = [
+  "name",
+  "description",
+  "endpoint",
+  "exampleRequest",
+  "exampleResponse",
+] as const;
+export type SellerEditableField = (typeof SELLER_EDITABLE_FIELDS)[number];
 
 export const APIS_DEFAULT_LIMIT = 20;
 export const APIS_MAX_LIMIT = 100;
@@ -170,4 +183,100 @@ export async function updateStatus(
     where: { id },
     data: { status, ...(onChainId !== undefined ? { onChainId } : {}) },
   });
+}
+
+// Same shape as listBySeller, but includes `endpoint` — gated by
+// seller auth in the route layer, never exposed on public /apis.
+export async function listBySellerWithEndpoint(sellerAddress: string) {
+  const apis = await prisma.apiListing.findMany({
+    where: { sellerAddress: sellerAddress.toLowerCase() },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      onChainId: true,
+      name: true,
+      description: true,
+      endpoint: true,
+      price: true,
+      category: true,
+      sellerAddress: true,
+      status: true,
+      exampleRequest: true,
+      exampleResponse: true,
+      createdAt: true,
+      updatedAt: true,
+      _count: { select: { payments: { where: { status: "COMPLETED" } } } },
+      adminActions: {
+        where: { action: "REJECT" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { reason: true },
+      },
+    },
+  });
+
+  return apis.map((row) => {
+    const { adminActions, ...api } = row;
+    return { ...api, rejectionReason: adminActions[0]?.reason ?? null };
+  });
+}
+
+export interface SellerUpdateInput {
+  name?: string;
+  description?: string;
+  endpoint?: string;
+  exampleRequest?: unknown;
+  exampleResponse?: unknown;
+}
+
+// Owner-scoped partial update. Whitelisting happens at the route layer
+// (the zod schema is the single source of truth for which fields are
+// editable); this function trusts its caller on field set but still
+// enforces ownership. Writes an AdminAction row with the diff so audits
+// can trace seller-initiated changes on APPROVED listings.
+export async function updateByOwner(
+  id: string,
+  sellerAddress: string,
+  patch: SellerUpdateInput
+) {
+  const existing = await prisma.apiListing.findUnique({ where: { id } });
+  if (!existing) throw new NotFoundError("API not found");
+  if (existing.sellerAddress.toLowerCase() !== sellerAddress.toLowerCase()) {
+    throw new ForbiddenError("Not the listing owner");
+  }
+
+  const diff: Record<string, { from: unknown; to: unknown }> = {};
+  const data: Record<string, unknown> = {};
+  for (const [key, next] of Object.entries(patch)) {
+    if (next === undefined) continue;
+    const prev = (existing as Record<string, unknown>)[key];
+    if (JSON.stringify(prev) === JSON.stringify(next)) continue;
+    data[key] = next;
+    diff[key] = { from: prev ?? null, to: next ?? null };
+  }
+
+  if (Object.keys(data).length === 0) {
+    return {
+      ...existing,
+      rejectionReason: null as string | null,
+      changed: false as const,
+    };
+  }
+
+  const [updated] = await prisma.$transaction([
+    prisma.apiListing.update({
+      where: { id },
+      data,
+    }),
+    prisma.adminAction.create({
+      data: {
+        apiId: id,
+        action: "SELF_EDIT",
+        adminAddress: sellerAddress.toLowerCase(),
+        reason: JSON.stringify(diff),
+      },
+    }),
+  ]);
+
+  return { ...updated, rejectionReason: null as string | null, changed: true as const };
 }

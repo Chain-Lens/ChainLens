@@ -54,11 +54,11 @@ export default function LandingHowItWorks() {
                 <T.kw>const</T.kw>
                 {" "}<T.val>apis</T.val>{" "}
                 <T.out>{"= await fetch("}</T.out>
-                <T.str>&apos;https://monapi.pelicanlab.dev/api/apis&apos;</T.str>
+                <T.str>&apos;https://chainlens.pelicanlab.dev/api/apis&apos;</T.str>
                 <T.out>{");"}</T.out>
               </TLine>
               <TLine>
-                <T.cmt>{"// → [{ id: \"weather-v2\", price: \"0.001 MON\", verified: true }]"}</T.cmt>
+                <T.cmt>{"// → [{ id: \"weather-v2\", price: \"0.05 USDC\", verified: true }]"}</T.cmt>
               </TLine>
               <TLine />
               <TLine>

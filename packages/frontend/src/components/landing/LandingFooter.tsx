@@ -41,7 +41,7 @@ export default function LandingFooter() {
           <IconTelegram /> @ghwo336
         </a>
         <a
-          href="https://monapi.pelicanlab.dev"
+          href="https://chainlens.pelicanlab.dev"
           target="_blank"
           rel="noopener noreferrer"
         >

@@ -1,6 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parsePriceToWei, normalizeGatewayUrl, parseRegisterArgs, runRegister } from "./register.js";
+import {
+  parsePriceToWei,
+  normalizeGatewayUrl,
+  parseRegisterArgs,
+  runRegister,
+  deriveWebUrl,
+} from "./register.js";
 
 test("parsePriceToWei: integer USDC", () => {
   assert.equal(parsePriceToWei("1"), "1000000");
@@ -29,6 +35,33 @@ test("normalizeGatewayUrl: strips trailing slash", () => {
   assert.equal(normalizeGatewayUrl("http://x/api/"), "http://x/api");
   assert.equal(normalizeGatewayUrl("http://x/api"), "http://x/api");
   assert.equal(normalizeGatewayUrl("http://x/api///"), "http://x/api");
+});
+
+test("deriveWebUrl: strips /api from public gateway", () => {
+  assert.equal(
+    deriveWebUrl("https://chainlens.pelicanlab.dev/api", {} as NodeJS.ProcessEnv),
+    "https://chainlens.pelicanlab.dev",
+  );
+});
+
+test("deriveWebUrl: localhost :3001 (backend) → :3000 (frontend)", () => {
+  assert.equal(
+    deriveWebUrl("http://localhost:3001/api", {} as NodeJS.ProcessEnv),
+    "http://localhost:3000",
+  );
+  assert.equal(
+    deriveWebUrl("http://127.0.0.1:3001/api", {} as NodeJS.ProcessEnv),
+    "http://127.0.0.1:3000",
+  );
+});
+
+test("deriveWebUrl: CHAIN_LENS_WEB_URL env overrides derivation", () => {
+  assert.equal(
+    deriveWebUrl("http://localhost:3001/api", {
+      CHAIN_LENS_WEB_URL: "https://admin.example/",
+    } as NodeJS.ProcessEnv),
+    "https://admin.example",
+  );
 });
 
 async function baseDeps(overrides: { cwd?: string; env?: NodeJS.ProcessEnv; deployState?: { url: string } | null } = {}) {
@@ -173,6 +206,7 @@ test("runRegister: POSTs the expected payload and returns parsed JSON", async ()
       headers: { "Content-Type": "application/json" },
     });
   };
+  const out: string[] = [];
   const result = await runRegister(
     {
       name: "x",
@@ -182,12 +216,15 @@ test("runRegister: POSTs the expected payload and returns parsed JSON", async ()
       sellerAddress: "0xdead000000000000000000000000000000000000",
       endpoint: "https://x.vercel.app",
       gatewayUrl: "http://localhost:3001/api",
+      webUrl: "http://localhost:3000",
     },
-    { fetch: fakeFetch, stdout: () => {} },
+    { fetch: fakeFetch, stdout: (m) => out.push(m) },
   );
   assert.deepEqual(result, { id: "abc", status: "PENDING" });
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, "http://localhost:3001/api/apis/register");
+  const joined = out.join("");
+  assert.match(joined, /Track status \+ view endpoint: http:\/\/localhost:3000\/seller/);
   assert.equal(calls[0].init?.method, "POST");
   const body = JSON.parse(calls[0].init?.body as string) as Record<string, unknown>;
   assert.equal(body.name, "x");
@@ -209,6 +246,7 @@ test("runRegister: throws with gateway error body on non-ok", async () => {
         sellerAddress: "0xdead000000000000000000000000000000000000",
         endpoint: "https://x.vercel.app",
         gatewayUrl: "http://localhost:3001/api",
+        webUrl: "http://localhost:3000",
       },
       { fetch: fakeFetch, stdout: () => {} },
     ),
