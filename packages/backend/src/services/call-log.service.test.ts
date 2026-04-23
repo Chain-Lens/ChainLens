@@ -4,6 +4,7 @@ import {
   aggregateRows,
   aggregateErrors,
   scoreListing,
+  groupByListingDay,
   type RawRow,
 } from "./call-log.service.js";
 
@@ -253,5 +254,71 @@ describe("aggregateErrors", () => {
   test("threads windowDays verbatim", () => {
     assert.equal(aggregateErrors([], 1).windowDays, 1);
     assert.equal(aggregateErrors([], 30).windowDays, 30);
+  });
+});
+
+describe("groupByListingDay", () => {
+  test("empty rows → empty result", () => {
+    assert.deepEqual(groupByListingDay([]), []);
+  });
+
+  test("groups by (listingId, UTC day)", () => {
+    const rows = [
+      { listingId: 1, createdAt: new Date("2026-01-10T08:00:00Z"), success: true,  latencyMs: 100, errorReason: null },
+      { listingId: 1, createdAt: new Date("2026-01-10T20:00:00Z"), success: false, latencyMs: 500, errorReason: "seller_5xx" },
+      { listingId: 1, createdAt: new Date("2026-01-11T05:00:00Z"), success: true,  latencyMs: 200, errorReason: null },
+      { listingId: 2, createdAt: new Date("2026-01-10T12:00:00Z"), success: true,  latencyMs: 300, errorReason: null },
+    ];
+    const result = groupByListingDay(rows);
+    assert.equal(result.length, 3); // listing1/day10, listing1/day11, listing2/day10
+
+    const l1d10 = result.find(r => r.listingId === 1 && r.date.toISOString().startsWith("2026-01-10"))!;
+    assert.ok(l1d10, "listing1 day10 entry should exist");
+    assert.equal(l1d10.totalCalls, 2);
+    assert.equal(l1d10.successes, 1);
+    assert.equal(l1d10.avgLatencyMs, 100); // only the success row
+    assert.deepEqual(l1d10.errorBreakdown, { seller_5xx: 1 });
+
+    const l1d11 = result.find(r => r.listingId === 1 && r.date.toISOString().startsWith("2026-01-11"))!;
+    assert.equal(l1d11.totalCalls, 1);
+    assert.equal(l1d11.successes, 1);
+    assert.equal(l1d11.avgLatencyMs, 200);
+    assert.deepEqual(l1d11.errorBreakdown, {});
+
+    const l2d10 = result.find(r => r.listingId === 2)!;
+    assert.equal(l2d10.totalCalls, 1);
+    assert.equal(l2d10.successes, 1);
+    assert.equal(l2d10.avgLatencyMs, 300);
+  });
+
+  test("avgLatencyMs is 0 when all calls failed", () => {
+    const rows = [
+      { listingId: 5, createdAt: new Date("2026-03-01T10:00:00Z"), success: false, latencyMs: 9999, errorReason: "seller_timeout" },
+      { listingId: 5, createdAt: new Date("2026-03-01T11:00:00Z"), success: false, latencyMs: 8000, errorReason: "seller_timeout" },
+    ];
+    const [r] = groupByListingDay(rows);
+    assert.equal(r.avgLatencyMs, 0);
+    assert.equal(r.totalCalls, 2);
+    assert.equal(r.successes, 0);
+    assert.deepEqual(r.errorBreakdown, { seller_timeout: 2 });
+  });
+
+  test("null errorReason falls into 'unknown' bucket", () => {
+    const rows = [
+      { listingId: 3, createdAt: new Date("2026-02-15T00:00:00Z"), success: false, latencyMs: 1000, errorReason: null },
+    ];
+    const [r] = groupByListingDay(rows);
+    assert.deepEqual(r.errorBreakdown, { unknown: 1 });
+  });
+
+  test("midnight UTC boundary: two rows on either side of midnight split into separate days", () => {
+    const rows = [
+      { listingId: 1, createdAt: new Date("2026-05-01T23:59:59Z"), success: true, latencyMs: 50, errorReason: null },
+      { listingId: 1, createdAt: new Date("2026-05-02T00:00:01Z"), success: true, latencyMs: 60, errorReason: null },
+    ];
+    const result = groupByListingDay(rows);
+    assert.equal(result.length, 2);
+    assert.ok(result.some(r => r.date.toISOString().startsWith("2026-05-01")));
+    assert.ok(result.some(r => r.date.toISOString().startsWith("2026-05-02")));
   });
 });

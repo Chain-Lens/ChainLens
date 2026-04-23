@@ -163,6 +163,24 @@ model AdminAction {
   api ApiListing @relation(fields: [apiId], references: [id])
 }
 
+// Daily aggregate of CallLog rows older than the raw retention window.
+// The rollup script reads raw rows past the threshold, groups them by
+// (listingId, UTC date), writes here, then deletes the raw rows.
+// Keeping this separate from CallLog means the hot table stays small.
+model CallLogDailyRollup {
+  id             Int      @id @default(autoincrement())
+  listingId      Int
+  date           DateTime @db.Date
+  totalCalls     Int
+  successes      Int
+  avgLatencyMs   Int
+  errorBreakdown Json
+  createdAt      DateTime @default(now())
+
+  @@unique([listingId, date])
+  @@index([listingId])
+}
+
 // Per-call observability row for v3 ChainLensMarket listings. One row per
 // POST /api/market/call/:id invocation that reached the listing-resolution
 // stage (pre-parse errors like malformed listingId are skipped — they carry

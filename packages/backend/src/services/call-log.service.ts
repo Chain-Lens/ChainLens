@@ -284,3 +284,116 @@ export function aggregateRows(rows: RawRow[], windowDays: number): ListingStats 
 function windowStart(windowDays: number): Date {
   return new Date(Date.now() - windowDays * 86_400_000);
 }
+
+// ──────────────────────────────────────────────────────────────────────
+// Retention rollup — keeps the raw CallLog table bounded at ~90 days
+// ──────────────────────────────────────────────────────────────────────
+
+export const DEFAULT_RETAIN_DAYS = 90;
+
+export interface DayRollup {
+  listingId: number;
+  date: Date;
+  totalCalls: number;
+  successes: number;
+  avgLatencyMs: number;
+  errorBreakdown: Record<string, number>;
+}
+
+type RollupRow = {
+  listingId: number;
+  createdAt: Date;
+  success: boolean;
+  latencyMs: number;
+  errorReason: string | null;
+};
+
+/** Pure: group raw rows into per-(listingId, UTC day) aggregates. */
+export function groupByListingDay(rows: RollupRow[]): DayRollup[] {
+  const map = new Map<string, { entry: DayRollup; latencySum: number }>();
+  for (const r of rows) {
+    const dateStr = r.createdAt.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const key = `${r.listingId}:${dateStr}`;
+    if (!map.has(key)) {
+      map.set(key, {
+        entry: {
+          listingId: r.listingId,
+          date: new Date(`${dateStr}T00:00:00.000Z`),
+          totalCalls: 0,
+          successes: 0,
+          avgLatencyMs: 0,
+          errorBreakdown: {},
+        },
+        latencySum: 0,
+      });
+    }
+    const slot = map.get(key)!;
+    slot.entry.totalCalls++;
+    if (r.success) {
+      slot.entry.successes++;
+      slot.latencySum += r.latencyMs;
+    } else {
+      const k = r.errorReason ?? "unknown";
+      slot.entry.errorBreakdown[k] = (slot.entry.errorBreakdown[k] ?? 0) + 1;
+    }
+  }
+  return [...map.values()].map(({ entry, latencySum }) => ({
+    ...entry,
+    avgLatencyMs:
+      entry.successes > 0 ? Math.round(latencySum / entry.successes) : 0,
+  }));
+}
+
+/**
+ * Rollup raw CallLog rows older than `retainDays` into CallLogDailyRollup,
+ * then delete the originals. Safe to run repeatedly — upsert is idempotent.
+ *
+ * Returns the number of distinct (listingId, date) buckets rolled up and
+ * the number of raw rows deleted.
+ */
+export async function rollupAndPruneCallLogs(
+  retainDays: number = DEFAULT_RETAIN_DAYS,
+): Promise<{ rolledUp: number; pruned: number }> {
+  const threshold = windowStart(retainDays);
+
+  const oldRows = await prisma.callLog.findMany({
+    where: { createdAt: { lt: threshold } },
+    select: {
+      listingId: true,
+      createdAt: true,
+      success: true,
+      latencyMs: true,
+      errorReason: true,
+    },
+  });
+
+  if (oldRows.length === 0) return { rolledUp: 0, pruned: 0 };
+
+  const rollups = groupByListingDay(oldRows);
+
+  for (const r of rollups) {
+    await prisma.callLogDailyRollup.upsert({
+      where: { listingId_date: { listingId: r.listingId, date: r.date } },
+      create: {
+        listingId: r.listingId,
+        date: r.date,
+        totalCalls: r.totalCalls,
+        successes: r.successes,
+        avgLatencyMs: r.avgLatencyMs,
+        errorBreakdown: r.errorBreakdown,
+      },
+      update: {
+        totalCalls: r.totalCalls,
+        successes: r.successes,
+        avgLatencyMs: r.avgLatencyMs,
+        errorBreakdown: r.errorBreakdown,
+      },
+    });
+  }
+
+  const { count: pruned } = await prisma.callLog.deleteMany({
+    where: { createdAt: { lt: threshold } },
+  });
+
+  return { rolledUp: rollups.length, pruned };
+}

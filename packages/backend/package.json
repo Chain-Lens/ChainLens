@@ -12,6 +12,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "rollup-call-logs": "tsx src/scripts/rollup-call-logs.ts",
     "clean": "rm -rf dist"
   },
   "prisma": {
