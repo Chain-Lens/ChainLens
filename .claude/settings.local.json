@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/ihojae/My-Projects/monapi-market log --oneline --all)",
+      "WebFetch(domain:docs.monad.xyz)",
+      "WebFetch(domain:github.com)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm --filter @monapi/shared build:*)",
+      "Bash(pnpm --filter @monapi/contracts compile:*)",
+      "Bash(pnpm --filter @monapi/contracts test:*)",
+      "Bash(pnpm:*)",
+      "Bash(docker:*)",
+      "Bash(pg_isready:*)",
+      "Bash(curl:*)",
+      "Bash(npx hardhat:*)",
+      "Bash(psql:*)",
+      "Bash(python3:*)"
+    ]
+  }
+}
