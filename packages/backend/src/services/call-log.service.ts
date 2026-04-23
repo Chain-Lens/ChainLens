@@ -22,13 +22,16 @@ export interface CallLogInput {
 }
 
 export interface ListingStats {
-  /** [0.0, 1.0] — successful calls / total calls in window. */
+  /** [0.0, 1.0] — pure empirical: successes / totalCalls. 0 when totalCalls=0. */
   successRate: number;
   /** Average latency (ms) across successful calls only. Failed calls often
    *  hit the 30s seller timeout and would pollute the signal. */
   avgLatencyMs: number;
   /** Total calls in the active window. */
   totalCalls: number;
+  /** Successful calls in the window — exposed for Laplace smoothing in
+   *  scoreListing without needing rate × total rounding tricks. */
+  successes: number;
   /** Wall-clock of the most recent call (success or fail). */
   lastCalledAt: Date | null;
   /** Window the stats were computed over, in days. */
@@ -107,13 +110,29 @@ export async function getListingsStats(
 }
 
 /**
- * Composite score for ranking: `successRate * ln(totalCalls + 1)`. Keeps
- * brand-new listings from topping the charts on "100% of 1 call" while
- * rewarding sustained quality. Swap this function out cleanly when ranking
- * iterations land in Phase 2b — keep the signature pure.
+ * Composite score for ranking — Laplace-smoothed success rate × log volume.
+ *
+ *   smoothedRate = (successes + 1) / (totalCalls + 2)   // Beta(1,1) prior
+ *   volumeFactor = ln(totalCalls + e)                    // ≥ 1 always
+ *   score        = smoothedRate × volumeFactor
+ *
+ * Key properties:
+ *   - totalCalls=0 → score = 0.5 × 1.0 = 0.5 (brand-new baseline, not 0).
+ *     Kills the cold-start trap where "no data" means "never gets chosen".
+ *   - Failures depress score sub-linearly thanks to the prior — a handful
+ *     of failures on a 100-call listing barely moves the needle, whereas
+ *     a handful on a 3-call listing hurts a lot.
+ *   - log volume prevents "100% on 1 call" rookies from topping the chart
+ *     over "85% on 200 calls" established players.
+ *
+ * Swap this function out cleanly (e.g., Thompson sampling) without touching
+ * callers. Weighted random sampling in market.routes.ts uses `score + α` as
+ * the selection weight, so as long as score ≥ 0 the sampler works.
  */
 export function scoreListing(stats: ListingStats): number {
-  return stats.successRate * Math.log(stats.totalCalls + 1);
+  const smoothedRate = (stats.successes + 1) / (stats.totalCalls + 2);
+  const volumeFactor = Math.log(stats.totalCalls + Math.E);
+  return smoothedRate * volumeFactor;
 }
 
 // ---------- internals (exported for tests) ----------
@@ -130,15 +149,17 @@ export function aggregateRows(rows: RawRow[], windowDays: number): ListingStats 
       successRate: 0,
       avgLatencyMs: 0,
       totalCalls: 0,
+      successes: 0,
       lastCalledAt: null,
       windowDays,
     };
   }
-  const successes = rows.filter((r) => r.success);
-  const successRate = successes.length / rows.length;
-  const avgLatencyMs = successes.length
+  const successRows = rows.filter((r) => r.success);
+  const successes = successRows.length;
+  const successRate = successes / rows.length;
+  const avgLatencyMs = successes
     ? Math.round(
-        successes.reduce((sum, r) => sum + r.latencyMs, 0) / successes.length,
+        successRows.reduce((sum, r) => sum + r.latencyMs, 0) / successes,
       )
     : 0;
   const lastCalledAt = rows.reduce(
@@ -149,6 +170,7 @@ export function aggregateRows(rows: RawRow[], windowDays: number): ListingStats 
     successRate,
     avgLatencyMs,
     totalCalls: rows.length,
+    successes,
     lastCalledAt,
     windowDays,
   };

@@ -43,6 +43,57 @@ interface OnChainListing {
 
 const SELLER_TIMEOUT_MS = 30_000;
 
+// ──────────────────────────────────────────────────────────────────────
+// Ranking utilities — seeded PRNG + weighted-random shuffle
+// ──────────────────────────────────────────────────────────────────────
+
+/** FNV-1a 32-bit hash — cheap deterministic seed bootstrapping. */
+function hashSeed(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/** Mulberry32 — small, seeded PRNG. Same seed → same sequence. */
+function mulberry32(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function rngFrom(seed: string | undefined): () => number {
+  if (!seed) return Math.random;
+  return mulberry32(hashSeed(seed));
+}
+
+/**
+ * Efraimidis-Spirakis weighted shuffle without replacement.
+ * key_i = -ln(U_i) / w_i, sort ascending → items in weighted-random order.
+ * Equivalent to "repeatedly sample from the distribution, remove picked
+ * item, sample again", but O(n log n) instead of O(n²).
+ */
+function weightedShuffle<T>(
+  items: readonly T[],
+  weights: readonly number[],
+  rng: () => number,
+): T[] {
+  const keyed = items.map((item, i) => {
+    const u = rng() || Number.EPSILON;
+    const w = Math.max(weights[i] ?? 0, 1e-9);
+    return { item, key: -Math.log(u) / w };
+  });
+  keyed.sort((a, b) => a.key - b.key);
+  return keyed.map((k) => k.item);
+}
+
 function marketAddress(): `0x${string}` {
   if (env.CHAIN_LENS_MARKET_ADDRESS) {
     return env.CHAIN_LENS_MARKET_ADDRESS as `0x${string}`;
@@ -136,9 +187,30 @@ async function nextListingId(): Promise<bigint> {
 
 router.get("/listings", async (req, res, next) => {
   try {
-    const n = await nextListingId();
+    // ───── parse query ──────────────────────────────────────────────
+    const q =
+      typeof req.query["q"] === "string" ? req.query["q"].toLowerCase().trim() : undefined;
+    const tag =
+      typeof req.query["tag"] === "string" ? req.query["tag"].toLowerCase().trim() : undefined;
+    const minSuccessRate =
+      typeof req.query["min_success_rate"] === "string"
+        ? Number(req.query["min_success_rate"])
+        : undefined;
+    const maxPriceUsdc =
+      typeof req.query["max_price_usdc"] === "string"
+        ? Number(req.query["max_price_usdc"])
+        : undefined;
+    const seed = typeof req.query["seed"] === "string" ? req.query["seed"] : undefined;
+    const rawLimit =
+      typeof req.query["limit"] === "string" ? Number(req.query["limit"]) : 20;
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 100) : 20;
+    const sortRaw =
+      typeof req.query["sort"] === "string" ? req.query["sort"] : "score";
+    const sort: "score" | "score_strict" | "latest" =
+      sortRaw === "latest" || sortRaw === "score_strict" ? sortRaw : "score";
 
-    // Collect on-chain state for every listing.
+    // ───── collect on-chain state ──────────────────────────────────
+    const n = await nextListingId();
     type RawItem = {
       listingIdNum: number;
       listingId: string;
@@ -169,15 +241,15 @@ router.get("/listings", async (req, res, next) => {
       });
     }
 
-    // Batch-fetch 30d stats for every listing in one SQL round trip.
+    // ───── enrich with stats + score ───────────────────────────────
     const statsMap = await getListingsStats(raw.map((r) => r.listingIdNum));
-
-    const items = raw.map((r) => {
+    let items = raw.map((r) => {
       const stats =
         statsMap.get(r.listingIdNum) ?? {
           successRate: 0,
           avgLatencyMs: 0,
           totalCalls: 0,
+          successes: 0,
           lastCalledAt: null,
           windowDays: 30,
         };
@@ -193,15 +265,71 @@ router.get("/listings", async (req, res, next) => {
       };
     });
 
-    // Default sort: score desc. `?sort=latest` flips to newest-first.
-    // Further sorts (price, popular, reputation-weighted) land in Phase 2b.
-    const sort = typeof req.query["sort"] === "string" ? req.query["sort"] : "score";
-    items.sort((a, b) => {
-      if (sort === "latest") return Number(BigInt(b.listingId) - BigInt(a.listingId));
-      return b.score - a.score;
+    const beforeFilterCount = items.length;
+
+    // ───── apply filters ───────────────────────────────────────────
+    items = items.filter((it) => {
+      // Default hides inactive listings. Admin/debug paths can request raw
+      // view later via a dedicated /admin route; the public search should
+      // never serve inactive.
+      if (!it.active) return false;
+
+      if (q) {
+        const name = String(it.metadata?.name ?? "").toLowerCase();
+        const desc = String(it.metadata?.description ?? "").toLowerCase();
+        if (!name.includes(q) && !desc.includes(q)) return false;
+      }
+      if (tag) {
+        const tags = Array.isArray(it.metadata?.tags)
+          ? (it.metadata?.tags as unknown[]).map((t) => String(t).toLowerCase())
+          : [];
+        if (!tags.includes(tag)) return false;
+      }
+      if (minSuccessRate !== undefined && Number.isFinite(minSuccessRate)) {
+        if (it.stats.successRate < minSuccessRate) return false;
+      }
+      if (maxPriceUsdc !== undefined && Number.isFinite(maxPriceUsdc)) {
+        const atomic = it.metadata?.pricing?.amount;
+        if (typeof atomic === "string" && /^\d+$/.test(atomic)) {
+          const usdc = Number(atomic) / 1_000_000;
+          if (usdc > maxPriceUsdc) return false;
+        }
+      }
+      return true;
     });
 
-    res.json({ items, total: items.length, sort });
+    // ───── rank ────────────────────────────────────────────────────
+    // - score (default): weighted random. Every call has a non-zero chance
+    //   proportional to its score, so new listings aren't buried forever.
+    //   ?seed=<any string> makes the same query reproducible.
+    // - score_strict: deterministic score desc. Debug + admin use.
+    // - latest: listingId desc. No ranking pressure, just recency.
+    if (sort === "latest") {
+      items.sort((a, b) =>
+        Number(BigInt(b.listingId) - BigInt(a.listingId)),
+      );
+    } else if (sort === "score_strict") {
+      items.sort((a, b) => b.score - a.score);
+    } else {
+      const rng = rngFrom(seed);
+      items = weightedShuffle(
+        items,
+        items.map((it) => it.score),
+        rng,
+      );
+    }
+
+    // ───── limit ───────────────────────────────────────────────────
+    const limited = items.slice(0, limit);
+
+    res.json({
+      items: limited,
+      total: items.length,            // post-filter
+      totalBeforeFilter: beforeFilterCount,
+      limit,
+      sort,
+      ...(seed ? { seed } : {}),
+    });
   } catch (err) {
     next(err);
   }
