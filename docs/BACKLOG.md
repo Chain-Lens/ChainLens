@@ -546,6 +546,10 @@ and human buyers.
   text; `<EXTERNAL_DATA>` boundary tagging (already in gateway); capability
   tokens that limit what the agent can do with returned data (e.g.
   read-only flag). Combo: structural + tier-1 regex + source attestation.
+  Current relay/settlement stance is documented in
+  [`RELAY_AND_SETTLEMENT_POLICY.md`](./RELAY_AND_SETTLEMENT_POLICY.md):
+  preserve seller output whenever possible, but separate relay from
+  settlement and mark all seller output as untrusted external content.
 - **Determinism & replay** — same query + same block height → same bytes,
   content-addressable. Absorbs the zkagent-protocol audit-trail idea
   naturally. Enables cross-agent cache sharing.

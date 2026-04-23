@@ -50,6 +50,10 @@ export interface ListingMetadata {
   method?: "GET" | "POST";
   pricing?: { amount?: string; unit?: string };
   tags?: string[];
+  inputs_schema?: unknown;
+  output_schema?: unknown;
+  example_request?: unknown;
+  example_response?: unknown;
   [k: string]: unknown;
 }
 
@@ -130,14 +134,14 @@ function formatPriceUsdc(atomic: string | undefined): string | null {
 export const discoverToolDefinition = {
   name: "chain-lens.discover",
   description:
-    "Search ChainLens v3 listings. Returns metadata, 30-day quality stats (success rate, avg latency, call volume), and a ranking score. Default sort is weighted-random by score so new listings stay discoverable — pass sort='score_strict' for deterministic ranking or seed=<string> for reproducible output.",
+    "Search ChainLens v3 listings like an API search engine. Threads every supported HTTP query to GET /api/market/listings: q, tag, min_success_rate, max_price_usdc, limit, sort, and seed. Returns metadata, endpoint/method, pricing, schemas/examples when sellers provide them, 30-day quality stats, and a ranking score. Default sort is weighted-random by score so new listings stay discoverable — pass sort='score_strict' for deterministic ranking or seed=<string> for reproducible output.",
   inputSchema: {
     type: "object",
     properties: {
       q: {
         type: "string",
         description:
-          "Free-text search over listing name + description (case-insensitive).",
+          "Free-text search over listing name + description. Use this as the main search box query, e.g. 'weather', 'stock price', 'news'.",
       },
       tag: {
         type: "string",

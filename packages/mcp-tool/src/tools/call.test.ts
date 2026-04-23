@@ -89,7 +89,14 @@ function makeDeps(overrides: Partial<CallDeps> = {}): {
         jobRef: FAKE_JOB_REF,
         settleTxHash: FAKE_TX,
         usdc: USDC,
-        data: { price: 150.23 },
+        delivery: "relayed_unmodified",
+        safety: {
+          trusted: false,
+          scanned: true,
+          schemaValid: true,
+          warnings: [],
+        },
+        untrusted_data: { price: 150.23 },
         envelope: "<EXTERNAL_DATA ...>...</EXTERNAL_DATA>",
       },
     }),
@@ -114,7 +121,9 @@ describe("chain-lens.call — happy path", () => {
     assert.equal(result.listingId, "7");
     assert.equal(result.jobRef, FAKE_JOB_REF);
     assert.equal(result.settleTxHash, FAKE_TX);
-    assert.deepEqual(result.data, { price: 150.23 });
+    assert.equal(result.delivery, "relayed_unmodified");
+    assert.equal(result.safety.schemaValid, true);
+    assert.deepEqual(result.untrustedData, { price: 150.23 });
     assert.ok(result.envelope?.includes("EXTERNAL_DATA"));
     assert.equal(result.usdc, USDC);
   });

@@ -7,6 +7,7 @@ import {
   rpcError,
   rpcResult,
   type RpcRequest,
+  type SignTypedDataRequest,
   type SignTxRequest,
 } from "./protocol.js";
 
@@ -22,6 +23,9 @@ export type SignTxDecision =
  * (no gate); 0.0.3 injects decoder + limits + approval prompt.
  */
 export type SignTxPolicy = (tx: Record<string, unknown>) => Promise<SignTxDecision>;
+export type SignTypedDataPolicy = (
+  typedData: Record<string, unknown>,
+) => Promise<SignTxDecision>;
 
 export interface DaemonOptions {
   privateKey: `0x${string}`;
@@ -30,6 +34,8 @@ export interface DaemonOptions {
   onEvent?: (event: DaemonEvent) => void;
   /** Pre-sign policy gate. Omit for no-gate (test/legacy). */
   policy?: SignTxPolicy;
+  /** Pre-sign policy gate for EIP-712 typed-data requests. */
+  typedDataPolicy?: SignTypedDataPolicy;
 }
 
 export type DaemonEvent =
@@ -151,6 +157,9 @@ export async function startDaemon(opts: DaemonOptions): Promise<Daemon> {
       case "sign-tx":
         await handleSignTx(socket, req);
         return;
+      case "sign-typed-data":
+        await handleSignTypedData(socket, req);
+        return;
       case "lock":
         send(socket, rpcResult(req.id, { ok: true }));
         socket.end(() => {
@@ -187,6 +196,41 @@ export async function startDaemon(opts: DaemonOptions): Promise<Daemon> {
       });
       commit?.();
       send(socket, rpcResult(req.id, { signedTransaction: signed }));
+    } catch (err) {
+      send(
+        socket,
+        rpcError(req.id, "signing_failed", err instanceof Error ? err.message : String(err)),
+      );
+    }
+  }
+
+  async function handleSignTypedData(
+    socket: Socket,
+    req: SignTypedDataRequest,
+  ): Promise<void> {
+    const typedData = req.params?.typedData;
+    if (!typedData || typeof typedData !== "object") {
+      send(socket, rpcError(req.id, "invalid_params", "missing params.typedData"));
+      return;
+    }
+    let commit: (() => void) | undefined;
+    if (opts.typedDataPolicy) {
+      const decision = await opts.typedDataPolicy(
+        typedData as Record<string, unknown>,
+      );
+      if (decision.type === "deny") {
+        opts.onEvent?.({ type: "denied", code: decision.code, message: decision.message });
+        send(socket, rpcError(req.id, decision.code, decision.message));
+        return;
+      }
+      commit = decision.commit;
+    }
+    try {
+      const signature = await account.signTypedData(
+        typedData as Parameters<typeof account.signTypedData>[0],
+      );
+      commit?.();
+      send(socket, rpcResult(req.id, { signature }));
     } catch (err) {
       send(
         socket,

@@ -36,7 +36,7 @@ export default function LandingHero() {
 
       <div className={styles.actions}>
         <a
-          href="/marketplace"
+          href="/discover"
           className={styles.btnPrimary}
         >
           Try Testnet

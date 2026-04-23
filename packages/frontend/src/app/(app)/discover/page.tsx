@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { formatUnits } from "viem";
+import type { ListingMetadata, ListingStats } from "@/types/market";
 
 export const metadata: Metadata = {
   title: "Discover APIs — ChainLens",
@@ -10,26 +12,11 @@ export const metadata: Metadata = {
 // Types
 // ──────────────────────────────────────────────────────────────────────
 
-interface DiscoverMeta {
-  name?: string;
-  description?: string;
-  endpoint?: string;
-  pricing?: { amount?: string };
-  tags?: string[];
-}
-
-interface DiscoverStats {
-  successRate: number;
-  avgLatencyMs: number;
-  totalCalls: number;
-  windowDays: number;
-}
-
 interface DiscoverItem {
   listingId: string;
-  metadata: DiscoverMeta | null;
+  metadata: ListingMetadata | null;
   metadataError?: string;
-  stats: DiscoverStats;
+  stats: ListingStats;
   score: number;
 }
 
@@ -93,11 +80,21 @@ function ListingCard({ item }: { item: DiscoverItem }) {
   const m = item.metadata;
   const name = m?.name ?? `Listing #${item.listingId}`;
   const tags = Array.isArray(m?.tags) ? m.tags : [];
+  const price =
+    m?.pricing?.amount && /^\d+$/.test(m.pricing.amount)
+      ? `${formatUnits(BigInt(m.pricing.amount), 6)} USDC`
+      : null;
 
   return (
-    <article className="card flex flex-col gap-3 p-4">
+    <article className="card group relative flex flex-col gap-3 p-4 transition-colors hover:border-[var(--accent)] hover:bg-[var(--bg3)]">
+      <Link
+        href={`/discover/${item.listingId}`}
+        aria-label={`Open ${name}`}
+        className="absolute inset-0 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+      />
+
       {/* Title + price */}
-      <div className="flex items-start justify-between gap-2">
+      <div className="pointer-events-none flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="truncate text-sm font-semibold text-[var(--text)]">
             {name}
@@ -108,22 +105,22 @@ function ListingCard({ item }: { item: DiscoverItem }) {
             </p>
           )}
         </div>
-        {m?.pricing?.amount && (
+        {price && (
           <span className="shrink-0 rounded-md bg-[var(--bg3)] px-2 py-1 text-xs font-semibold text-[var(--text)]">
-            {m.pricing.amount} USDC
+            {price}
           </span>
         )}
       </div>
 
       {/* Endpoint */}
       {m?.endpoint && (
-        <p className="truncate font-mono text-xs text-[var(--text3)]">
+        <p className="pointer-events-none truncate font-mono text-xs text-[var(--text3)]">
           {m.endpoint}
         </p>
       )}
 
       {/* Stats row */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="pointer-events-none flex flex-wrap items-center gap-2">
         <SuccessRateBadge rate={item.stats.successRate} />
         {item.stats.totalCalls > 0 && (
           <span className="text-xs text-[var(--text3)]">
@@ -145,7 +142,7 @@ function ListingCard({ item }: { item: DiscoverItem }) {
 
       {/* Tags */}
       {tags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
+        <div className="relative z-10 flex flex-wrap gap-1">
           {tags.map((t) => (
             <Link
               key={t}
@@ -159,8 +156,16 @@ function ListingCard({ item }: { item: DiscoverItem }) {
       )}
 
       {item.metadataError && (
-        <p className="text-xs text-[#f85149]">metadata unavailable</p>
+        <p className="pointer-events-none text-xs text-[#f85149]">
+          metadata unavailable
+        </p>
       )}
+
+      <div className="pointer-events-none mt-auto pt-2">
+        <span className="inline-flex items-center text-sm font-medium text-[var(--accent)] transition-transform group-hover:translate-x-0.5">
+          View details →
+        </span>
+      </div>
     </article>
   );
 }

@@ -1,6 +1,6 @@
 {
   "name": "@chain-lens/sign",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Encrypted wallet keystore CLI + signing daemon for ChainLens. Spending limits and per-tx approval prompts; the safer alternative to WALLET_PRIVATE_KEY env.",
   "license": "MIT",
   "repository": {

@@ -23,6 +23,7 @@ export interface ListingMetadata {
   endpoint: string;
   method: "GET" | "POST";
   pricing: { amount: string; unit: "per_call" };
+  output_schema?: unknown;
   tags?: string[];
   [k: string]: unknown;
 }

@@ -4,8 +4,8 @@ Encrypted wallet keystore CLI + signing daemon for ChainLens. Planned replacemen
 for the `WALLET_PRIVATE_KEY` environment-variable pattern used by
 `@chain-lens/mcp-tool`.
 
-> **Status:** `0.0.x` **alpha**. 0.0.3 adds spending limits, per-tx
-> approval prompts, and `@chain-lens/mcp-tool` integration via
+> **Status:** `0.0.x` **alpha**. 0.0.4 supports both transaction signing
+> and v3 MCP/x402 `ReceiveWithAuthorization` typed-data signing through
 > `CHAIN_LENS_SIGN_SOCKET`. Use on throwaway wallets while the API settles.
 
 ## Install
@@ -96,6 +96,47 @@ Denials never count against the hour window and are logged to stderr
 (`[denied] <code>: <message>`) so you can tell an expired prompt apart
 from a typo.
 
+`chain-lens-sign status` is the cheapest pre-flight check before starting an
+MCP client. If the daemon is locked, it prints the exact `unlock` command to
+run. If unlocked, it prints the socket path to put in `CHAIN_LENS_SIGN_SOCKET`.
+
+## macOS Login Helper
+
+If you dislike manually finding the approval terminal, use a LaunchAgent to
+open one at login. This is only a convenience wrapper: the Terminal still asks
+for your keystore password, and every payment approval still happens there.
+
+Create `~/Library/LaunchAgents/dev.chainlens.sign.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>dev.chainlens.sign</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/osascript</string>
+    <string>-e</string>
+    <string>tell application "Terminal" to do script "chain-lens-sign unlock --ttl 8h"</string>
+  </array>
+</dict>
+</plist>
+```
+
+Load it:
+
+```bash
+launchctl load ~/Library/LaunchAgents/dev.chainlens.sign.plist
+```
+
+Do not run `chain-lens-sign unlock` as a headless background service. Without
+a TTY, approval prompts auto-deny by design.
+
 ## MCP integration
 
 Once the daemon is unlocked, point `@chain-lens/mcp-tool` at it via
@@ -152,7 +193,9 @@ Length-prefixed JSON RPC over unix socket; permissions follow the process
 - **0.0.1** — keystore management only (init/import/address)
 - **0.0.2** — unlock daemon (unix socket, TTL) + `send-tx`
 - **0.0.3** — MCP integration (`@chain-lens/mcp-tool` reads
-  `CHAIN_LENS_SIGN_SOCKET`) + spending limits + per-tx approval prompt (current)
+  `CHAIN_LENS_SIGN_SOCKET`) + spending limits + per-tx approval prompt
+- **0.0.4** — v3 MCP/x402 typed-data signing for USDC
+  `ReceiveWithAuthorization` (current)
 - **0.1.0** — first production-grade release, tagged when 0.0.x usage settles
 
 ## License

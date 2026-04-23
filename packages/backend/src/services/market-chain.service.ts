@@ -22,6 +22,7 @@ export interface ListingMetadata {
   method?: "GET" | "POST";
   pricing?: { amount?: string; unit?: string };
   inputs_schema?: unknown;
+  output_schema?: unknown;
   example_request?: unknown;
   example_response?: unknown;
   tags?: string[];

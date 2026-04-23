@@ -5,8 +5,8 @@
  * `chain-lens.discover` (which returns ranked lists), inspect targets the
  * "I picked listing #7 — how do I actually call it?" step: full metadata
  * including example_request / example_response, the 30-day stats, a 7-day
- * error breakdown (seller_5xx vs seller_timeout vs metadata_error so the
- * agent can decide whether to retry or pick a different listing), and a
+ * error breakdown (seller_5xx vs seller_timeout vs response_rejected_schema
+ * so the agent can decide whether to retry, skip, or flag the seller), and a
  * human-readable priceUsdc display string.
  *
  * The error breakdown in particular is a token-efficiency play: the agent
@@ -47,9 +47,19 @@ export interface InspectMetadata {
   pricing?: { amount?: string; unit?: string };
   tags?: string[];
   inputs_schema?: unknown;
+  output_schema?: unknown;
   example_request?: unknown;
   example_response?: unknown;
   [k: string]: unknown;
+}
+
+export interface InspectSecurityRecentFailures {
+  schemaRejects: number;
+  injectionRejects: number;
+  tooLargeRejects: number;
+  unserializableRejects: number;
+  totalPolicyRejects: number;
+  hasSchemaRejects: boolean;
 }
 
 export interface InspectResult {
@@ -63,6 +73,7 @@ export interface InspectResult {
   stats: InspectStats;
   score: number;
   recentErrors: InspectRecentErrors;
+  securityRecentFailures: InspectSecurityRecentFailures;
   /** Display-formatted USDC price, derived client-side. */
   priceUsdc: string | null;
 }
@@ -82,10 +93,14 @@ export async function inspectHandler(
       `chain-lens.inspect: backend returned ${res.status} ${res.statusText}`,
     );
   }
-  const body = (await res.json()) as Omit<InspectResult, "priceUsdc">;
+  const body = (await res.json()) as Omit<
+    InspectResult,
+    "priceUsdc" | "securityRecentFailures"
+  >;
 
   return {
     ...body,
+    securityRecentFailures: summarizeSecurityFailures(body.recentErrors.breakdown),
     priceUsdc: formatPriceUsdc(body.metadata?.pricing?.amount),
   };
 }
@@ -95,10 +110,30 @@ function formatPriceUsdc(atomic: string | undefined): string | null {
   return (Number(atomic) / 1_000_000).toFixed(6) + " USDC";
 }
 
+function summarizeSecurityFailures(
+  breakdown: Record<string, number>,
+): InspectSecurityRecentFailures {
+  const schemaRejects = breakdown.response_rejected_schema ?? 0;
+  const injectionRejects = breakdown.response_rejected_injection ?? 0;
+  const tooLargeRejects = breakdown.response_rejected_too_large ?? 0;
+  const unserializableRejects =
+    breakdown.response_rejected_unserializable ?? 0;
+
+  return {
+    schemaRejects,
+    injectionRejects,
+    tooLargeRejects,
+    unserializableRejects,
+    totalPolicyRejects:
+      schemaRejects + injectionRejects + tooLargeRejects + unserializableRejects,
+    hasSchemaRejects: schemaRejects > 0,
+  };
+}
+
 export const inspectToolDefinition = {
   name: "chain-lens.inspect",
   description:
-    "Deep-dive on a single ChainLens listing before calling it. Returns full metadata (including inputs_schema + example_request/example_response), 30-day quality stats, 7-day error breakdown (seller_5xx / seller_timeout / metadata_error / etc.), ranking score, and a human-readable priceUsdc. Token-efficient way to decide whether to call, retry, or skip a listing.",
+    "Deep-dive on a single ChainLens listing before calling it. Returns full metadata (including inputs_schema/output_schema + example_request/example_response), 30-day quality stats, 7-day error breakdown, highlighted policy rejects (response_rejected_schema / response_rejected_injection), ranking score, and a human-readable priceUsdc. Token-efficient way to decide whether to call, retry, or skip a listing.",
   inputSchema: {
     type: "object",
     required: ["listing_id"],

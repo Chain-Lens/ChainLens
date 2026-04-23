@@ -7,7 +7,7 @@ import { encodeFunctionData } from "viem";
 import { generatePrivateKey } from "viem/accounts";
 import { startDaemon } from "./server.js";
 import { connectDaemon, DaemonRpcError } from "./client.js";
-import { buildPolicy } from "./policy.js";
+import { buildPolicy, buildTypedDataPolicy } from "./policy.js";
 import { createLimitEnforcer } from "./limit-enforcer.js";
 import type { PromptContext, PromptResult } from "./approval-prompt.js";
 
@@ -43,6 +43,36 @@ function mkApproveTx(amount: bigint) {
   };
 }
 
+function mkReceiveWithAuthorization(amount: bigint) {
+  return {
+    domain: {
+      name: "USDC",
+      version: "2",
+      chainId: 84532,
+      verifyingContract: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    },
+    types: {
+      ReceiveWithAuthorization: [
+        { name: "from", type: "address" },
+        { name: "to", type: "address" },
+        { name: "value", type: "uint256" },
+        { name: "validAfter", type: "uint256" },
+        { name: "validBefore", type: "uint256" },
+        { name: "nonce", type: "bytes32" },
+      ],
+    },
+    primaryType: "ReceiveWithAuthorization",
+    message: {
+      from: "0x2222222222222222222222222222222222222222",
+      to: "0x45bB56fDB0E6bb14d178E417b67Ed7B3323ffFf7",
+      value: amount,
+      validAfter: 0n,
+      validBefore: 1_776_800_000n,
+      nonce: "0x" + "11".repeat(32),
+    },
+  };
+}
+
 async function mkTestDaemon(opts: {
   prompt: (ctx: PromptContext) => Promise<PromptResult>;
   maxPerTxAtomic?: bigint;
@@ -55,12 +85,18 @@ async function mkTestDaemon(opts: {
     maxPerHourAtomic: opts.maxPerHourAtomic ?? 10_000_000n,
   });
   const policy = buildPolicy({ limits, approvalTimeoutSec: 1, prompt: opts.prompt });
+  const typedDataPolicy = buildTypedDataPolicy({
+    limits,
+    approvalTimeoutSec: 1,
+    prompt: opts.prompt,
+  });
   const pk = generatePrivateKey();
   const daemon = await startDaemon({
     privateKey: pk,
     socketPath,
     ttlMs: 10_000,
     policy,
+    typedDataPolicy,
   });
   const cleanup = async () => {
     await daemon.close("client").catch(() => {});
@@ -161,6 +197,42 @@ describe("daemon policy gate", () => {
       await client
         .signTransaction(mkApproveTx(2_000_000n))
         .catch(() => undefined);
+      assert.equal(env.limits.windowSum(), 0n);
+      client.close();
+    } finally {
+      await env.cleanup();
+    }
+  });
+
+  it("signs ReceiveWithAuthorization typed data and records spend", async () => {
+    const env = await mkTestDaemon({ prompt: async () => ({ approved: true }) });
+    try {
+      const client = await connectDaemon(env.socketPath);
+      const signed = await client.signTypedData(
+        mkReceiveWithAuthorization(3_000_000n),
+      );
+      assert.match(signed.signature, /^0x[0-9a-fA-F]{130}$/);
+      assert.equal(env.limits.windowSum(), 3_000_000n);
+      client.close();
+    } finally {
+      await env.cleanup();
+    }
+  });
+
+  it("rejects ReceiveWithAuthorization typed data over limit", async () => {
+    const env = await mkTestDaemon({
+      prompt: async () => ({ approved: true }),
+      maxPerTxAtomic: 1_000_000n,
+    });
+    try {
+      const client = await connectDaemon(env.socketPath);
+      await assert.rejects(
+        () => client.signTypedData(mkReceiveWithAuthorization(3_000_000n)),
+        (err: unknown) => {
+          assert.equal((err as DaemonRpcError).code, "limit_exceeded");
+          return true;
+        },
+      );
       assert.equal(env.limits.windowSum(), 0n);
       client.close();
     } finally {

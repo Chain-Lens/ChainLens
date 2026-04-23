@@ -31,6 +31,11 @@ const SAMPLE_DETAIL = {
       properties: { ticker: { type: "string" } },
       required: ["ticker"],
     },
+    output_schema: {
+      type: "object",
+      properties: { price: { type: "number" } },
+      required: ["price"],
+    },
     example_request: { ticker: "TSLA" },
     example_response: { price: 150.23 },
   },
@@ -45,8 +50,12 @@ const SAMPLE_DETAIL = {
   score: 2.121,
   recentErrors: {
     windowDays: 7,
-    totalFailures: 2,
-    breakdown: { seller_timeout: 1, seller_5xx: 1 },
+    totalFailures: 4,
+    breakdown: {
+      seller_timeout: 1,
+      seller_5xx: 1,
+      response_rejected_schema: 2,
+    },
   },
 };
 
@@ -60,9 +69,12 @@ describe("inspectHandler", () => {
     assert.equal(calls[0], "http://x/api/market/listings/7");
     assert.equal(out.listingId, "7");
     assert.equal(out.stats.successRate, 0.9);
-    assert.equal(out.recentErrors.totalFailures, 2);
+    assert.equal(out.recentErrors.totalFailures, 4);
     assert.equal(out.recentErrors.breakdown["seller_timeout"], 1);
     assert.equal(out.recentErrors.breakdown["seller_5xx"], 1);
+    assert.equal(out.securityRecentFailures.schemaRejects, 2);
+    assert.equal(out.securityRecentFailures.hasSchemaRejects, true);
+    assert.equal(out.securityRecentFailures.totalPolicyRejects, 2);
   });
 
   it("derives priceUsdc from metadata.pricing.amount", async () => {

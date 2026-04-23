@@ -170,6 +170,9 @@ chain-lens-sign import        # paste a Base Sepolia throwaway private key
 # All per-tx approval prompts appear HERE, not in Claude Desktop/Code.
 chain-lens-sign unlock --ttl 2h
 # → prints: export CHAIN_LENS_SIGN_SOCKET=/home/you/.chain-lens/sign.sock
+
+# Optional pre-flight check from any shell:
+chain-lens-sign status
 ```
 
 Then paste that socket path into the MCP config:
@@ -193,12 +196,23 @@ Then paste that socket path into the MCP config:
 
 Restart Claude Desktop/Code. When you run a paid tool, **watch Terminal A** —
 the prompt asks `approve? [y/N]` within 30 seconds. Type `y` + Enter
-there (not in the Claude window). `chain-lens.request` triggers **two**
-prompts in a row: one for `USDC.approve`, one for `Escrow.createJob`.
+there (not in the Claude window). The v3 `chain-lens.call` flow triggers
+one prompt for `USDC ReceiveWithAuthorization`; legacy v2
+`chain-lens.request` may trigger transaction prompts.
+
+If Claude starts the MCP server while `CHAIN_LENS_SIGN_SOCKET` points at a
+stale or missing socket, startup fails with a message telling you to run
+`chain-lens-sign status` and `chain-lens-sign unlock --ttl 2h` first.
 
 See the [`@chain-lens/sign` README](https://github.com/Chain-Lens/ChainLens/tree/main/packages/sign)
 for keystore details, `unlock --ttl` flags, and the `~/.chain-lens/config.json`
 override file (raise limits, change the 30-second timeout).
+
+**macOS optional convenience:** you can create a LaunchAgent that opens a
+Terminal window and runs `chain-lens-sign unlock --ttl 8h` at login. It still
+requires your keystore password and per-payment approvals in that Terminal
+window; do not run the signer as a headless background daemon because no TTY
+means prompts auto-deny.
 
 ### Option B — `WALLET_PRIVATE_KEY` (legacy, testnet-only)
 
@@ -275,8 +289,9 @@ by reading the `JobCompleted` event from `ApiMarketEscrowV2` on Base Sepolia.
 | `chain-lens.request` returns `status: "TIMEOUT"`. | Gateway didn't finalize within `CHAIN_LENS_POLL_TIMEOUT_MS` (default 120s) — usually a slow seller upstream. | The escrow is still live. Poll later with `chain-lens.status({ job_id })`; the gateway will complete or refund when it catches up. |
 | Tx reverts with `insufficient allowance` / `insufficient balance`. | Wallet is missing USDC on the chosen chain, or a previous `approve` was revoked. | Top up from [faucet.circle.com](https://faucet.circle.com) (Base Sepolia). `chain-lens.request` re-approves automatically. |
 | `WALLET_PRIVATE_KEY is set` warning on stderr at startup. | **Expected.** The tool prints this every time so you notice if it ever ends up in an unintended config (e.g. a committed `.mcp.json`). | If you did intend it and you're on testnet, ignore. If not, remove the key from the config and restart the client. |
-| `chain-lens.request` hangs for 30s+ then errors with `timeout`. | Using the sign daemon and the approval prompt fired in Terminal A (the `chain-lens-sign unlock` window), but nobody typed `y` in time. | Keep the unlock terminal visible while you run paid tools. Every paid request triggers **two** prompts (approve + createJob) — respond to each within 30s. |
-| `sign-tx` denied with `[denied] unknown_target`. | Daemon only signs `USDC.approve|transfer` and `ApiMarketEscrow.pay`/`createJob`. Most often means `CHAIN_ID` points at a network where `CONTRACT_ADDRESSES_V2`/`USDC_ADDRESSES` don't match what the daemon hard-codes. | Check `CHAIN_ID` (`84532` = Base Sepolia, `8453` = Base Mainnet). If the target is correct but unsupported, fall back to `WALLET_PRIVATE_KEY` temporarily. |
+| MCP server fails at startup with `CHAIN_LENS_SIGN_SOCKET is set, but no signing daemon is reachable`. | The socket path is stale, or `chain-lens-sign unlock` is not running. | Run `chain-lens-sign status`. If locked, start `chain-lens-sign unlock --ttl 2h`, copy the printed socket path into MCP env, and restart the MCP client. |
+| `chain-lens.call` hangs for 30s+ then errors with `timeout`. | Using the sign daemon and the approval prompt fired in Terminal A (the `chain-lens-sign unlock` window), but nobody typed `y` in time. | Keep the unlock terminal visible while you run paid tools. v3 calls prompt for `USDC ReceiveWithAuthorization`; respond within 30s. |
+| Signing denied with `[denied] unknown_target`. | Daemon only signs known ChainLens payment shapes: v3 `USDC ReceiveWithAuthorization` typed data plus legacy tx shapes such as `USDC.approve|transfer` and escrow calls. | Check `CHAIN_ID` (`84532` = Base Sepolia, `8453` = Base Mainnet). If the target is correct but unsupported, use the testnet `WALLET_PRIVATE_KEY` path temporarily. |
 | `sign-tx` denied with `[denied] limit_exceeded`. | Per-tx (5 USDC) or rolling 1-hour (50 USDC) ceiling hit. | Edit `~/.chain-lens/config.json` (decimal USDC strings under `limits.maxPerTx` / `limits.maxPerHour`), then Ctrl-C the unlock terminal and re-unlock. |
 | Startup error: `Both WALLET_PRIVATE_KEY and CHAIN_LENS_SIGN_SOCKET are set`. | Tool refuses to pick for you — the two signing paths are mutually exclusive. | Remove whichever one you didn't mean to keep from the MCP config. Migrating to the daemon? Drop `WALLET_PRIVATE_KEY`. |
 

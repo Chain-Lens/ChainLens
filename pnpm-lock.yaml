@@ -183,10 +183,10 @@ importers:
   packages/mcp-tool:
     dependencies:
       '@chain-lens/shared':
-        specifier: workspace:*
+        specifier: 0.0.3
         version: link:../shared
       '@chain-lens/sign':
-        specifier: workspace:*
+        specifier: 0.0.4
         version: link:../sign
       '@modelcontextprotocol/sdk':
         specifier: ^1.0.0

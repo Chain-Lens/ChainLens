@@ -9,7 +9,7 @@
 
 export const MAX_FRAME_SIZE = 64 * 1024;
 
-export type RpcMethod = "address" | "status" | "sign-tx" | "lock";
+export type RpcMethod = "address" | "status" | "sign-tx" | "sign-typed-data" | "lock";
 
 export interface RpcRequestBase {
   id: string;
@@ -33,7 +33,17 @@ export interface SignTxRequest extends RpcRequestBase {
   params: { transaction: Record<string, unknown> };
 }
 
-export type RpcRequest = AddressRequest | StatusRequest | LockRequest | SignTxRequest;
+export interface SignTypedDataRequest extends RpcRequestBase {
+  method: "sign-typed-data";
+  params: { typedData: Record<string, unknown> };
+}
+
+export type RpcRequest =
+  | AddressRequest
+  | StatusRequest
+  | LockRequest
+  | SignTxRequest
+  | SignTypedDataRequest;
 
 export interface AddressResult {
   address: `0x${string}`;
@@ -47,6 +57,10 @@ export interface StatusResult {
 
 export interface SignTxResult {
   signedTransaction: `0x${string}`;
+}
+
+export interface SignTypedDataResult {
+  signature: `0x${string}`;
 }
 
 export interface LockResult {

@@ -5,6 +5,7 @@ import {
   encodeFrame,
   type AddressResult,
   type RpcResponse,
+  type SignTypedDataResult,
   type SignTxResult,
   type StatusResult,
 } from "./protocol.js";
@@ -21,6 +22,7 @@ export interface DaemonClient {
   address(): Promise<AddressResult>;
   status(): Promise<StatusResult>;
   signTransaction(transaction: Record<string, unknown>): Promise<SignTxResult>;
+  signTypedData(typedData: Record<string, unknown>): Promise<SignTypedDataResult>;
   lock(): Promise<void>;
   close(): void;
 }
@@ -63,6 +65,8 @@ export async function connectDaemon(socketPath: string): Promise<DaemonClient> {
     status: () => call<StatusResult>("status"),
     signTransaction: (transaction) =>
       call<SignTxResult>("sign-tx", { transaction }),
+    signTypedData: (typedData) =>
+      call<SignTypedDataResult>("sign-typed-data", { typedData }),
     lock: async () => {
       await call<{ ok: true }>("lock");
     },

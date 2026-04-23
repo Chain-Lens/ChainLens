@@ -1,7 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import { decryptKey, type KeystoreV3 } from "../crypto/keystore.js";
 import { startDaemon } from "../daemon/server.js";
-import { buildPolicy } from "../daemon/policy.js";
+import { buildPolicy, buildTypedDataPolicy } from "../daemon/policy.js";
 import { createLimitEnforcer } from "../daemon/limit-enforcer.js";
 import { createApprovalPrompt } from "../daemon/approval-prompt.js";
 import { loadConfig, atomicToUsdc } from "../config.js";
@@ -25,6 +25,11 @@ export async function runUnlock(argv: string[]): Promise<void> {
     approvalTimeoutSec: config.approvalTimeoutSec,
     prompt: approvalPrompt,
   });
+  const typedDataPolicy = buildTypedDataPolicy({
+    limits,
+    approvalTimeoutSec: config.approvalTimeoutSec,
+    prompt: approvalPrompt,
+  });
 
   const sock = socketPath();
   const daemon = await startDaemon({
@@ -32,6 +37,7 @@ export async function runUnlock(argv: string[]): Promise<void> {
     socketPath: sock,
     ttlMs,
     policy,
+    typedDataPolicy,
     onEvent: (event) => {
       if (event.type === "listening") {
         process.stdout.write(

@@ -33,7 +33,8 @@ Paths
   Keystores:       $CHAIN_LENS_HOME/keystore   (default ~/.chain-lens/keystore)
   Daemon socket:   $CHAIN_LENS_SIGN_SOCKET     (default ~/.chain-lens/sign.sock)
 
-NOTE: 0.0.x alpha. MCP integration and per-tx approval prompts land in 0.0.3.
+NOTE: 0.0.x alpha. Keep the unlock terminal visible; it is the approval console
+for MCP/x402 signing prompts.
 `;
 
 type Handler = (argv: string[]) => Promise<void>;

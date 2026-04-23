@@ -9,7 +9,12 @@ export async function runStatus(): Promise<void> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes("ENOENT") || msg.includes("ECONNREFUSED")) {
-      process.stdout.write(`Locked. No daemon running at ${sock}.\n`);
+      process.stdout.write(
+        `Locked. No approval console daemon is running at ${sock}.\n\n` +
+          `Start it before using MCP/x402 signing through CHAIN_LENS_SIGN_SOCKET:\n` +
+          `  chain-lens-sign unlock --ttl 2h\n\n` +
+          `Keep that terminal open and visible; approval prompts appear there.\n`,
+      );
       return;
     }
     throw err;
@@ -20,7 +25,9 @@ export async function runStatus(): Promise<void> {
     process.stdout.write(
       `Unlocked: ${status.address}\n` +
         `Socket:   ${sock}\n` +
-        `TTL left: ${formatDuration(status.ttlRemainingMs)}\n`,
+        `TTL left: ${formatDuration(status.ttlRemainingMs)}\n` +
+        `MCP env:  CHAIN_LENS_SIGN_SOCKET=${sock}\n` +
+        `Console:  keep the unlock terminal visible for approval prompts.\n`,
     );
   } finally {
     client.close();

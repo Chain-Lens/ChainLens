@@ -41,3 +41,4 @@ AUDIT_REMAINING.md
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+.env.test

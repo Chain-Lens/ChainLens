@@ -9,6 +9,8 @@ import { validate } from "../middleware/validate.js";
 import { AppError, BadRequestError } from "../utils/errors.js";
 import { assertSafeOutboundUrl } from "../utils/network.js";
 import { logger } from "../utils/logger.js";
+import { scanResponse } from "../services/injection-filter.service.js";
+import { validateResponseShape } from "../services/response-schema.service.js";
 
 const EDITABLE_KEYS = new Set([
   "name",
@@ -37,6 +39,99 @@ function rejectNonEditableKeys(req: Request, _res: Response, next: NextFunction)
 }
 
 const router = Router();
+
+const preflightSchema = z.object({
+  endpoint: z.string().url(),
+  method: z.enum(["GET", "POST"]).optional(),
+  payload: z.record(z.string(), z.unknown()).optional(),
+  output_schema: z.record(z.string(), z.unknown()),
+});
+
+// POST /seller/preflight — registration-time self-test for a prospective
+// listing. Public on purpose: sellers need this before they have a stored
+// listing or seller-auth JWT. SSRF protections still apply via
+// assertSafeOutboundUrl.
+router.post(
+  "/preflight",
+  validate(preflightSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const startedAt = Date.now();
+      const { endpoint, method = "GET", payload = {}, output_schema } =
+        req.body as z.infer<typeof preflightSchema>;
+      const safeUrl = await assertSafeOutboundUrl(endpoint);
+
+      const fetchOptions: RequestInit = {
+        method,
+        signal: AbortSignal.timeout(8000),
+        redirect: "error",
+      };
+
+      if (method === "POST") {
+        fetchOptions.headers = { "Content-Type": "application/json" };
+        fetchOptions.body = JSON.stringify(payload);
+      } else if (Object.keys(payload).length > 0) {
+        for (const [key, value] of Object.entries(payload)) {
+          safeUrl.searchParams.set(key, String(value));
+        }
+      }
+
+      let status: number | null = null;
+      let body: unknown = null;
+      let error: string | null = null;
+      let schemaValid: boolean | null = null;
+      let warnings: string[] = [];
+
+      try {
+        const response = await fetch(safeUrl, fetchOptions);
+        status = response.status;
+        const text = await response.text();
+        try {
+          body = JSON.parse(text);
+        } catch {
+          body = text;
+        }
+
+        const scan = scanResponse(body);
+        if (!scan.clean) {
+          warnings.push(scan.reason ?? "response_rejected");
+          error = scan.reason ?? "response_rejected";
+        }
+
+        const schemaCheck = validateResponseShape(body, {
+          endpoint,
+          method,
+          output_schema,
+        });
+        schemaValid = schemaCheck.applicable ? schemaCheck.valid : null;
+        if (schemaCheck.applicable && !schemaCheck.valid) {
+          warnings.push(
+            `schema_validation_failed: ${schemaCheck.reason ?? "unknown"}`,
+          );
+          error =
+            error ??
+            `schema_validation_failed: ${schemaCheck.reason ?? "unknown"}`;
+        }
+      } catch (err) {
+        error = err instanceof Error ? err.message : "Request failed";
+      }
+
+      res.json({
+        status,
+        body,
+        error,
+        latencyMs: Date.now() - startedAt,
+        safety: {
+          scanned: true,
+          schemaValid,
+          warnings,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 router.use(requireSeller);
 

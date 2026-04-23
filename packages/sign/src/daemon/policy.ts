@@ -10,9 +10,14 @@
 
 import type { SignTxPolicy, SignTxDecision } from "./server.js";
 import { decodeTx } from "./tx-decoder.js";
+import { decodeTypedData } from "./typed-data-decoder.js";
 import type { LimitEnforcer } from "./limit-enforcer.js";
 import { atomicToUsdc } from "../config.js";
-import type { PromptContext, PromptResult } from "./approval-prompt.js";
+import type {
+  DecodedSpend,
+  PromptContext,
+  PromptResult,
+} from "./approval-prompt.js";
 
 export interface PolicyOptions {
   limits: LimitEnforcer;
@@ -35,36 +40,59 @@ export function buildPolicy(opts: PolicyOptions): SignTxPolicy {
       );
     }
 
-    const check = opts.limits.check(decoded.amountAtomic);
-    if (!check.ok) {
-      const which = check.reason === "per-tx-exceeded" ? "per-tx" : "per-hour";
+    return checkLimitsAndPrompt(opts, decoded);
+  };
+}
+
+export function buildTypedDataPolicy(opts: PolicyOptions): SignTxPolicy {
+  return async (typedData) => {
+    const decoded = decodeTypedData(typedData);
+
+    if (decoded.kind === "unknown") {
       return deny(
-        "limit_exceeded",
-        `refusing: ${which} limit exceeded — ` +
-          `offending ${atomicToUsdc(check.offendingAtomic)} USDC > cap ${atomicToUsdc(check.limitAtomic)} USDC. ` +
-          `Edit ~/.chain-lens/config.json to raise.`,
+        "unknown_target",
+        `refusing: unrecognized typed-data request (${decoded.reason}). ` +
+          `0.0.4 daemon only signs USDC ReceiveWithAuthorization typed data.`,
       );
     }
 
-    const result = await opts.prompt({
-      decoded,
-      remainingHourAtomic: check.remainingHourAtomic,
-      timeoutSec: opts.approvalTimeoutSec,
-    });
-    if (!result.approved) {
-      const code =
-        result.reason === "timeout"
-          ? "timeout"
-          : result.reason === "no-tty"
-            ? "no_tty"
-            : "denied";
-      const verb = result.reason === "timeout" ? "did not respond" : "denied";
-      return deny(code, `user ${verb} approval`);
-    }
-    return {
-      type: "allow",
-      commit: () => opts.limits.record(decoded.amountAtomic),
-    };
+    return checkLimitsAndPrompt(opts, decoded);
+  };
+}
+
+async function checkLimitsAndPrompt(
+  opts: PolicyOptions,
+  decoded: Exclude<DecodedSpend, { kind: "unknown" }>,
+): Promise<SignTxDecision> {
+  const check = opts.limits.check(decoded.amountAtomic);
+  if (!check.ok) {
+    const which = check.reason === "per-tx-exceeded" ? "per-tx" : "per-hour";
+    return deny(
+      "limit_exceeded",
+      `refusing: ${which} limit exceeded — ` +
+        `offending ${atomicToUsdc(check.offendingAtomic)} USDC > cap ${atomicToUsdc(check.limitAtomic)} USDC. ` +
+        `Edit ~/.chain-lens/config.json to raise.`,
+    );
+  }
+
+  const result = await opts.prompt({
+    decoded,
+    remainingHourAtomic: check.remainingHourAtomic,
+    timeoutSec: opts.approvalTimeoutSec,
+  });
+  if (!result.approved) {
+    const code =
+      result.reason === "timeout"
+        ? "timeout"
+        : result.reason === "no-tty"
+          ? "no_tty"
+          : "denied";
+    const verb = result.reason === "timeout" ? "did not respond" : "denied";
+    return deny(code, `user ${verb} approval`);
+  }
+  return {
+    type: "allow",
+    commit: () => opts.limits.record(decoded.amountAtomic),
   };
 }
 

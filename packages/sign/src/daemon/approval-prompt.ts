@@ -12,9 +12,12 @@
 import { createInterface, type Interface } from "node:readline";
 import { atomicToUsdc } from "../config.js";
 import type { DecodedTx } from "./tx-decoder.js";
+import type { DecodedTypedData } from "./typed-data-decoder.js";
+
+export type DecodedSpend = DecodedTx | DecodedTypedData;
 
 export interface PromptContext {
-  decoded: DecodedTx;
+  decoded: DecodedSpend;
   remainingHourAtomic: bigint;
   timeoutSec: number;
 }
@@ -106,6 +109,7 @@ function renderSummary(ctx: PromptContext): string {
     transfer: "USDC transfer",
     pay: "Escrow.pay",
     createJob: "Escrow.createJob",
+    receiveWithAuthorization: "USDC ReceiveWithAuthorization",
   };
 
   lines.push(`  kind:       ${kindLabel[decoded.kind]}`);

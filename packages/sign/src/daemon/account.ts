@@ -18,8 +18,11 @@ export async function daemonAccount(client: DaemonClient): Promise<LocalAccount>
     async signMessage() {
       throw new Error("signMessage: not implemented (daemon 0.0.2 supports sign-tx only)");
     },
-    async signTypedData() {
-      throw new Error("signTypedData: not implemented (daemon 0.0.2 supports sign-tx only)");
+    async signTypedData(typedData) {
+      const { signature } = await client.signTypedData(
+        typedData as unknown as Record<string, unknown>,
+      );
+      return signature;
     },
   });
 }

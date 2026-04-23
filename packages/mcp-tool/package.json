@@ -1,6 +1,6 @@
 {
   "name": "@chain-lens/mcp-tool",
-  "version": "0.0.13",
+  "version": "0.1.1",
   "description": "ChainLens MCP tool — discover sellers, request data, check job status from Claude Desktop and other MCP clients.",
   "license": "MIT",
   "repository": {
@@ -34,8 +34,8 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "@chain-lens/shared": "workspace:*",
-    "@chain-lens/sign": "workspace:*",
+    "@chain-lens/shared": "0.0.3",
+    "@chain-lens/sign": "0.0.4",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "viem": "^2.21.0"
   },

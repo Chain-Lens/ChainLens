@@ -58,7 +58,14 @@ export interface CallResult {
   listingId: string;
   jobRef: `0x${string}`;
   settleTxHash: `0x${string}`;
-  data: unknown;
+  delivery: "relayed_unmodified" | "rejected_untrusted";
+  safety: {
+    trusted: false;
+    scanned: boolean;
+    schemaValid: boolean | null;
+    warnings: string[];
+  };
+  untrustedData: unknown;
   envelope?: string;
   usdc?: `0x${string}`;
 }
@@ -176,7 +183,14 @@ export async function callHandler(
     listingId?: string;
     jobRef?: `0x${string}`;
     settleTxHash?: `0x${string}`;
-    data?: unknown;
+    delivery?: "relayed_unmodified" | "rejected_untrusted";
+    safety?: {
+      trusted: false;
+      scanned: boolean;
+      schemaValid: boolean | null;
+      warnings: string[];
+    };
+    untrusted_data?: unknown;
     envelope?: string;
     usdc?: `0x${string}`;
   };
@@ -192,7 +206,14 @@ export async function callHandler(
     listingId: body.listingId ?? input.listing_id,
     jobRef: body.jobRef,
     settleTxHash: body.settleTxHash,
-    data: body.data,
+    delivery: body.delivery ?? "relayed_unmodified",
+    safety: body.safety ?? {
+      trusted: false,
+      scanned: false,
+      schemaValid: null,
+      warnings: [],
+    },
+    untrustedData: body.untrusted_data,
     ...(body.envelope !== undefined ? { envelope: body.envelope } : {}),
     ...(body.usdc !== undefined ? { usdc: body.usdc } : {}),
   };

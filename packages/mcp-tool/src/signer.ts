@@ -31,7 +31,19 @@ export async function resolveSigner(
   config: McpConfig,
 ): Promise<Signer | undefined> {
   if (config.signSocketPath) {
-    const client = await connectDaemon(config.signSocketPath);
+    let client;
+    try {
+      client = await connectDaemon(config.signSocketPath);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(
+        `CHAIN_LENS_SIGN_SOCKET is set, but no signing daemon is reachable at ${config.signSocketPath}.\n` +
+          `Start the approval console first:\n\n` +
+          `  chain-lens-sign status\n` +
+          `  chain-lens-sign unlock --ttl 2h\n\n` +
+          `Keep the unlock terminal visible while using paid MCP tools. Original error: ${message}`,
+      );
+    }
     // daemonAccount returns `Promise<Account>` — a superset of LocalAccount
     // (the daemon exposes signTypedData but not always the extra LocalAccount
     // fields). Cast to our Signer shape, which is the subset we actually use.
