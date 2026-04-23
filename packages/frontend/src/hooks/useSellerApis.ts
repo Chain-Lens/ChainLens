@@ -40,9 +40,13 @@ export function useSellerApis(
     if (!address) return;
     setLoading(true);
     setError(null);
-    const path = authenticated ? `/seller/listings` : `/apis/seller/${address}`;
+    if (!authenticated) {
+      setApis([]);
+      setLoading(false);
+      return;
+    }
     apiClient
-      .get<SellerApi[]>(path)
+      .get<SellerApi[]>(`/seller/listings`)
       .then(setApis)
       .catch((err) =>
         setError(err instanceof Error ? err.message : "Failed to load APIs"),

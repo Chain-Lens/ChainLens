@@ -47,7 +47,7 @@ export default function SellerPage() {
 
   async function handleDelete(apiId: string) {
     if (!confirm("정말 삭제하시겠습니까?")) return;
-    await apiClient.delete(`/apis/${apiId}`, { sellerAddress: address });
+    await apiClient.delete(`/seller/listings/${apiId}`);
     refetch();
   }
 

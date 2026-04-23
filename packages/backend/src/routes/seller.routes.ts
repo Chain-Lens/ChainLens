@@ -207,4 +207,20 @@ router.patch(
   },
 );
 
+// DELETE /seller/listings/:id — owner-scoped delete.
+router.delete(
+  "/listings/:id",
+  async (req: SellerAuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const result = await apiService.deleteApi(
+        req.params["id"] as string,
+        req.sellerAddress!,
+      );
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 export default router;
