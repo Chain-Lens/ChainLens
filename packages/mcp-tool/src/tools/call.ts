@@ -5,9 +5,11 @@
  *   1. Sign a USDC ReceiveWithAuthorization off-chain. `to` is the
  *      ChainLensMarket contract (NOT the seller); the contract pulls the
  *      USDC inside `settle()` once the Gateway confirms the seller ran.
- *   2. POST {inputs, payment} to /api/market/call/:listing_id. The Gateway
- *      proxies the request to the seller, and on success submits our signed
- *      authorization to ChainLensMarket.settle() — a single on-chain tx.
+ *   2. GET /api/x402/:listing_id with an `X-Payment` header. Inputs are
+ *      encoded as query parameters, so the paid call has no request body.
+ *      The Gateway proxies the request to the seller, and on success submits
+ *      our signed authorization to ChainLensMarket.settle() — a single
+ *      on-chain tx.
  *   3. Return the seller's response body plus the settle tx hash.
  *
  * Failed seller calls (5xx, timeout) → the Gateway drops the auth without
@@ -50,7 +52,7 @@ export interface CallDeps {
   nowSeconds?: () => bigint;
   /** How long the authorization stays valid. Default 3600s. */
   authValidSeconds?: number;
-  /** Abort the Gateway POST after this many ms. Default 150_000. */
+  /** Abort the Gateway GET after this many ms. Default 150_000. */
   callTimeoutMs?: number;
 }
 
@@ -141,28 +143,41 @@ export async function callHandler(
   });
   const sig = parseSignature(signature);
 
-  // ---------- Gateway POST ----------
-  const url = `${deps.apiBaseUrl}/market/call/${input.listing_id}`;
+  // ---------- Gateway x402 GET ----------
+  const url = new URL(`${deps.apiBaseUrl}/x402/${input.listing_id}`);
+  for (const [key, value] of Object.entries(input.inputs)) {
+    if (value === undefined || value === null) continue;
+    url.searchParams.set(key, String(value));
+  }
   const signal = deps.callTimeoutMs
     ? AbortSignal.timeout(deps.callTimeoutMs)
     : AbortSignal.timeout(150_000);
-
-  const res = await deps.fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      inputs: input.inputs,
-      payment: {
-        buyer: deps.signer.address,
-        amount: input.amount,
-        validAfter: validAfter.toString(),
-        validBefore: validBefore.toString(),
-        nonce,
-        v: Number(sig.v),
-        r: sig.r,
-        s: sig.s,
+  const xPayment = Buffer.from(
+    JSON.stringify({
+      x402Version: 1,
+      scheme: "exact",
+      network: deps.chainId === 8453 ? "base" : "base-sepolia",
+      payload: {
+        authorization: {
+          from: deps.signer.address,
+          to: deps.marketAddress,
+          value: input.amount,
+          validAfter: validAfter.toString(),
+          validBefore: validBefore.toString(),
+          nonce,
+        },
+        signature: {
+          v: Number(sig.v),
+          r: sig.r,
+          s: sig.s,
+        },
       },
     }),
+  ).toString("base64url");
+
+  const res = await deps.fetch(url, {
+    method: "GET",
+    headers: { "X-Payment": xPayment },
     signal,
   });
 
@@ -222,7 +237,7 @@ export async function callHandler(
 export const callToolDefinition = {
   name: "chain-lens.call",
   description:
-    "Invoke a ChainLens v3 listing via x402. Signs a USDC ReceiveWithAuthorization, POSTs it with inputs to the Gateway, which calls the seller API and settles on-chain only on success. Failed seller calls drop the signature — no USDC moves.",
+    "Invoke a ChainLens v3 listing via x402. Signs a USDC ReceiveWithAuthorization, sends it as an X-Payment header on a GET request, and the Gateway settles on-chain only on success. Failed seller calls drop the signature — no USDC moves.",
   inputSchema: {
     type: "object",
     required: ["listing_id", "inputs", "amount"],

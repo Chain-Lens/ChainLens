@@ -123,7 +123,10 @@ export async function register(data: {
 
 export async function listBySeller(sellerAddress: string) {
   const apis = await prisma.apiListing.findMany({
-    where: { sellerAddress: sellerAddress.toLowerCase() },
+    where: {
+      sellerAddress: sellerAddress.toLowerCase(),
+      contractVersion: "V3",
+    },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -189,7 +192,10 @@ export async function updateStatus(
 // seller auth in the route layer, never exposed on public /apis.
 export async function listBySellerWithEndpoint(sellerAddress: string) {
   const apis = await prisma.apiListing.findMany({
-    where: { sellerAddress: sellerAddress.toLowerCase() },
+    where: {
+      sellerAddress: sellerAddress.toLowerCase(),
+      contractVersion: "V3",
+    },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,

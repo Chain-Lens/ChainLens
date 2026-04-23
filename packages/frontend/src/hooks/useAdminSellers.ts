@@ -25,7 +25,19 @@ export function useAdminSellers(enabled: boolean) {
     setError(null);
     apiClient
       .get<{ items: AdminSeller[] }>("/admin/sellers")
-      .then((res) => setSellers(res.items))
+      .then((res) =>
+        setSellers(
+          res.items.map((seller) => ({
+            ...seller,
+            registered: seller.registered ?? false,
+            active: seller.active ?? false,
+            name: seller.name ?? null,
+            jobsCompleted: seller.jobsCompleted ?? 0,
+            jobsFailed: seller.jobsFailed ?? 0,
+            earningsUsdcAtomic: seller.earningsUsdcAtomic ?? "0",
+          })),
+        ),
+      )
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Failed to load sellers");
       })

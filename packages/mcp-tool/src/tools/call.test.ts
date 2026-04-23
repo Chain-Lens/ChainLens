@@ -45,6 +45,7 @@ function fakeSigner(captured: SignCapture[]): Signer {
 interface FetchCall {
   url: string;
   method: string | undefined;
+  headers: Record<string, string>;
   body: unknown;
 }
 
@@ -61,7 +62,12 @@ function fakeFetch(
     } catch {
       body = init.body;
     }
-    capture.push({ url: String(url), method: init.method, body });
+    capture.push({
+      url: String(url),
+      method: init.method,
+      headers: Object.fromEntries(new Headers(init.headers).entries()),
+      body,
+    });
     const resBody =
       "bodyText" in response
         ? response.bodyText
@@ -151,7 +157,7 @@ describe("chain-lens.call — happy path", () => {
     assert.equal(s.message["nonce"], FAKE_NONCE);
   });
 
-  it("POSTs the expected payload to /market/call/:id", async () => {
+  it("GETs /x402/:id with query inputs and X-Payment header", async () => {
     const { deps, calls } = makeDeps();
     await callHandler(
       { listing_id: "7", inputs: { ticker: "TSLA" }, amount: "50000" },
@@ -159,21 +165,37 @@ describe("chain-lens.call — happy path", () => {
     );
     assert.equal(calls.length, 1);
     const c = calls[0]!;
-    assert.equal(c.url, "https://gw.example/api/market/call/7");
-    assert.equal(c.method, "POST");
-    const body = c.body as {
-      inputs: Record<string, unknown>;
-      payment: Record<string, unknown>;
+    assert.equal(c.url, "https://gw.example/api/x402/7?ticker=TSLA");
+    assert.equal(c.method, "GET");
+    assert.equal(c.body, undefined);
+    assert.ok(c.headers["x-payment"]);
+
+    const payment = JSON.parse(
+      Buffer.from(c.headers["x-payment"]!, "base64url").toString("utf8"),
+    ) as {
+      x402Version: number;
+      scheme: string;
+      network: string;
+      payload: {
+        authorization: Record<string, unknown>;
+        signature: Record<string, unknown>;
+      };
     };
-    assert.deepEqual(body.inputs, { ticker: "TSLA" });
-    assert.equal(body.payment["buyer"], BUYER);
-    assert.equal(body.payment["amount"], "50000");
-    assert.equal(body.payment["validAfter"], "0");
-    assert.equal(body.payment["validBefore"], String(1_776_800_000n + 3_600n));
-    assert.equal(body.payment["nonce"], FAKE_NONCE);
-    assert.equal(typeof body.payment["v"], "number");
-    assert.match(String(body.payment["r"]), /^0x[0-9a-f]{64}$/);
-    assert.match(String(body.payment["s"]), /^0x[0-9a-f]{64}$/);
+    assert.equal(payment.x402Version, 1);
+    assert.equal(payment.scheme, "exact");
+    assert.equal(payment.network, "base-sepolia");
+    assert.equal(payment.payload.authorization["from"], BUYER);
+    assert.equal(payment.payload.authorization["to"], MARKET);
+    assert.equal(payment.payload.authorization["value"], "50000");
+    assert.equal(payment.payload.authorization["validAfter"], "0");
+    assert.equal(
+      payment.payload.authorization["validBefore"],
+      String(1_776_800_000n + 3_600n),
+    );
+    assert.equal(payment.payload.authorization["nonce"], FAKE_NONCE);
+    assert.equal(typeof payment.payload.signature["v"], "number");
+    assert.match(String(payment.payload.signature["r"]), /^0x[0-9a-f]{64}$/);
+    assert.match(String(payment.payload.signature["s"]), /^0x[0-9a-f]{64}$/);
   });
 });
 

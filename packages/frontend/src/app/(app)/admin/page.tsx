@@ -4,9 +4,7 @@ import { useMemo, useState } from "react";
 import { formatUnits } from "viem";
 import { useAccount } from "wagmi";
 import ApprovalCard from "@/components/admin/ApprovalCard";
-import JobsTab from "@/components/admin/JobsTab";
 import SellersTab from "@/components/admin/SellersTab";
-import TasksTab from "@/components/admin/TasksTab";
 import ConnectButton from "@/components/shared/ConnectButton";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import StatusBadge from "@/components/shared/StatusBadge";
@@ -14,14 +12,12 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { useAdminAllApis } from "@/hooks/useAdminAllApis";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 
-type AdminTab = "pending" | "apis" | "sellers" | "jobs" | "tasks";
+type AdminTab = "pending" | "apis" | "sellers";
 
 const TABS: Array<{ id: AdminTab; label: string }> = [
   { id: "pending", label: "Pending" },
   { id: "apis", label: "All APIs" },
   { id: "sellers", label: "Sellers" },
-  { id: "jobs", label: "Jobs" },
-  { id: "tasks", label: "Tasks" },
 ];
 
 export default function AdminPage() {
@@ -161,8 +157,6 @@ export default function AdminPage() {
         />
       )}
       {activeTab === "sellers" && <SellersTab enabled={activeTab === "sellers"} />}
-      {activeTab === "jobs" && <JobsTab enabled={activeTab === "jobs"} />}
-      {activeTab === "tasks" && <TasksTab enabled={activeTab === "tasks"} />}
     </main>
   );
 }
@@ -208,13 +202,15 @@ function AllApisTab({
   error: string | null;
   apis: Array<{
     id: string;
+    contractVersion?: string | null;
+    onChainId?: number | null;
     name: string;
     category: string;
     status: string;
     price: string;
     sellerAddress: string;
     createdAt: string;
-    _count: { payments: number };
+    _count?: { payments?: number };
   }>;
 }) {
   if (loading) return <LoadingSpinner />;
@@ -245,7 +241,12 @@ function AllApisTab({
             >
               <td className="px-4 py-3">
                 <div className="font-medium text-[var(--text)]">{api.name}</div>
-                <div className="text-xs text-[var(--text3)]">{api.category}</div>
+                <div className="text-xs text-[var(--text3)]">
+                  {api.category}
+                  {api.contractVersion === "V3" && typeof api.onChainId === "number"
+                    ? ` · v3 #${api.onChainId}`
+                    : " · legacy"}
+                </div>
               </td>
               <td className="px-4 py-3">
                 <StatusBadge status={api.status} />
@@ -257,7 +258,7 @@ function AllApisTab({
                 {formatUnits(BigInt(api.price), 6)} USDC
               </td>
               <td className="px-4 py-3 text-right text-[var(--text2)]">
-                {api._count.payments}
+                {api._count?.payments ?? 0}
               </td>
               <td className="px-4 py-3 text-xs text-[var(--text3)]">
                 {new Date(api.createdAt).toLocaleDateString()}

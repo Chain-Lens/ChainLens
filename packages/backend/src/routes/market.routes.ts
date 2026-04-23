@@ -341,7 +341,7 @@ router.get("/listings/:id", async (req, res, next) => {
 //   4. seller OK → settle() on-chain (pulls USDC via EIP-3009) → return 200
 //   5. seller fail → drop auth, return 502 — USDC never moves
 
-interface PaymentAuth {
+export interface PaymentAuth {
   buyer: `0x${string}`;
   amount: string;
   validAfter: string;
@@ -352,7 +352,7 @@ interface PaymentAuth {
   s: `0x${string}`;
 }
 
-const receiveWithAuthorizationTypes = {
+export const receiveWithAuthorizationTypes = {
   ReceiveWithAuthorization: [
     { name: "from", type: "address" },
     { name: "to", type: "address" },
@@ -363,7 +363,7 @@ const receiveWithAuthorizationTypes = {
   ],
 } as const;
 
-function parsePayment(raw: unknown): PaymentAuth {
+export function parsePayment(raw: unknown): PaymentAuth {
   if (!raw || typeof raw !== "object") throw new Error("missing payment");
   const p = raw as Record<string, unknown>;
   const need = (k: string) => {
@@ -503,7 +503,7 @@ async function recoverPaymentSigner(payment: PaymentAuth) {
   try {
     return await recoverTypedDataAddress({
       domain: {
-        name: "USD Coin",
+        name: "USDC",
         version: "2",
         chainId,
         verifyingContract: usdcAddress(),
@@ -529,10 +529,22 @@ async function recoverPaymentSigner(payment: PaymentAuth) {
   }
 }
 
-router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next: NextFunction) => {
-  const t0 = Date.now();
-  const listingIdStr = req.params["listingId"] as string;
-
+export async function handlePaidListingCall({
+  listingIdStr,
+  inputs,
+  payment,
+  res,
+  next,
+  startedAt = Date.now(),
+}: {
+  listingIdStr: string;
+  inputs: unknown;
+  payment: PaymentAuth;
+  res: ExpressResponse;
+  next: NextFunction;
+  startedAt?: number;
+}) {
+  const t0 = startedAt;
   // Pre-listing caller errors — these don't belong in CallLog (no listing
   // context to attribute them to). Return 400 and bail.
   if (!/^\d+$/.test(listingIdStr)) {
@@ -540,19 +552,6 @@ router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next:
     return;
   }
   const listingId = BigInt(listingIdStr);
-
-  const body = req.body as { inputs?: unknown; payment?: unknown };
-  const inputs = body?.inputs ?? {};
-  let payment: PaymentAuth;
-  try {
-    payment = parsePayment(body?.payment);
-  } catch (e) {
-    res.status(400).json({
-      error: "invalid payment",
-      detail: e instanceof Error ? e.message : String(e),
-    });
-    return;
-  }
 
   // Past this point we have a listing id + buyer → every exit path feeds
   // exactly one CallLog row. The outcome record is mutated in place at each
@@ -792,7 +791,7 @@ router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next:
           expectedBuyer: payment.buyer,
           recoveredSigner,
           eip712Domain: {
-            name: "USD Coin",
+            name: "USDC",
             version: "2",
             chainId: publicClient.chain?.id,
             verifyingContract: usdcAddress(),
@@ -880,6 +879,27 @@ router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next:
       logger.warn({ err: String(e) }, "call log insert failed"),
     );
   }
+}
+
+router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next: NextFunction) => {
+  const body = req.body as { inputs?: unknown; payment?: unknown };
+  let payment: PaymentAuth;
+  try {
+    payment = parsePayment(body?.payment);
+  } catch (e) {
+    res.status(400).json({
+      error: "invalid payment",
+      detail: e instanceof Error ? e.message : String(e),
+    });
+    return;
+  }
+  await handlePaidListingCall({
+    listingIdStr: req.params["listingId"] as string,
+    inputs: body?.inputs ?? {},
+    payment,
+    res,
+    next,
+  });
 });
 
 export default router;

@@ -5,13 +5,15 @@ import { apiClient } from "@/lib/api-client";
 
 export interface AdminApi {
   id: string;
+  contractVersion?: string | null;
+  onChainId?: number | null;
   name: string;
   category: string;
   status: string;
   price: string;
   sellerAddress: string;
   createdAt: string;
-  _count: { payments: number };
+  _count?: { payments?: number };
 }
 
 export function useAdminAllApis(isAuthenticated: boolean) {
@@ -28,7 +30,16 @@ export function useAdminAllApis(isAuthenticated: boolean) {
     setError(null);
     apiClient
       .get<AdminApi[]>("/admin/apis")
-      .then(setApis)
+      .then((rows) =>
+        setApis(
+          rows.map((api) => ({
+            ...api,
+            _count: {
+              payments: api._count?.payments ?? 0,
+            },
+          })),
+        ),
+      )
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Failed to load APIs");
       })

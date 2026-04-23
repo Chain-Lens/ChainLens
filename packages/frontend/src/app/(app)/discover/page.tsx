@@ -26,6 +26,23 @@ interface DiscoverResponse {
   totalBeforeFilter: number;
 }
 
+type DiscoverLoadErrorKind =
+  | "api_missing"
+  | "backend_unreachable"
+  | "backend_error";
+
+interface DiscoverLoadError {
+  kind: DiscoverLoadErrorKind;
+  title: string;
+  message: string;
+  detail?: string;
+  status?: number;
+}
+
+type DiscoverLoadResult =
+  | { ok: true; data: DiscoverResponse }
+  | { ok: false; error: DiscoverLoadError };
+
 // ──────────────────────────────────────────────────────────────────────
 // Data fetching
 // ──────────────────────────────────────────────────────────────────────
@@ -37,21 +54,74 @@ async function fetchListings(params: {
   q?: string;
   tag?: string;
   sort?: string;
-}): Promise<DiscoverResponse> {
+}): Promise<DiscoverLoadResult> {
   const qs = new URLSearchParams();
   if (params.q)    qs.set("q",    params.q);
   if (params.tag)  qs.set("tag",  params.tag);
   if (params.sort) qs.set("sort", params.sort);
   qs.set("limit", "50");
 
+  const url = `${BACKEND}/market/listings?${qs}`;
+
+  let res: Response;
   try {
-    const res = await fetch(`${BACKEND}/market/listings?${qs}`, {
+    res = await fetch(url, {
       cache: "no-store",
     });
-    if (!res.ok) throw new Error(`status ${res.status}`);
-    return (await res.json()) as DiscoverResponse;
-  } catch {
-    return { items: [], total: 0, totalBeforeFilter: 0 };
+  } catch (error) {
+    return {
+      ok: false,
+      error: {
+        kind: "backend_unreachable",
+        title: "Backend connection failed",
+        message:
+          "The Discovery page could not connect to the configured backend.",
+        detail: error instanceof Error ? error.message : String(error),
+      },
+    };
+  }
+
+  if (res.status === 404) {
+    return {
+      ok: false,
+      error: {
+        kind: "api_missing",
+        title: "Discovery API is missing",
+        message:
+          "The backend is reachable, but /api/market/listings was not found.",
+        status: res.status,
+      },
+    };
+  }
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    return {
+      ok: false,
+      error: {
+        kind: "backend_error",
+        title: "Backend returned an error",
+        message:
+          "The Discovery API exists, but the backend failed while loading listings.",
+        detail: detail.slice(0, 500),
+        status: res.status,
+      },
+    };
+  }
+
+  try {
+    return { ok: true, data: (await res.json()) as DiscoverResponse };
+  } catch (error) {
+    return {
+      ok: false,
+      error: {
+        kind: "backend_error",
+        title: "Backend returned invalid JSON",
+        message:
+          "The Discovery API responded, but the response could not be parsed.",
+        detail: error instanceof Error ? error.message : String(error),
+      },
+    };
   }
 }
 
@@ -170,6 +240,46 @@ function ListingCard({ item }: { item: DiscoverItem }) {
   );
 }
 
+function DiscoveryErrorPanel({ error }: { error: DiscoverLoadError }) {
+  const label =
+    error.kind === "api_missing"
+      ? "API missing"
+      : error.kind === "backend_unreachable"
+        ? "Backend unreachable"
+        : "Backend error";
+
+  return (
+    <div className="mt-8 rounded-lg border border-[rgba(248,81,73,0.35)] bg-[rgba(248,81,73,0.08)] px-6 py-8">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="rounded border border-[rgba(248,81,73,0.4)] px-2 py-0.5 text-xs font-semibold text-[var(--red)]">
+          {label}
+        </span>
+        {error.status && (
+          <span className="font-mono text-xs text-[var(--text3)]">
+            HTTP {error.status}
+          </span>
+        )}
+      </div>
+      <h2 className="text-base font-semibold text-[var(--text)]">
+        {error.title}
+      </h2>
+      <p className="mt-1 text-sm text-[var(--text2)]">{error.message}</p>
+      <dl className="mt-4 grid gap-2 text-left text-xs sm:grid-cols-[160px_1fr]">
+        <dt className="text-[var(--text3)]">Backend URL</dt>
+        <dd className="break-all font-mono text-[var(--text2)]">{BACKEND}</dd>
+        {error.detail && (
+          <>
+            <dt className="text-[var(--text3)]">Detail</dt>
+            <dd className="break-words font-mono text-[var(--text2)]">
+              {error.detail}
+            </dd>
+          </>
+        )}
+      </dl>
+    </div>
+  );
+}
+
 // ──────────────────────────────────────────────────────────────────────
 // Page
 // ──────────────────────────────────────────────────────────────────────
@@ -184,13 +294,26 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
   const tag  = typeof sp["tag"]  === "string" ? sp["tag"].trim()  : "";
   const sort = typeof sp["sort"] === "string" ? sp["sort"]        : "score";
 
-  const data = await fetchListings({
+  const result = await fetchListings({
     q:    q    || undefined,
     tag:  tag  || undefined,
     sort: sort !== "score" ? sort : undefined,
   });
 
+  const data = result.ok
+    ? result.data
+    : { items: [], total: 0, totalBeforeFilter: 0 };
   const showReset = !!q || !!tag || sort !== "score";
+  const emptyTitle = showReset
+    ? "No listings match your search."
+    : data.totalBeforeFilter > 0
+      ? "Backend connected. No listings are public yet."
+      : "Backend connected. No on-chain listings found.";
+  const emptyDetail = showReset
+    ? null
+    : data.totalBeforeFilter > 0
+      ? `${data.totalBeforeFilter} on-chain listing${data.totalBeforeFilter === 1 ? "" : "s"} found, but none are active and approved for Discovery.`
+      : "The Discovery API responded, but the configured market contract has no listings to show.";
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -222,8 +345,8 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
           className="input w-36"
         />
         <select name="sort" defaultValue={sort} className="input w-44">
-          <option value="score">Ranked (Thompson)</option>
-          <option value="score_strict">Score (strict desc)</option>
+          <option value="score">Recommended</option>
+          <option value="score_strict">Top rated</option>
           <option value="latest">Newest first</option>
         </select>
         <button type="submit" className="btn-primary px-4 py-2 text-sm">
@@ -236,35 +359,48 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
         )}
       </form>
 
-      {/* Count line */}
-      <p className="mb-4 text-xs text-[var(--text3)]">
-        {data.items.length === 0
-          ? "No approved listings found."
-          : `${data.items.length} listing${data.items.length === 1 ? "" : "s"} shown`}
-        {data.totalBeforeFilter > data.total && data.items.length > 0
-          ? ` · ${data.totalBeforeFilter - data.total} hidden by filters`
-          : ""}
-      </p>
-
-      {/* Listing grid */}
-      {data.items.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {data.items.map((item) => (
-            <ListingCard key={item.listingId} item={item} />
-          ))}
-        </div>
+      {!result.ok ? (
+        <DiscoveryErrorPanel error={result.error} />
       ) : (
-        <div className="mt-8 rounded-lg border border-[var(--border)] bg-[var(--bg2)] px-6 py-14 text-center">
-          <p className="text-[var(--text2)]">No listings match your search.</p>
-          {showReset && (
-            <Link
-              href="/discover"
-              className="mt-3 inline-block text-sm text-[var(--text3)] underline underline-offset-2"
-            >
-              Clear filters
-            </Link>
+        <>
+          {/* Count line */}
+          <p className="mb-4 text-xs text-[var(--text3)]">
+            {data.items.length === 0
+              ? "No approved listings found."
+              : `${data.items.length} listing${data.items.length === 1 ? "" : "s"} shown`}
+            {data.totalBeforeFilter > data.total && data.items.length > 0
+              ? ` · ${data.totalBeforeFilter - data.total} hidden by filters`
+              : ""}
+          </p>
+
+          {/* Listing grid */}
+          {data.items.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {data.items.map((item) => (
+                <ListingCard key={item.listingId} item={item} />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-8 rounded-lg border border-[var(--border)] bg-[var(--bg2)] px-6 py-14 text-center">
+              <p className="text-[var(--text2)]">
+                {emptyTitle}
+              </p>
+              {emptyDetail && (
+                <p className="mx-auto mt-2 max-w-xl text-sm text-[var(--text3)]">
+                  {emptyDetail}
+                </p>
+              )}
+              {showReset && (
+                <Link
+                  href="/discover"
+                  className="mt-3 inline-block text-sm text-[var(--text3)] underline underline-offset-2"
+                >
+                  Clear filters
+                </Link>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );

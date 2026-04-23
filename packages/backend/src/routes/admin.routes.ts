@@ -25,6 +25,7 @@ router.get(
   async (_req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const apis = await prisma.apiListing.findMany({
+        where: { contractVersion: "V3" },
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
@@ -36,6 +37,11 @@ router.get(
           contractVersion: true,
           onChainId: true,
           createdAt: true,
+          _count: {
+            select: {
+              payments: true,
+            },
+          },
         },
       });
       res.json(apis);
