@@ -182,6 +182,64 @@ export function scoreListing(stats: ListingStats): number {
   return smoothedRate * volumeFactor;
 }
 
+// ──────────────────────────────────────────────────────────────────────
+// Admin-only raw log access
+// ──────────────────────────────────────────────────────────────────────
+//
+// Public stats endpoints strip `buyer` so wallet addresses aren't leaked
+// to the world. Admin triage ("why is listing #7 constantly failing?")
+// needs the raw rows with buyer visible — that's what this exposes.
+// Access control happens at the route layer (requireAdmin middleware).
+
+export interface CallLogFilter {
+  listingId: number;
+  onlyFailures?: boolean;
+  since?: Date;
+  limit?: number;
+  offset?: number;
+}
+
+export interface CallLogPage {
+  items: Array<{
+    id: string;
+    listingId: number;
+    buyer: string;
+    success: boolean;
+    sellerStatus: number | null;
+    latencyMs: number;
+    amount: string;
+    jobRef: string;
+    settleTxHash: string | null;
+    errorReason: string | null;
+    createdAt: Date;
+  }>;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export async function listCallLogs(
+  filter: CallLogFilter,
+): Promise<CallLogPage> {
+  const limit = Math.min(Math.max(filter.limit ?? 50, 1), 500);
+  const offset = Math.max(filter.offset ?? 0, 0);
+  const where = {
+    listingId: filter.listingId,
+    ...(filter.onlyFailures ? { success: false } : {}),
+    ...(filter.since ? { createdAt: { gte: filter.since } } : {}),
+  };
+  const [items, total] = await Promise.all([
+    prisma.callLog.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.callLog.count({ where }),
+  ]);
+  return { items, total, limit, offset };
+}
+
 // ---------- internals (exported for tests) ----------
 
 export interface RawRow {

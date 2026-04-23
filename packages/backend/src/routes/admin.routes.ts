@@ -22,6 +22,7 @@ import {
 } from "../services/task-type.service.js";
 import { BadRequestError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
+import { listCallLogs } from "../services/call-log.service.js";
 
 const router = Router();
 
@@ -157,6 +158,50 @@ const rejectSchema = z.object({
 });
 
 // GET /admin/sellers
+// GET /admin/call-logs — raw CallLog triage view for a single listing.
+// Admin-only because rows carry `buyer` addresses (public responses
+// aggregate only). Useful for answering "why is listing N flaky?" —
+// filter by failures, pick a suspicious row, cross-reference jobRef
+// against gateway logs.
+const callLogsQuerySchema = z.object({
+  listing_id: z.string().regex(/^\d+$/),
+  only_failures: z.union([z.literal("true"), z.literal("false")]).optional(),
+  since: z
+    .string()
+    .datetime()
+    .optional()
+    .describe("ISO timestamp lower bound (inclusive)"),
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
+router.get(
+  "/call-logs",
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const parsed = callLogsQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        res.status(400).json({
+          error: "invalid_query",
+          details: parsed.error.flatten(),
+        });
+        return;
+      }
+      const { listing_id, only_failures, since, limit, offset } = parsed.data;
+      const page = await listCallLogs({
+        listingId: Number(listing_id),
+        onlyFailures: only_failures === "true",
+        since: since ? new Date(since) : undefined,
+        limit,
+        offset,
+      });
+      res.json(page);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 // Aggregates unique seller addresses from ApiListing and enriches each with
 // on-chain SellerRegistry state (registered/active/stats). N+1 reads are fine
 // at MVP scale; swap to multicall3 when the seller set grows.
