@@ -30,8 +30,33 @@ import {
   nextListingId,
   resolveMetadata,
   type ListingMetadata,
+  type OnChainListing,
 } from "./market-chain.service.js";
 import { logger } from "../utils/logger.js";
+
+// ──────────────────────────────────────────────────────────────────────
+// Dependency injection — lets integration tests swap Prisma / viem fakes
+// ──────────────────────────────────────────────────────────────────────
+
+export interface MarketListenerDeps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: { apiListing: { upsert(a: any): Promise<unknown>; updateMany(a: any): Promise<unknown>; findFirst(a: any): Promise<{ onChainId: number } | null> } };
+  watchEvent(params: any): () => void; // eslint-disable-line @typescript-eslint/no-explicit-any
+  getMarketAddress(): `0x${string}`;
+  readListing_(id: bigint): Promise<OnChainListing>;
+  nextListingId_(): Promise<bigint>;
+  resolveMetadata_(uri: string): Promise<ListingMetadata>;
+}
+
+interface HandlerCtx {
+  db: MarketListenerDeps['db'];
+  resolveMeta: MarketListenerDeps['resolveMetadata_'];
+}
+
+interface CatchupCtx extends HandlerCtx {
+  nextListingId_: MarketListenerDeps['nextListingId_'];
+  readListing_: MarketListenerDeps['readListing_'];
+}
 
 interface ListenerState {
   /** Wall-clock of the most recent processed event (any kind). */
@@ -111,16 +136,14 @@ export function classifyHealth(params: ClassifyParams): ListenerHealth {
 // Event handlers
 // ──────────────────────────────────────────────────────────────────────
 
-async function handleListingRegistered(args: {
-  listingId: bigint;
-  owner: `0x${string}`;
-  payout: `0x${string}`;
-  metadataURI: string;
-}): Promise<void> {
+async function handleListingRegistered(
+  args: { listingId: bigint; owner: `0x${string}`; payout: `0x${string}`; metadataURI: string },
+  ctx: HandlerCtx,
+): Promise<void> {
   const id = Number(args.listingId);
   let meta: ListingMetadata | null = null;
   try {
-    meta = await resolveMetadata(args.metadataURI);
+    meta = await ctx.resolveMeta(args.metadataURI);
   } catch (e) {
     logger.warn(
       { listingId: id, err: String(e) },
@@ -128,7 +151,7 @@ async function handleListingRegistered(args: {
     );
   }
 
-  await prisma.apiListing.upsert({
+  await ctx.db.apiListing.upsert({
     where: {
       contractVersion_onChainId: {
         contractVersion: "V3",
@@ -167,14 +190,14 @@ async function handleListingRegistered(args: {
   if (id > state.lastSyncedListingId) state.lastSyncedListingId = id;
 }
 
-async function handleMetadataUpdated(args: {
-  listingId: bigint;
-  metadataURI: string;
-}): Promise<void> {
+async function handleMetadataUpdated(
+  args: { listingId: bigint; metadataURI: string },
+  ctx: HandlerCtx,
+): Promise<void> {
   const id = Number(args.listingId);
   let meta: ListingMetadata | null = null;
   try {
-    meta = await resolveMetadata(args.metadataURI);
+    meta = await ctx.resolveMeta(args.metadataURI);
   } catch (e) {
     logger.warn(
       { listingId: id, err: String(e) },
@@ -184,7 +207,7 @@ async function handleMetadataUpdated(args: {
     return;
   }
 
-  await prisma.apiListing.updateMany({
+  await ctx.db.apiListing.updateMany({
     where: { contractVersion: "V3", onChainId: id },
     data: {
       ...(meta.name ? { name: String(meta.name).slice(0, 200) } : {}),
@@ -205,10 +228,10 @@ async function handleMetadataUpdated(args: {
  * Without this, a listener restart after N blocks of downtime would leave
  * those N listings invisible (no PENDING row → admin UI never shows them).
  */
-async function catchupOnBoot(): Promise<void> {
+async function catchupOnBoot(ctx: CatchupCtx): Promise<void> {
   let onchainMax: number;
   try {
-    onchainMax = Number(await nextListingId()) - 1;
+    onchainMax = Number(await ctx.nextListingId_()) - 1;
   } catch (e) {
     logger.warn(
       { err: String(e) },
@@ -221,7 +244,7 @@ async function catchupOnBoot(): Promise<void> {
     return;
   }
 
-  const dbMax = await prisma.apiListing.findFirst({
+  const dbMax = await ctx.db.apiListing.findFirst({
     where: { contractVersion: "V3" },
     orderBy: { onChainId: "desc" },
     select: { onChainId: true },
@@ -237,13 +260,13 @@ async function catchupOnBoot(): Promise<void> {
   );
   for (let i = dbMaxId + 1; i <= onchainMax; i++) {
     try {
-      const l = await readListing(BigInt(i));
+      const l = await ctx.readListing_(BigInt(i));
       await handleListingRegistered({
         listingId: BigInt(i),
         owner: l.owner,
         payout: l.payout,
         metadataURI: l.metadataURI,
-      });
+      }, ctx);
     } catch (e) {
       state.errorCount += 1;
       logger.error(
@@ -258,7 +281,10 @@ async function catchupOnBoot(): Promise<void> {
 // Entry point
 // ──────────────────────────────────────────────────────────────────────
 
-export function startMarketListener(): { stop: () => void } {
+export function startMarketListener(deps?: Partial<MarketListenerDeps>): {
+  stop: () => void;
+  catchupDone: Promise<void>;
+} {
   state = {
     lastEventAt: null,
     lastSyncedListingId: -1,
@@ -266,25 +292,26 @@ export function startMarketListener(): { stop: () => void } {
     errorCount: 0,
   };
 
-  const address = marketAddress();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db: MarketListenerDeps['db'] = (deps?.db ?? prisma) as any;
+  const ctx: CatchupCtx = {
+    db,
+    resolveMeta: deps?.resolveMetadata_ ?? resolveMetadata,
+    nextListingId_: deps?.nextListingId_ ?? nextListingId,
+    readListing_: deps?.readListing_ ?? readListing,
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const watchEvent: MarketListenerDeps['watchEvent'] = deps?.watchEvent ?? ((p: any) => publicClient.watchContractEvent(p));
+  const address = (deps?.getMarketAddress ?? marketAddress)();
 
-  const unwatchRegistered = publicClient.watchContractEvent({
+  const unwatchRegistered = watchEvent({
     address,
     abi: ChainLensMarketAbi,
     eventName: "ListingRegistered",
-    onLogs: async (logs) => {
-      for (const log of logs as Array<
-        Log & {
-          args: {
-            listingId: bigint;
-            owner: `0x${string}`;
-            payout: `0x${string}`;
-            metadataURI: string;
-          };
-        }
-      >) {
+    onLogs: async (logs: Array<Log & { args: { listingId: bigint; owner: `0x${string}`; payout: `0x${string}`; metadataURI: string } }>) => {
+      for (const log of logs) {
         try {
-          await handleListingRegistered(log.args);
+          await handleListingRegistered(log.args, ctx);
         } catch (e) {
           state.errorCount += 1;
           logger.error(
@@ -294,7 +321,7 @@ export function startMarketListener(): { stop: () => void } {
         }
       }
     },
-    onError: (err) => {
+    onError: (err: Error) => {
       state.errorCount += 1;
       logger.error(
         { err: String(err) },
@@ -303,18 +330,14 @@ export function startMarketListener(): { stop: () => void } {
     },
   });
 
-  const unwatchMetadata = publicClient.watchContractEvent({
+  const unwatchMetadata = watchEvent({
     address,
     abi: ChainLensMarketAbi,
     eventName: "ListingMetadataUpdated",
-    onLogs: async (logs) => {
-      for (const log of logs as Array<
-        Log & {
-          args: { listingId: bigint; metadataURI: string };
-        }
-      >) {
+    onLogs: async (logs: Array<Log & { args: { listingId: bigint; metadataURI: string } }>) => {
+      for (const log of logs) {
         try {
-          await handleMetadataUpdated(log.args);
+          await handleMetadataUpdated(log.args, ctx);
         } catch (e) {
           state.errorCount += 1;
           logger.error(
@@ -324,7 +347,7 @@ export function startMarketListener(): { stop: () => void } {
         }
       }
     },
-    onError: (err) => {
+    onError: (err: Error) => {
       state.errorCount += 1;
       logger.error(
         { err: String(err) },
@@ -335,7 +358,7 @@ export function startMarketListener(): { stop: () => void } {
 
   // Run catchup in the background — anything that fires during catchup is
   // queued by the subscriptions started above, so we don't miss events.
-  void catchupOnBoot().catch((e) =>
+  const catchupDone = catchupOnBoot(ctx).catch((e) =>
     logger.error({ err: String(e) }, "market listener boot catchup failed"),
   );
 
@@ -346,5 +369,6 @@ export function startMarketListener(): { stop: () => void } {
       unwatchRegistered();
       unwatchMetadata();
     },
+    catchupDone,
   };
 }
