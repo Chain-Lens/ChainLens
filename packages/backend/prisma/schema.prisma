@@ -155,3 +155,25 @@ model AdminAction {
 
   api ApiListing @relation(fields: [apiId], references: [id])
 }
+
+// Per-call observability row for v3 ChainLensMarket listings. One row per
+// POST /api/market/call/:id invocation that reached the listing-resolution
+// stage (pre-parse errors like malformed listingId are skipped — they carry
+// no listing signal). Feeds per-listing stats + ranking in Phase 2b.
+model CallLog {
+  id            String   @id @default(cuid())
+  listingId     Int
+  buyer         String
+  success       Boolean
+  sellerStatus  Int?
+  latencyMs     Int
+  amount        String
+  jobRef        String
+  settleTxHash  String?
+  errorReason   String?
+  createdAt     DateTime @default(now())
+
+  @@index([listingId, createdAt])
+  @@index([listingId, success])
+  @@index([buyer])
+}

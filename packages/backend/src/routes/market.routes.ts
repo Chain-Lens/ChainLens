@@ -8,6 +8,12 @@ import {
 import { publicClient, walletClient, enqueueWrite } from "../config/viem.js";
 import { env } from "../config/env.js";
 import { logger } from "../utils/logger.js";
+import {
+  logCall,
+  getListingStats,
+  getListingsStats,
+  scoreListing,
+} from "../services/call-log.service.js";
 
 const router = Router();
 
@@ -128,17 +134,21 @@ async function nextListingId(): Promise<bigint> {
 // ──────────────────────────────────────────────────────────────────────
 // Phase 1 naive scan. Swap to event-indexed cache once listing count grows.
 
-router.get("/listings", async (_req, res, next) => {
+router.get("/listings", async (req, res, next) => {
   try {
     const n = await nextListingId();
-    const items: Array<{
+
+    // Collect on-chain state for every listing.
+    type RawItem = {
+      listingIdNum: number;
       listingId: string;
       owner: string;
       payout: string;
       active: boolean;
       metadata: ListingMetadata | null;
       metadataError?: string;
-    }> = [];
+    };
+    const raw: RawItem[] = [];
     for (let i = 0n; i < n; i++) {
       const l = await readListing(i);
       let meta: ListingMetadata | null = null;
@@ -148,7 +158,8 @@ router.get("/listings", async (_req, res, next) => {
       } catch (e) {
         err = e instanceof Error ? e.message : String(e);
       }
-      items.push({
+      raw.push({
+        listingIdNum: Number(i),
         listingId: i.toString(),
         owner: getAddress(l.owner),
         payout: getAddress(l.payout),
@@ -157,7 +168,40 @@ router.get("/listings", async (_req, res, next) => {
         ...(err ? { metadataError: err } : {}),
       });
     }
-    res.json({ items, total: items.length });
+
+    // Batch-fetch 30d stats for every listing in one SQL round trip.
+    const statsMap = await getListingsStats(raw.map((r) => r.listingIdNum));
+
+    const items = raw.map((r) => {
+      const stats =
+        statsMap.get(r.listingIdNum) ?? {
+          successRate: 0,
+          avgLatencyMs: 0,
+          totalCalls: 0,
+          lastCalledAt: null,
+          windowDays: 30,
+        };
+      return {
+        listingId: r.listingId,
+        owner: r.owner,
+        payout: r.payout,
+        active: r.active,
+        metadata: r.metadata,
+        ...(r.metadataError ? { metadataError: r.metadataError } : {}),
+        stats,
+        score: scoreListing(stats),
+      };
+    });
+
+    // Default sort: score desc. `?sort=latest` flips to newest-first.
+    // Further sorts (price, popular, reputation-weighted) land in Phase 2b.
+    const sort = typeof req.query["sort"] === "string" ? req.query["sort"] : "score";
+    items.sort((a, b) => {
+      if (sort === "latest") return Number(BigInt(b.listingId) - BigInt(a.listingId));
+      return b.score - a.score;
+    });
+
+    res.json({ items, total: items.length, sort });
   } catch (err) {
     next(err);
   }
@@ -174,6 +218,7 @@ router.get("/listings/:id", async (req, res, next) => {
     } catch (e) {
       metaError = e instanceof Error ? e.message : String(e);
     }
+    const stats = await getListingStats(Number(id));
     res.json({
       listingId: id.toString(),
       owner: getAddress(l.owner),
@@ -182,6 +227,8 @@ router.get("/listings/:id", async (req, res, next) => {
       metadataURI: l.metadataURI,
       metadata: meta,
       ...(metaError ? { metadataError: metaError } : {}),
+      stats,
+      score: scoreListing(stats),
     });
   } catch (err) {
     next(err);
@@ -312,36 +359,59 @@ function wrapExternal(body: unknown, sourceHost: string, listingId: string, jobR
 }
 
 router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next: NextFunction) => {
+  const t0 = Date.now();
+  const listingIdStr = req.params["listingId"] as string;
+
+  // Pre-listing caller errors — these don't belong in CallLog (no listing
+  // context to attribute them to). Return 400 and bail.
+  if (!/^\d+$/.test(listingIdStr)) {
+    res.status(400).json({ error: "listingId must be decimal" });
+    return;
+  }
+  const listingId = BigInt(listingIdStr);
+
+  const body = req.body as { inputs?: unknown; payment?: unknown };
+  const inputs = body?.inputs ?? {};
+  let payment: PaymentAuth;
   try {
-    const listingIdStr = req.params["listingId"] as string;
-    if (!/^\d+$/.test(listingIdStr)) {
-      res.status(400).json({ error: "listingId must be decimal" });
-      return;
-    }
-    const listingId = BigInt(listingIdStr);
+    payment = parsePayment(body?.payment);
+  } catch (e) {
+    res.status(400).json({
+      error: "invalid payment",
+      detail: e instanceof Error ? e.message : String(e),
+    });
+    return;
+  }
 
-    const body = req.body as { inputs?: unknown; payment?: unknown };
-    const inputs = body?.inputs ?? {};
-    let payment: PaymentAuth;
-    try {
-      payment = parsePayment(body?.payment);
-    } catch (e) {
-      res.status(400).json({
-        error: "invalid payment",
-        detail: e instanceof Error ? e.message : String(e),
-      });
-      return;
-    }
+  // Past this point we have a listing id + buyer → every exit path feeds
+  // exactly one CallLog row. The outcome record is mutated in place at each
+  // branch, then the `finally` block writes it fire-and-forget.
+  const outcome: {
+    success: boolean;
+    errorReason: string | null;
+    sellerStatus: number | null;
+    settleTxHash: `0x${string}` | null;
+    jobRef: `0x${string}`;
+  } = {
+    success: false,
+    errorReason: "unknown",
+    sellerStatus: null,
+    settleTxHash: null,
+    jobRef: "0x",
+  };
 
+  try {
     // 1. Read listing
     let listing: OnChainListing;
     try {
       listing = await readListing(listingId);
     } catch {
+      outcome.errorReason = "listing_not_found";
       res.status(404).json({ error: "listing not found" });
       return;
     }
     if (!listing.active) {
+      outcome.errorReason = "listing_inactive";
       res.status(410).json({ error: "listing inactive" });
       return;
     }
@@ -351,6 +421,7 @@ router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next:
     try {
       meta = await resolveMetadata(listing.metadataURI);
     } catch (e) {
+      outcome.errorReason = "metadata_error";
       res.status(502).json({
         error: "seller metadata unreachable",
         detail: e instanceof Error ? e.message : String(e),
@@ -358,6 +429,7 @@ router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next:
       return;
     }
     if (!meta.endpoint || typeof meta.endpoint !== "string") {
+      outcome.errorReason = "metadata_invalid";
       res.status(502).json({ error: "listing metadata missing `endpoint`" });
       return;
     }
@@ -368,6 +440,7 @@ router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next:
     if (declaredAmt) {
       try {
         if (BigInt(payment.amount) < BigInt(declaredAmt)) {
+          outcome.errorReason = "amount_below_price";
           res.status(402).json({
             error: "amount below listing price",
             required: declaredAmt,
@@ -376,7 +449,7 @@ router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next:
           return;
         }
       } catch {
-        // Ignore malformed declared price — it's the seller's metadata quality issue.
+        // Ignore malformed declared price — seller metadata quality issue.
       }
     }
 
@@ -386,10 +459,15 @@ router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next:
         `${listingIdStr}|${payment.buyer}|${payment.nonce}|${payment.amount}`,
       ),
     );
+    outcome.jobRef = jobRef;
+
     let sellerResult: { ok: boolean; status: number; body: unknown };
     try {
       sellerResult = await callSeller(meta.endpoint, method, inputs);
     } catch (e) {
+      const isTimeout =
+        e instanceof Error && (e.name === "AbortError" || e.name === "TimeoutError");
+      outcome.errorReason = isTimeout ? "seller_timeout" : "seller_exception";
       logger.warn(
         { listingId: listingIdStr, err: String(e) },
         "seller call failed",
@@ -401,8 +479,12 @@ router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next:
       return;
     }
 
+    outcome.sellerStatus = sellerResult.status;
+
     if (!sellerResult.ok) {
       // Auth not submitted → USDC never moves. This IS the refund.
+      outcome.errorReason =
+        sellerResult.status >= 500 ? "seller_5xx" : "seller_4xx";
       res.status(502).json({
         error: "seller returned non-2xx",
         sellerStatus: sellerResult.status,
@@ -434,6 +516,7 @@ router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next:
         }),
       );
     } catch (e) {
+      outcome.errorReason = "settle_failed";
       logger.error(
         { listingId: listingIdStr, err: String(e) },
         "settle() tx submission failed",
@@ -447,6 +530,7 @@ router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next:
       });
       return;
     }
+    outcome.settleTxHash = txHash;
 
     // Fire-and-forget wait for receipt so logs reflect confirmation status.
     void (async () => {
@@ -476,6 +560,9 @@ router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next:
     })();
     const wrapped = wrapExternal(sellerResult.body, host, listingIdStr, jobRef);
 
+    outcome.success = true;
+    outcome.errorReason = null;
+
     res.status(200).json({
       listingId: listingIdStr,
       jobRef,
@@ -485,7 +572,23 @@ router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next:
       envelope: wrapped.envelope,
     });
   } catch (err) {
+    outcome.errorReason = "unhandled_exception";
     next(err);
+  } finally {
+    // Fire-and-forget: DB flake must not mask a successful settlement.
+    void logCall({
+      listingId: Number(listingId),
+      buyer: payment.buyer,
+      success: outcome.success,
+      sellerStatus: outcome.sellerStatus,
+      latencyMs: Date.now() - t0,
+      amount: payment.amount,
+      jobRef: outcome.jobRef,
+      settleTxHash: outcome.settleTxHash,
+      errorReason: outcome.errorReason,
+    }).catch((e) =>
+      logger.warn({ err: String(e) }, "call log insert failed"),
+    );
   }
 });
 
