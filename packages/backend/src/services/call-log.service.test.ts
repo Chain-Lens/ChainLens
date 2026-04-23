@@ -4,6 +4,7 @@ import {
   aggregateRows,
   aggregateErrors,
   scoreListing,
+  sampleBeta,
   groupByListingDay,
   type RawRow,
 } from "./call-log.service.js";
@@ -69,147 +70,106 @@ describe("aggregateRows", () => {
   });
 });
 
-describe("scoreListing", () => {
-  test("brand-new listing gets 0.5 baseline, not 0", () => {
-    // Laplace prior Beta(1,1) → 50% smoothed rate × ln(e) = 1 → 0.5.
-    // This is the cold-start fix: new listings must compete, not be buried.
-    const s = scoreListing({
-      successRate: 0,
-      avgLatencyMs: 0,
-      totalCalls: 0,
-      successes: 0,
-      lastCalledAt: null,
-      windowDays: 30,
-    });
-    assert.equal(s, 0.5);
+// ──────────────────────────────────────────────────────────────────────
+// Thompson sampling tests — sampleBeta + scoreListing
+// ──────────────────────────────────────────────────────────────────────
+
+// Mulberry32 seeded PRNG — deterministic, same algorithm as market.routes.ts.
+function mlb(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function avg(xs: number[]): number {
+  return xs.reduce((s, x) => s + x, 0) / xs.length;
+}
+
+function samples(alpha: number, beta_: number, n: number, seed: number): number[] {
+  const rng = mlb(seed);
+  return Array.from({ length: n }, () => sampleBeta(alpha, beta_, rng));
+}
+
+describe("sampleBeta", () => {
+  test("all samples are in [0, 1]", () => {
+    const xs = samples(3, 5, 300, 1);
+    assert.ok(xs.every((x) => x >= 0 && x <= 1), "out-of-range sample found");
   });
 
-  test("rewards volume with sub-linear (log) scaling", () => {
-    const lowVol = scoreListing({
-      successRate: 1,
-      avgLatencyMs: 100,
-      totalCalls: 1,
-      successes: 1,
-      lastCalledAt: new Date(),
-      windowDays: 30,
-    });
-    const highVol = scoreListing({
-      successRate: 1,
-      avgLatencyMs: 100,
-      totalCalls: 100,
-      successes: 100,
-      lastCalledAt: new Date(),
-      windowDays: 30,
-    });
-    assert.ok(highVol > lowVol, "higher volume → higher score");
-    // Log scaling keeps the ratio bounded — not a 100× blowout.
-    assert.ok(
-      highVol / lowVol < 6,
-      `log scaling (ratio was ${highVol / lowVol})`,
+  test("Beta(1,1) = Uniform(0,1): mean ≈ 0.5", () => {
+    const m = avg(samples(1, 1, 500, 2));
+    assert.ok(Math.abs(m - 0.5) < 0.06, `mean ${m.toFixed(4)} not near 0.5`);
+  });
+
+  test("mean ≈ α/(α+β) for several parameter sets", () => {
+    const cases: [number, number][] = [[2, 5], [10, 3], [50, 50], [0.5, 1.5]];
+    for (const [a, b] of cases) {
+      const m = avg(samples(a, b, 500, 3));
+      const expected = a / (a + b);
+      assert.ok(
+        Math.abs(m - expected) < 0.06,
+        `Beta(${a},${b}) mean ${m.toFixed(4)} expected ${expected.toFixed(4)}`,
+      );
+    }
+  });
+
+  test("shape < 1 reduction path: Beta(0.5, 1.5) mean ≈ 0.25", () => {
+    const m = avg(samples(0.5, 1.5, 500, 4));
+    assert.ok(Math.abs(m - 0.25) < 0.06, `mean ${m.toFixed(4)} not near 0.25`);
+  });
+});
+
+describe("scoreListing — Thompson sampling", () => {
+  // scoreListing accepts an optional rng so tests are deterministic.
+  function score(successes: number, totalCalls: number, seed: number): number {
+    return scoreListing(
+      { successRate: 0, avgLatencyMs: 0, totalCalls, successes, lastCalledAt: null, windowDays: 30 },
+      mlb(seed),
     );
+  }
+
+  function scoreMean(successes: number, totalCalls: number, n: number, seed: number): number {
+    return avg(Array.from({ length: n }, (_, i) => score(successes, totalCalls, seed + i)));
+  }
+
+  test("cold start (0/0): score is in [0, 1] and expected value ≈ 0.5", () => {
+    // Beta(1,1) = Uniform(0,1) — no data, maximum uncertainty
+    const m = scoreMean(0, 0, 300, 10);
+    assert.ok(Math.abs(m - 0.5) < 0.06, `mean ${m.toFixed(4)}`);
   });
 
-  test("lower successRate yields strictly lower score (monotonic)", () => {
-    // With Laplace smoothing the relationship is no longer exactly
-    // proportional, but it MUST remain monotonic: more failures → lower.
-    const good = scoreListing({
-      successRate: 1,
-      avgLatencyMs: 100,
-      totalCalls: 100,
-      successes: 100,
-      lastCalledAt: new Date(),
-      windowDays: 30,
-    });
-    const half = scoreListing({
-      successRate: 0.5,
-      avgLatencyMs: 100,
-      totalCalls: 100,
-      successes: 50,
-      lastCalledAt: new Date(),
-      windowDays: 30,
-    });
-    const bad = scoreListing({
-      successRate: 0.1,
-      avgLatencyMs: 100,
-      totalCalls: 100,
-      successes: 10,
-      lastCalledAt: new Date(),
-      windowDays: 30,
-    });
-    assert.ok(good > half, `good ${good} > half ${half}`);
-    assert.ok(half > bad, `half ${half} > bad ${bad}`);
+  test("higher success rate → higher expected score", () => {
+    // Beta(91, 11) mean ≈ 0.89 vs Beta(11, 91) mean ≈ 0.11
+    const highMean = scoreMean(90, 100, 200, 20);
+    const lowMean  = scoreMean(10, 100, 200, 220);
+    assert.ok(highMean > lowMean, `high ${highMean.toFixed(3)} > low ${lowMean.toFixed(3)}`);
   });
 
-  test("handful of failures on a heavy-traffic listing barely moves score", () => {
-    // 100/100 vs 99/100 — Laplace prior absorbs a single failure.
-    const perfect = scoreListing({
-      successRate: 1.0,
-      avgLatencyMs: 100,
-      totalCalls: 100,
-      successes: 100,
-      lastCalledAt: new Date(),
-      windowDays: 30,
-    });
-    const oneFailure = scoreListing({
-      successRate: 0.99,
-      avgLatencyMs: 100,
-      totalCalls: 100,
-      successes: 99,
-      lastCalledAt: new Date(),
-      windowDays: 30,
-    });
+  test("one failure on a 100-call listing barely moves expected score", () => {
+    // Beta(101,1) mean=101/102 ≈ 0.990 vs Beta(100,2) mean=100/102 ≈ 0.980
+    const perfect     = scoreMean(100, 100, 300, 40);
+    const oneFailure  = scoreMean(99,  100, 300, 340);
     assert.ok(perfect > oneFailure);
-    // Delta is small — less than 2% of perfect score.
+    // delta < 2 % of the perfect mean — posterior absorbs one failure
     assert.ok(
       (perfect - oneFailure) / perfect < 0.02,
-      `one failure on 100 calls should be a tiny hit, saw ${(perfect - oneFailure) / perfect}`,
+      `delta ${((perfect - oneFailure) / perfect).toFixed(4)} should be < 0.02`,
     );
   });
 
-  test("new perfect-record listing ranks below established lesser one", () => {
-    // 1/1 → smoothed=2/3, vol=ln(1+e) ≈ 1.31 → score ≈ 0.876
-    const rookie = scoreListing({
-      successRate: 1,
-      avgLatencyMs: 100,
-      totalCalls: 1,
-      successes: 1,
-      lastCalledAt: new Date(),
-      windowDays: 30,
-    });
-    // 80/100 → smoothed=81/102 ≈ 0.794, vol=ln(100+e) ≈ 4.63 → score ≈ 3.68
-    const established = scoreListing({
-      successRate: 0.8,
-      avgLatencyMs: 100,
-      totalCalls: 100,
-      successes: 80,
-      lastCalledAt: new Date(),
-      windowDays: 30,
-    });
+  test("established 80/100 listing outranks 1/1 rookie in expectation", () => {
+    // Beta(81,21) mean ≈ 0.794 vs Beta(2,1) mean ≈ 0.667
+    const established = scoreMean(80, 100, 300, 60);
+    const rookie      = scoreMean(1,  1,   300, 360);
     assert.ok(
       established > rookie,
-      `established (${established}) should outrank rookie (${rookie})`,
+      `established ${established.toFixed(3)} > rookie ${rookie.toFixed(3)}`,
     );
-  });
-
-  test("scoring smoke: rookie still ranks above listing with zero data", () => {
-    // Every successful call should outweigh the unknown baseline.
-    const cold = scoreListing({
-      successRate: 0,
-      avgLatencyMs: 0,
-      totalCalls: 0,
-      successes: 0,
-      lastCalledAt: null,
-      windowDays: 30,
-    });
-    const rookie = scoreListing({
-      successRate: 1,
-      avgLatencyMs: 100,
-      totalCalls: 1,
-      successes: 1,
-      lastCalledAt: new Date(),
-      windowDays: 30,
-    });
-    assert.ok(rookie > cold, `rookie ${rookie} > cold ${cold}`);
   });
 });
 

@@ -156,30 +156,74 @@ export function aggregateErrors(
   };
 }
 
+// ──────────────────────────────────────────────────────────────────────
+// Thompson sampling — Beta(1+successes, 1+failures) posterior score
+// ──────────────────────────────────────────────────────────────────────
+
+/** Box-Muller transform: standard normal from two U(0,1) samples. */
+function normalRandom(rng: () => number): number {
+  let u: number;
+  do { u = rng(); } while (u === 0);
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng());
+}
+
 /**
- * Composite score for ranking — Laplace-smoothed success rate × log volume.
- *
- *   smoothedRate = (successes + 1) / (totalCalls + 2)   // Beta(1,1) prior
- *   volumeFactor = ln(totalCalls + e)                    // ≥ 1 always
- *   score        = smoothedRate × volumeFactor
- *
- * Key properties:
- *   - totalCalls=0 → score = 0.5 × 1.0 = 0.5 (brand-new baseline, not 0).
- *     Kills the cold-start trap where "no data" means "never gets chosen".
- *   - Failures depress score sub-linearly thanks to the prior — a handful
- *     of failures on a 100-call listing barely moves the needle, whereas
- *     a handful on a 3-call listing hurts a lot.
- *   - log volume prevents "100% on 1 call" rookies from topping the chart
- *     over "85% on 200 calls" established players.
- *
- * Swap this function out cleanly (e.g., Thompson sampling) without touching
- * callers. Weighted random sampling in market.routes.ts uses `score + α` as
- * the selection weight, so as long as score ≥ 0 the sampler works.
+ * Marsaglia-Tsang rejection sampler for Gamma(shape, rate=1), shape > 0.
+ * For shape < 1 uses the standard reduction: Gamma(α) = Gamma(α+1) × U^(1/α).
  */
-export function scoreListing(stats: ListingStats): number {
-  const smoothedRate = (stats.successes + 1) / (stats.totalCalls + 2);
-  const volumeFactor = Math.log(stats.totalCalls + Math.E);
-  return smoothedRate * volumeFactor;
+function sampleGamma(shape: number, rng: () => number): number {
+  if (shape < 1) {
+    return sampleGamma(shape + 1, rng) * Math.pow(rng(), 1 / shape);
+  }
+  const d = shape - 1 / 3;
+  const c = 1 / Math.sqrt(9 * d);
+  for (;;) {
+    let x: number, v: number;
+    do {
+      x = normalRandom(rng);
+      v = 1 + c * x;
+    } while (v <= 0);
+    v = v * v * v;
+    const u = rng();
+    if (u < 1 - 0.0331 * x * x * x * x) return d * v;
+    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+  }
+}
+
+/**
+ * Sample from Beta(alpha, beta) via ratio of two independent Gamma samples.
+ * Exported for unit testing; production callers should use scoreListing.
+ */
+export function sampleBeta(
+  alpha: number,
+  beta: number,
+  rng: () => number = Math.random,
+): number {
+  const x = sampleGamma(alpha, rng);
+  const y = sampleGamma(beta, rng);
+  return x / (x + y);
+}
+
+/**
+ * Thompson-sampling score: draw once from Beta(1+successes, 1+failures).
+ *
+ * Why Thompson over Laplace + log-volume:
+ *   - Naturally balances exploration vs exploitation without a hand-tuned
+ *     volume exponent.
+ *   - Cold start: Beta(1,1) = Uniform(0,1) → expected 0.5, same as before.
+ *   - High evidence: posterior concentrates around the true rate.
+ *   - Still stochastic → weighted shuffle in market.routes stays meaningful.
+ *
+ * Optional rng for unit tests; defaults to Math.random in production.
+ * Signature is backward-compatible with all callers.
+ */
+export function scoreListing(
+  stats: ListingStats,
+  rng: () => number = Math.random,
+): number {
+  const alpha = 1 + stats.successes;
+  const beta = 1 + (stats.totalCalls - stats.successes);
+  return sampleBeta(alpha, beta, rng);
 }
 
 // ──────────────────────────────────────────────────────────────────────
