@@ -12,6 +12,7 @@ import {
   logCall,
   getListingStats,
   getListingsStats,
+  getRecentErrors,
   scoreListing,
 } from "../services/call-log.service.js";
 
@@ -346,7 +347,10 @@ router.get("/listings/:id", async (req, res, next) => {
     } catch (e) {
       metaError = e instanceof Error ? e.message : String(e);
     }
-    const stats = await getListingStats(Number(id));
+    const [stats, recentErrors] = await Promise.all([
+      getListingStats(Number(id)),
+      getRecentErrors(Number(id)),
+    ]);
     res.json({
       listingId: id.toString(),
       owner: getAddress(l.owner),
@@ -357,6 +361,7 @@ router.get("/listings/:id", async (req, res, next) => {
       ...(metaError ? { metadataError: metaError } : {}),
       stats,
       score: scoreListing(stats),
+      recentErrors,
     });
   } catch (err) {
     next(err);

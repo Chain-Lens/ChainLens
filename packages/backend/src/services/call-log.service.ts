@@ -110,6 +110,53 @@ export async function getListingsStats(
 }
 
 /**
+ * Breakdown of recent failures keyed by errorReason. Used by the inspect
+ * endpoint so agents and admins can see *why* a listing is flaky — a pile
+ * of `seller_5xx` tells a very different story from `seller_timeout`.
+ */
+export interface RecentErrors {
+  windowDays: number;
+  totalFailures: number;
+  /** errorReason → count. "unknown" bucket catches nulls (should be rare). */
+  breakdown: Record<string, number>;
+}
+
+export const DEFAULT_ERROR_WINDOW_DAYS = 7;
+
+export async function getRecentErrors(
+  listingId: number,
+  windowDays: number = DEFAULT_ERROR_WINDOW_DAYS,
+): Promise<RecentErrors> {
+  const since = new Date(Date.now() - windowDays * 86_400_000);
+  const rows = await prisma.callLog.findMany({
+    where: {
+      listingId,
+      success: false,
+      createdAt: { gte: since },
+    },
+    select: { errorReason: true },
+  });
+  return aggregateErrors(rows, windowDays);
+}
+
+// Exported for unit tests — pure function.
+export function aggregateErrors(
+  rows: { errorReason: string | null }[],
+  windowDays: number,
+): RecentErrors {
+  const breakdown: Record<string, number> = {};
+  for (const r of rows) {
+    const key = r.errorReason ?? "unknown";
+    breakdown[key] = (breakdown[key] ?? 0) + 1;
+  }
+  return {
+    windowDays,
+    totalFailures: rows.length,
+    breakdown,
+  };
+}
+
+/**
  * Composite score for ranking — Laplace-smoothed success rate × log volume.
  *
  *   smoothedRate = (successes + 1) / (totalCalls + 2)   // Beta(1,1) prior

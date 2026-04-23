@@ -145,6 +145,7 @@ async function main() {
   const server = buildMcpServer({
     discover: sharedReadDeps,
     status: sharedReadDeps,
+    inspect: sharedReadDeps,
     request: requestDeps,
     call: callDeps,
   });

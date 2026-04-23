@@ -14,10 +14,12 @@ import { discoverHandler, discoverToolDefinition, type DiscoverDeps } from "./to
 import { statusHandler, statusToolDefinition, type StatusDeps } from "./tools/status.js";
 import { requestHandler, requestToolDefinition, type RequestDeps } from "./tools/request.js";
 import { callHandler, callToolDefinition, type CallDeps } from "./tools/call.js";
+import { inspectHandler, inspectToolDefinition, type InspectDeps } from "./tools/inspect.js";
 
 export interface McpServerDeps {
   discover: DiscoverDeps;
   status: StatusDeps;
+  inspect: InspectDeps;
   /** Omit to disable chain-lens.request (no wallet or no v2 escrow on this chain). */
   request?: RequestDeps;
   /** Omit to disable chain-lens.call (no wallet or no v3 market on this chain). */
@@ -31,7 +33,11 @@ export function buildMcpServer(deps: McpServerDeps): Server {
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    const tools: unknown[] = [discoverToolDefinition, statusToolDefinition];
+    const tools: unknown[] = [
+      discoverToolDefinition,
+      inspectToolDefinition,
+      statusToolDefinition,
+    ];
     if (deps.request) tools.push(requestToolDefinition);
     if (deps.call) tools.push(callToolDefinition);
     return { tools };
@@ -46,6 +52,10 @@ export function buildMcpServer(deps: McpServerDeps): Server {
       }
       if (name === statusToolDefinition.name) {
         const result = await statusHandler(args as never, deps.status);
+        return toolTextResult(result);
+      }
+      if (name === inspectToolDefinition.name) {
+        const result = await inspectHandler(args as never, deps.inspect);
         return toolTextResult(result);
       }
       if (name === requestToolDefinition.name) {

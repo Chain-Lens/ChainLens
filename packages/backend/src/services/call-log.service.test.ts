@@ -1,6 +1,11 @@
 import { test, describe } from "node:test";
 import * as assert from "node:assert/strict";
-import { aggregateRows, scoreListing, type RawRow } from "./call-log.service.js";
+import {
+  aggregateRows,
+  aggregateErrors,
+  scoreListing,
+  type RawRow,
+} from "./call-log.service.js";
 
 describe("aggregateRows", () => {
   test("returns zeros for empty rows", () => {
@@ -185,7 +190,7 @@ describe("scoreListing", () => {
     );
   });
 
-  test("rookie still ranks above listing with zero data", () => {
+  test("scoring smoke: rookie still ranks above listing with zero data", () => {
     // Every successful call should outweigh the unknown baseline.
     const cold = scoreListing({
       successRate: 0,
@@ -204,5 +209,49 @@ describe("scoreListing", () => {
       windowDays: 30,
     });
     assert.ok(rookie > cold, `rookie ${rookie} > cold ${cold}`);
+  });
+});
+
+describe("aggregateErrors", () => {
+  test("empty rows → zero failures", () => {
+    const r = aggregateErrors([], 7);
+    assert.deepEqual(r, { windowDays: 7, totalFailures: 0, breakdown: {} });
+  });
+
+  test("buckets by errorReason with counts", () => {
+    const r = aggregateErrors(
+      [
+        { errorReason: "seller_5xx" },
+        { errorReason: "seller_5xx" },
+        { errorReason: "seller_timeout" },
+        { errorReason: "metadata_error" },
+        { errorReason: "seller_5xx" },
+      ],
+      7,
+    );
+    assert.equal(r.totalFailures, 5);
+    assert.deepEqual(r.breakdown, {
+      seller_5xx: 3,
+      seller_timeout: 1,
+      metadata_error: 1,
+    });
+  });
+
+  test("null errorReason falls into 'unknown' bucket", () => {
+    const r = aggregateErrors(
+      [
+        { errorReason: null },
+        { errorReason: null },
+        { errorReason: "seller_4xx" },
+      ],
+      7,
+    );
+    assert.equal(r.breakdown["unknown"], 2);
+    assert.equal(r.breakdown["seller_4xx"], 1);
+  });
+
+  test("threads windowDays verbatim", () => {
+    assert.equal(aggregateErrors([], 1).windowDays, 1);
+    assert.equal(aggregateErrors([], 30).windowDays, 30);
   });
 });

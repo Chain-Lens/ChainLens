@@ -531,6 +531,141 @@ directly, but every significant C/D design decision should cite it.
 
 ---
 
+## Search engine roadmap (agent-first) — captured 2026-04-23
+
+Strategic axis: ChainLens as an **agent-native** search engine, not a
+generalised one. Design decisions fall out of the asymmetry between agent
+and human buyers.
+
+### Moats we're leaning into
+
+- **Wallet-first auth** — signup = first signature, login = nonce challenge,
+  KYC = ERC-8004 attestation, MFA/recovery = key rotation. Removes every
+  friction human APIs pile on (email verify, captcha, MFA, password reset).
+- **Prompt-injection hardening** — schema-enforced JSON responses over free
+  text; `<EXTERNAL_DATA>` boundary tagging (already in gateway); capability
+  tokens that limit what the agent can do with returned data (e.g.
+  read-only flag). Combo: structural + tier-1 regex + source attestation.
+- **Determinism & replay** — same query + same block height → same bytes,
+  content-addressable. Absorbs the zkagent-protocol audit-trail idea
+  naturally. Enables cross-agent cache sharing.
+- **Context-efficiency SLA** — response token budget as a first-class
+  parameter (`budget_tokens`, `format={evidence|narrative|decision}`,
+  `detail={raw|summary}`). Not intelligence-tiering (brittle); agent
+  declares its own budget.
+- **Crypto-economic redress** — slashing is the legal system for a
+  non-juridical agent. No reliance on CS tickets or courts.
+
+### Explicitly rejected (don't revisit without new evidence)
+
+- **General tool integration à la Perplexity** — dilutes the "economically
+  guaranteed on-chain data" moat. Already claimed by LangChain/n8n/Zapier.
+- **Wallet provisioning** — ceded to Privy/Dynamic/Coinbase. We sit on top
+  with permissions (session keys, budget caps), not under with key custody.
+- **Ad-driven score boost** — kills the signal itself (Akerlof's lemon
+  problem on trust scores). Stake-based prior weighting is OK;
+  posterior-additive ads are not.
+- **Cross-session wallet tracking by default** — directly contradicts
+  privacy-premium SKU. Only opt-in per-account personalisation.
+
+### Indexing (public, capital-asset style — rack up aggressively)
+
+Listed roughly by payoff/cost ratio:
+
+1. **Listing denormalisation + listener sync** (~160 L) — mirror on-chain
+   v3 listings into `ApiListing` via event listener. Queries stop hitting
+   RPC + metadata fetch per request. Biggest single perf win.
+2. **Postgres tsvector full-text index** (~50 L) — proper search, not
+   `LIKE '%q%'`. Handles phrase + prefix + boolean ops. No new dep.
+3. **pgvector semantic embeddings** (~200 L + embed pipeline) — queries
+   by intent, not keyword. Domain-language drift ("TVL" / "locked value")
+   absorbed. Use `text-embedding-3-small` or BGE.
+4. **Co-occurrence recommendations** (~150 L + periodic aggregation) —
+   "agents that used A also used B", aggregate-only so privacy premium
+   stays intact.
+5. **Cryptographic response attestation + capability tokens** — out-of-
+   scope bytes, but the roadmap hinge for trustless data consumption.
+
+### Personalisation (opt-in only — privacy premium must hold)
+
+Ordered from lightest/safest to heaviest/costliest trust:
+
+1. **Tool aliasing (client-side)** (~80 L, MCP) — `~/.chainlens/aliases.json`
+   lets the agent register `kr_perp_volume(dex=…)` shortcuts. Backend
+   never sees it. Pure token saver + lock-in.
+2. **Session memory (ephemeral)** (~100 L + Redis) — `X-Session-Id`
+   header, TTL 30 m, suggestions within session only. No cross-session
+   trail.
+3. **Wallet-declared preferences (self-signed)** (~60 L) — agent publishes
+   an SBT or signed JSON stating its domain + constraints. We read, don't
+   infer. Zero tracking.
+4. **Explicit learning mode (opt-in, discounted)** (~120 L + GDPR-style
+   delete) — wallet toggles "use my patterns for ranking"; earns a 10%
+   rebate. Default OFF.
+
+### Caching (natural extension of determinism)
+
+- **CID response cache** — free once determinism is in. Past-block queries
+  = permanent cache; latest-block = TTL 1 block.
+- **Routing-decision cache** — orchestrator token savings (200–500 tok per
+  route) come from tool-aliasing (above) more than from server cache.
+- **Delta queries** — "changes since <cursor>" for polling monitor agents.
+- **Push / subscribe** — `X condition met → webhook`. Cuts polling tokens
+  to zero. Natural x402 subscription-fee hook.
+
+### Privacy premium SKU (Phase 2 differentiator)
+
+- **Default**: minimal metadata logging + CID-only cache keys.
+- **Paid tier**: TEE (AWS Nitro / Phala / Marlin) verification path.
+  Gateway operators never see plaintext request/response. Per-call
+  surcharge (e.g. `+0.05 USDC`), not subscription — high-stakes queries
+  opt in dynamically. Anchor price to "loss if pattern leaks" (MEV
+  bot / HF segment).
+- **Not**: pattern marketplace (Akerlof lemons). If we want a data-
+  contribution reward model, frame it as "anonymised query → routing
+  improvement → rebate," not "sell your patterns."
+
+### Scoring evolution
+
+- Now: Laplace-smoothed `(s+1)/(n+2) × ln(n+e)`, weighted-random shuffle.
+- Next: **Thompson sampling** as a drop-in replacement of `scoreListing`.
+  Beta(1+s, 1+f) posterior, sample once, rank. Automatic exploration,
+  zero hyperparams. Ship when real traffic exists to calibrate priors.
+- **Stake-based prior weighting** is the legit form of "promoted
+  listing": bigger stake → prior with more weight → faster climb, but
+  equal slashing exposure. Never posterior-additive.
+
+### Agent-specific observability
+
+- Per-listing error breakdown (seller_5xx, timeout, metadata, settle) —
+  landing in inspect tool now.
+- Listener liveness metric — alert if no ListingRegistered / Settled seen
+  for N minutes while nextListingId changed on-chain.
+- CallLog retention + rollup (90 d raw → aggregated snapshot).
+
+### Structural reasons agents can't replace ChainLens
+
+For future slide decks / pitches, here are the 6 points that hold even if
+model intelligence scales 100×:
+
+1. Indexing is capital, querying is consumable — agents re-pay the crawl
+   cost per query; ChainLens amortises.
+2. Two-sided gatekeeper — sellers optimise for us because we route demand,
+   individual agents don't.
+3. Freshness vs consistency asymmetry — agents want fresh, high-stakes
+   workflows want same-query-same-answer. Block-height determinism wins.
+4. Responsibility externalisation — non-juridical agents can't carry
+   legal/financial liability; we can via slashing.
+5. Normalisation / disambiguation — canonical form is a capital asset
+   agents re-derive badly per-query.
+6. Abuse / sybil defence — agents re-do the filtering; we amortise.
+
+Smarter agents → more tokens on analysis, less on raw fetch → more
+demand for a trusted data layer. ChainLens scales with agent capability,
+not against it.
+
+---
+
 ## Resolved (post-v0.1.0)
 
 - ✅ v0.1.1 #1 — `enqueueWrite` serializer, all 9 write sites routed (ff59c05)
