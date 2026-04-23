@@ -215,8 +215,10 @@ async function resolveListing(input: ExecuteJobInput): Promise<{
 
   const listing =
     input.apiId && input.apiId > 0n
-      ? await prisma.apiListing.findUnique({
-          where: { onChainId: Number(input.apiId) },
+      ? // v2 legacy path — rows have contractVersion = null. findFirst covers
+        // that without the composite unique key gymnastics.
+        await prisma.apiListing.findFirst({
+          where: { onChainId: Number(input.apiId), contractVersion: null },
           select: { endpoint: true, sellerAddress: true, category: true, status: true },
         })
       : await prisma.apiListing.findFirst({

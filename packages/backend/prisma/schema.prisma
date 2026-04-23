@@ -103,7 +103,12 @@ model ApiTestResult {
 
 model ApiListing {
   id             String    @id @default(uuid())
-  onChainId      Int?      @unique
+  // null / "" = legacy v2 (ApiMarketEscrow); "V3" = ChainLensMarket.
+  // Needed because v2 and v3 both restart onChainId at 0, so the bare
+  // @unique onChainId used to be a collision risk once v3 listings started
+  // flowing in via the market listener.
+  contractVersion String?
+  onChainId       Int?
   name           String
   description    String
   endpoint       String
@@ -119,8 +124,10 @@ model ApiListing {
   payments     PaymentRequest[]
   adminActions AdminAction[]
 
+  @@unique([contractVersion, onChainId])
   @@index([status])
   @@index([sellerAddress])
+  @@index([contractVersion, status])
 }
 
 model PaymentRequest {

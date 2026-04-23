@@ -3,6 +3,7 @@ import { env } from "./config/env.js";
 import { publicClient } from "./config/viem.js";
 import { startEventListener } from "./services/event-listener.service.js";
 import { startV2EventListener } from "./services/v2-event-listener.service.js";
+import { startMarketListener } from "./services/market-listener.service.js";
 import { prismaEvidenceStore } from "./services/evidence-store.js";
 import { logger } from "./utils/logger.js";
 import { CONTRACT_ADDRESSES_V2 } from "@chain-lens/shared";
@@ -44,6 +45,18 @@ async function main() {
     logger.warn(
       { error },
       "v2 event listener failed to start (contracts may not be deployed yet)"
+    );
+  }
+
+  // v3 ChainLensMarket listener — mirrors ListingRegistered events into
+  // the ApiListing table so the admin approval gate has rows to gate on.
+  // Health probe at /api/health will report "unstarted" if this fails.
+  try {
+    startMarketListener();
+  } catch (error) {
+    logger.warn(
+      { error },
+      "market listener failed to start (ChainLensMarket may not be deployed for this chain)"
     );
   }
 }

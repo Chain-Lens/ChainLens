@@ -13,6 +13,7 @@ import reputationRoutes from "./reputation.routes.js";
 import jobsRoutes from "./jobs.routes.js";
 import jobExecuteRoutes from "./job-execute.routes.js";
 import taskTypeRoutes from "./task-type.routes.js";
+import healthRoutes from "./health.routes.js";
 
 const router = Router();
 
@@ -30,10 +31,6 @@ router.use("/reputation", reputationRoutes);
 router.use("/jobs/execute", jobExecuteRoutes);
 router.use("/jobs", jobsRoutes);
 router.use("/task-types", taskTypeRoutes);
-
-// Health check
-router.get("/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
+router.use("/health", healthRoutes);
 
 export { router as routes };

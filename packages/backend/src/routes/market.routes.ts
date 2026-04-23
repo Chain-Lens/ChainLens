@@ -1,13 +1,9 @@
 import { Router, Request, Response as ExpressResponse, NextFunction } from "express";
 import { keccak256, stringToBytes, getAddress } from "viem";
-import {
-  ChainLensMarketAbi,
-  CHAIN_LENS_MARKET_ADDRESSES,
-  USDC_ADDRESSES,
-} from "@chain-lens/shared";
+import { ChainLensMarketAbi } from "@chain-lens/shared";
 import { publicClient, walletClient, enqueueWrite } from "../config/viem.js";
-import { env } from "../config/env.js";
 import { logger } from "../utils/logger.js";
+import prisma from "../config/prisma.js";
 import {
   logCall,
   getListingStats,
@@ -15,32 +11,21 @@ import {
   getRecentErrors,
   scoreListing,
 } from "../services/call-log.service.js";
+import {
+  marketAddress,
+  usdcAddress,
+  resolveMetadata,
+  readListing,
+  nextListingId,
+  type ListingMetadata,
+  type OnChainListing,
+} from "../services/market-chain.service.js";
 
 const router = Router();
 
 // ──────────────────────────────────────────────────────────────────────
-// Types + constants
+// Constants
 // ──────────────────────────────────────────────────────────────────────
-
-interface ListingMetadata {
-  name?: string;
-  description?: string;
-  endpoint: string;           // seller REST URL
-  method?: "GET" | "POST";    // default GET
-  pricing?: { amount?: string; unit?: string };
-  inputs_schema?: unknown;
-  example_request?: unknown;
-  example_response?: unknown;
-  tags?: string[];
-  [k: string]: unknown;
-}
-
-interface OnChainListing {
-  owner: `0x${string}`;
-  payout: `0x${string}`;
-  metadataURI: string;
-  active: boolean;
-}
 
 const SELLER_TIMEOUT_MS = 30_000;
 
@@ -93,92 +78,6 @@ function weightedShuffle<T>(
   });
   keyed.sort((a, b) => a.key - b.key);
   return keyed.map((k) => k.item);
-}
-
-function marketAddress(): `0x${string}` {
-  if (env.CHAIN_LENS_MARKET_ADDRESS) {
-    return env.CHAIN_LENS_MARKET_ADDRESS as `0x${string}`;
-  }
-  const chainId = publicClient.chain?.id;
-  if (chainId === undefined) {
-    throw new Error("publicClient.chain not configured");
-  }
-  const addr = CHAIN_LENS_MARKET_ADDRESSES[chainId];
-  if (!addr || /^0x0+$/.test(addr)) {
-    throw new Error(`ChainLensMarket not deployed on chainId=${chainId}`);
-  }
-  return addr as `0x${string}`;
-}
-
-function usdcAddress(): `0x${string}` {
-  const chainId = publicClient.chain?.id;
-  if (chainId === undefined) throw new Error("publicClient.chain not configured");
-  return USDC_ADDRESSES[chainId] as `0x${string}`;
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// Metadata resolution
-// ──────────────────────────────────────────────────────────────────────
-
-/**
- * Parse a metadataURI into a ListingMetadata object. Supports:
- *   - `data:application/json,<json>` or `data:application/json;base64,<b64>`
- *   - `http(s)://…` fetched JSON
- *   - bare `{...}` JSON literal (convenience for short metadata)
- *
- * Keeps Phase 1 simple — no IPFS, no signing, no caching.
- */
-async function resolveMetadata(uri: string): Promise<ListingMetadata> {
-  const trimmed = uri.trim();
-  if (!trimmed) throw new Error("empty metadataURI");
-
-  // data: URI
-  if (trimmed.startsWith("data:")) {
-    const comma = trimmed.indexOf(",");
-    if (comma === -1) throw new Error("malformed data URI");
-    const head = trimmed.slice(5, comma);
-    const body = trimmed.slice(comma + 1);
-    const decoded = head.includes(";base64")
-      ? Buffer.from(body, "base64").toString("utf-8")
-      : decodeURIComponent(body);
-    return JSON.parse(decoded) as ListingMetadata;
-  }
-
-  // JSON literal convenience
-  if (trimmed.startsWith("{")) {
-    return JSON.parse(trimmed) as ListingMetadata;
-  }
-
-  // URL
-  if (/^https?:\/\//i.test(trimmed)) {
-    const res = await fetch(trimmed, { signal: AbortSignal.timeout(10_000) });
-    if (!res.ok) throw new Error(`metadata fetch ${res.status}`);
-    return (await res.json()) as ListingMetadata;
-  }
-
-  throw new Error("unsupported metadataURI scheme (use data:, http(s):, or raw JSON)");
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// On-chain reads
-// ──────────────────────────────────────────────────────────────────────
-
-async function readListing(listingId: bigint): Promise<OnChainListing> {
-  const l = (await publicClient.readContract({
-    address: marketAddress(),
-    abi: ChainLensMarketAbi,
-    functionName: "getListing",
-    args: [listingId],
-  })) as OnChainListing;
-  return l;
-}
-
-async function nextListingId(): Promise<bigint> {
-  return (await publicClient.readContract({
-    address: marketAddress(),
-    abi: ChainLensMarketAbi,
-    functionName: "nextListingId",
-  })) as bigint;
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -242,8 +141,29 @@ router.get("/listings", async (req, res, next) => {
       });
     }
 
-    // ───── enrich with stats + score ───────────────────────────────
-    const statsMap = await getListingsStats(raw.map((r) => r.listingIdNum));
+    // ───── enrich with stats + score + approval ───────────────────
+    const ids = raw.map((r) => r.listingIdNum);
+    const [statsMap, approvedIds] = await Promise.all([
+      getListingsStats(ids),
+      prisma.apiListing
+        .findMany({
+          where: {
+            contractVersion: "V3",
+            onChainId: { in: ids },
+            status: "APPROVED",
+          },
+          select: { onChainId: true },
+        })
+        .then(
+          (rows) =>
+            new Set(
+              rows
+                .map((r) => r.onChainId)
+                .filter((x): x is number => typeof x === "number"),
+            ),
+        ),
+    ]);
+
     let items = raw.map((r) => {
       const stats =
         statsMap.get(r.listingIdNum) ?? {
@@ -274,6 +194,13 @@ router.get("/listings", async (req, res, next) => {
       // view later via a dedicated /admin route; the public search should
       // never serve inactive.
       if (!it.active) return false;
+
+      // Admin approval gate — listings show up in search only after the
+      // admin approves. Pending / rejected / revoked stay hidden. A brand-
+      // new listing that the listener hasn't ingested yet is also hidden
+      // until the PENDING row exists (usually within one block).
+      const idNum = Number(it.listingId);
+      if (!approvedIds.has(idNum)) return false;
 
       if (q) {
         const name = String(it.metadata?.name ?? "").toLowerCase();
@@ -347,9 +274,18 @@ router.get("/listings/:id", async (req, res, next) => {
     } catch (e) {
       metaError = e instanceof Error ? e.message : String(e);
     }
-    const [stats, recentErrors] = await Promise.all([
+    const [stats, recentErrors, approval] = await Promise.all([
       getListingStats(Number(id)),
       getRecentErrors(Number(id)),
+      prisma.apiListing.findUnique({
+        where: {
+          contractVersion_onChainId: {
+            contractVersion: "V3",
+            onChainId: Number(id),
+          },
+        },
+        select: { status: true },
+      }),
     ]);
     res.json({
       listingId: id.toString(),
@@ -362,6 +298,9 @@ router.get("/listings/:id", async (req, res, next) => {
       stats,
       score: scoreListing(stats),
       recentErrors,
+      // UNLISTED = listener hasn't ingested yet. Sellers + admins see this
+      // until the next ListingRegistered event is processed.
+      adminStatus: approval?.status ?? "UNLISTED",
     });
   } catch (err) {
     next(err);
@@ -534,7 +473,29 @@ router.post("/call/:listingId", async (req: Request, res: ExpressResponse, next:
   };
 
   try {
-    // 1. Read listing
+    // 1. Admin approval check — reject PENDING/REJECTED/REVOKED before
+    //    burning an RPC round-trip or seller call. UNLISTED means the
+    //    listener hasn't indexed this id yet (fresh block); treated the
+    //    same as not-approved so we don't race the listener.
+    const approval = await prisma.apiListing.findUnique({
+      where: {
+        contractVersion_onChainId: {
+          contractVersion: "V3",
+          onChainId: Number(listingId),
+        },
+      },
+      select: { status: true },
+    });
+    if (!approval || approval.status !== "APPROVED") {
+      outcome.errorReason = "not_approved";
+      res.status(403).json({
+        error: "listing not approved for execution",
+        adminStatus: approval?.status ?? "UNLISTED",
+      });
+      return;
+    }
+
+    // 2. Read listing on-chain
     let listing: OnChainListing;
     try {
       listing = await readListing(listingId);

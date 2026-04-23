@@ -56,8 +56,10 @@ export async function findPendingByPaymentEvent(
   apiOnChainId: number,
   amount: string
 ) {
-  const api = await prisma.apiListing.findUnique({
-    where: { onChainId: apiOnChainId },
+  // v2 legacy — contractVersion is null for pre-v3 rows. findFirst avoids
+  // the composite unique key since v2 code never knows about contractVersion.
+  const api = await prisma.apiListing.findFirst({
+    where: { onChainId: apiOnChainId, contractVersion: null },
   });
 
   if (!api) return null;
