@@ -30,11 +30,10 @@ function MoonIcon() {
 }
 
 const NAV_LINKS = [
-  { href: "/discover",    label: "Discover" },
-  { href: "/marketplace", label: "Marketplace" },
-  { href: "/register",    label: "Sell API" },
-  { href: "/seller",      label: "My APIs" },
-  { href: "/docs",        label: "Docs" },
+  { href: "/discover", label: "Discover" },
+  { href: "/register", label: "Sell API" },
+  { href: "/seller",   label: "My APIs" },
+  { href: "/docs",     label: "Docs" },
 ];
 
 export default function Header() {
