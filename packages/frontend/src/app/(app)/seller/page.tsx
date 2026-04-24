@@ -46,7 +46,7 @@ export default function SellerPage() {
   const hasPending = pendingAmount > BigInt(0);
 
   async function handleDelete(apiId: string) {
-    if (!confirm("정말 삭제하시겠습니까?")) return;
+    if (!confirm("Are you sure you want to delete?")) return;
     await apiClient.delete(`/seller/listings/${apiId}`);
     refetch();
   }
@@ -279,8 +279,8 @@ function ApiRow({
 
       {api.status === "REJECTED" && (
         <div className="rounded border border-[rgba(248,81,73,0.3)] bg-[rgba(248,81,73,0.1)] px-3 py-2 text-xs text-[var(--red)]">
-          <span className="font-medium">거절 이유: </span>
-          {api.rejectionReason ?? "이유 없음"}
+          <span className="font-medium">Rejection reason: </span>
+          {api.rejectionReason ?? "No reason provided"}
         </div>
       )}
 

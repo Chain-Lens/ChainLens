@@ -16,7 +16,7 @@ export function useAdminAuth() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 기존 세션 확인
+  // Check existing session
   const checkSession = useCallback(async () => {
     try {
       const res = await fetch(`${BASE_URL}/auth/me`, { credentials: "include" });
@@ -31,7 +31,7 @@ export function useAdminAuth() {
     checkSession();
   }, [checkSession]);
 
-  // 지갑 변경 시 세션 초기화
+  // Reset session when wallet changes
   useEffect(() => {
     setIsAuthenticated(false);
     checkSession();
@@ -43,12 +43,12 @@ export function useAdminAuth() {
     setError(null);
 
     try {
-      // 1. 서버에서 nonce 발급
+      // 1. Fetch nonce from server
       const { nonce } = await fetch(`${BASE_URL}/auth/nonce`).then((r) =>
         r.json()
       );
 
-      // 2. SIWE 메시지 생성
+      // 2. Build SIWE message
       const message = new SiweMessage({
         domain: window.location.host,
         address,
@@ -61,10 +61,10 @@ export function useAdminAuth() {
 
       const preparedMessage = message.prepareMessage();
 
-      // 3. 지갑으로 서명
+      // 3. Sign with wallet
       const signature = await signMessageAsync({ message: preparedMessage });
 
-      // 4. 서버에서 검증 → JWT 쿠키 발급
+      // 4. Verify on server → issues JWT cookie
       const res = await fetch(`${BASE_URL}/auth/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -176,7 +176,7 @@ export default function RequestStatusContent({
         {isStuck && isBuyer && (
           <div className="mt-2 border-t border-[var(--border)] pt-4">
             <p className="mb-3 text-xs text-[var(--text2)]">
-              결제 후 5분이 지나도 처리가 완료되지 않으면 환불을 요청할 수 있습니다.
+              If settlement doesn't complete within 5 minutes after payment, you can request a refund.
             </p>
             {refundError && (
               <p className="mb-2 text-xs text-[var(--red)]">{refundError}</p>
