@@ -8,13 +8,12 @@ The stack:
 1. Claude Desktop with the `@chain-lens/mcp-tool` MCP server installed
    (always free, always safe to install).
 2. **Optional (testnet only):** a dedicated throwaway wallet funded from
-   Base Sepolia faucets if you want to try `chain-lens.request`.
+   Base Sepolia faucets if you want to try paid calls.
 
-> ⚠ **Paid requests are testnet-only today.** `chain-lens.request` still
-> reads `WALLET_PRIVATE_KEY` from the MCP config, which stores the key in
-> plaintext on disk. The safer `@chain-lens/sign` CLI is planned for
-> `0.1.x`. Use a throwaway Base Sepolia wallet and never put a mainnet key
-> in there.
+> ⚠ **Paid calls are testnet-only today.** The recommended path is the
+> `@chain-lens/sign` daemon, which keeps the key out of MCP config and adds
+> per-payment approval prompts. `WALLET_PRIVATE_KEY` still works as a legacy
+> fallback, but only use it with a throwaway Base Sepolia wallet.
 
 ---
 
@@ -88,9 +87,10 @@ inside a session to see the connection and tool list.
 | `CHAIN_ID` | `84532` (Base Sepolia). `8453` for Base Mainnet (when addresses are published). |
 | `RPC_URL` | Public Base Sepolia RPC is fine for light use. If the agent gets throttled, swap in an [Alchemy](https://alchemy.com) or [Infura](https://infura.io) URL. |
 
-After restart either client shows two tools:
+After restart either client shows three read-only tools:
 
 - `chain-lens.discover` — list sellers for a task type
+- `chain-lens.inspect` — inspect one listing before you spend
 - `chain-lens.status` — look up evidence for a past job
 
 Both are read-only — no wallet required, no funds at risk.
@@ -106,7 +106,7 @@ That's enough to see the marketplace. If you never want to pay from an
 agent, you can stop here — point any other agent at a seller's endpoint
 directly with your own wallet + UI.
 
-## 3. (Optional, testnet only) Enable `chain-lens.request`
+## 3. (Optional, testnet only) Enable paid tools
 
 Skip this whole section unless you explicitly want the agent to spend
 on-chain.
@@ -129,7 +129,25 @@ on-chain.
 
 Verify both balances on [sepolia.basescan.org](https://sepolia.basescan.org).
 
-### 3c. Add `WALLET_PRIVATE_KEY` to the MCP config
+### 3c. Recommended: use `@chain-lens/sign`
+
+Install once:
+
+```bash
+npm install -g @chain-lens/sign
+chain-lens-sign import
+```
+
+Unlock each session in a visible terminal:
+
+```bash
+chain-lens-sign unlock --ttl 2h
+```
+
+Then point the MCP server at the printed socket path with
+`CHAIN_LENS_SIGN_SOCKET`.
+
+### 3d. Legacy fallback: add `WALLET_PRIVATE_KEY` to the MCP config
 
 **Claude Desktop** — extend the `env` block from step 1a:
 
@@ -169,8 +187,7 @@ claude mcp add chain-lens \
 > shell and reference it as `"WALLET_PRIVATE_KEY": "${WALLET_PRIVATE_KEY}"`
 > so the literal never hits disk.
 
-Restart the client. `chain-lens.request` now appears alongside the two
-read-only tools.
+Restart the client. Paid tools now appear alongside the read-only tools.
 
 When the MCP tool starts, it prints a stderr warning that
 `WALLET_PRIVATE_KEY` is set — this is expected and is there so you notice
@@ -178,24 +195,19 @@ if it ever ends up in an unexpected config.
 
 ## 4. Make your first paid call (testnet only, 1 min)
 
-With `WALLET_PRIVATE_KEY` wired up from step 3, try this prompt:
+With `CHAIN_LENS_SIGN_SOCKET` or `WALLET_PRIVATE_KEY` wired up from step 3,
+try this prompt:
 
-> "Use ChainLens to find a seller that serves `defillama_tvl`, request
-> Uniswap's TVL for 0.05 USDC, and tell me the job id so I can verify it."
+> "Use ChainLens to find a good `defillama_tvl` listing, inspect it, then call
+> it for Uniswap's TVL with a budget of 0.05 USDC."
 
 Claude will:
 
-1. Call `chain-lens.discover({ task_type: "defillama_tvl" })` — picks an
-   active seller.
-2. Call `chain-lens.request({ seller, task_type: "defillama_tvl", inputs: { protocol: "uniswap" }, amount: "50000" })`
-   — this triggers two on-chain transactions from your wallet:
-   - `approve(USDC, escrow, 0.05)` — one-time allowance
-   - `createJob(seller, taskType, amount, inputsHash, 0)` — escrows 0.05
-     USDC and emits `JobCreated`
-3. Poll the gateway for evidence until status is `COMPLETED` or
-   `REFUNDED`.
-4. Return the `jobId`, the seller's response JSON, and the on-chain
-   `responseHash`.
+1. Call `chain-lens.discover(...)` to find active listings.
+2. Call `chain-lens.inspect({ listing_id })` to check schemas, examples, and
+   recent failure signals.
+3. Call `chain-lens.call({ listing_id, inputs: { protocol: "uniswap" }, amount: "50000" })`.
+4. Return the seller response plus the settlement tx hash.
 
 Amount `50000` is USDC with 6 decimals, i.e. **0.05 USDC** per call.
 
@@ -203,19 +215,16 @@ Amount `50000` is USDC with 6 decimals, i.e. **0.05 USDC** per call.
 
 Two independent checks:
 
-- **On the web:** Open `https://chainlens.pelicanlab.dev/evidence/<jobId>`
-  (or your self-hosted gateway's equivalent). The page recomputes
-  `keccak256(JSON.stringify(response))` in your browser and shows a
-  green banner when it matches what the seller committed on-chain.
-  No gateway trust required.
-- **On-chain:** The `createJob` transaction appears on
-  [sepolia.basescan.org](https://sepolia.basescan.org) under your
-  wallet's tx list. Decoding reveals the `jobId` and the escrowed 0.05
-  USDC transfer.
+- **On-chain settlement:** Open the `settleTxHash` from `chain-lens.call`
+  on [sepolia.basescan.org](https://sepolia.basescan.org) to verify the paid
+  market settlement transaction.
+- **Legacy evidence flow:** If you are intentionally using legacy
+  `chain-lens.request`, open `https://chainlens.pelicanlab.dev/evidence/<jobId>`
+  to verify the stored response hash.
 
-If the seller returned garbage (failed schema check or tripped the
-prompt-injection filter), the gateway calls `refund(jobId)` and your
-0.05 USDC comes right back to your wallet, usually within 10 seconds.
+If the seller returned garbage or timed out, the v3 gateway drops the signed
+authorization and no USDC moves. Legacy v2 `chain-lens.request` may still
+complete via refund/evidence polling.
 
 ## 6. Keep the agent honest
 
@@ -249,11 +258,10 @@ connection status and any spawn errors.
 You set `CHAIN_ID` to something other than `84532` (Base Sepolia) or
 `8453` (Base Mainnet). Those are the only two ChainLens is deployed to.
 
-**`chain-lens.request` returns `status: "TIMEOUT"`.**
-The gateway didn't finalize within 2 minutes. Usually means the seller's
-upstream API is slow or down. The escrow is still in-flight — the
-gateway's event listener will either complete or refund it when it
-catches up. Poll with `chain-lens.status({ job_id })`.
+**`chain-lens.call` times out or errors after a long wait.**
+Usually means the seller upstream was slow, the gateway timed out, or you
+missed the sign-daemon approval prompt. In the v3 path the authorization is
+dropped on failure, so no USDC moves.
 
 **Transaction reverts with "insufficient allowance" or "insufficient balance".**
 Your wallet is missing USDC on Base Sepolia, or the previous `approve`

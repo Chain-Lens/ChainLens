@@ -33,17 +33,18 @@ npm install -g @chain-lens/mcp-tool
 
 | Tool | Wallet? | Purpose |
 | --- | --- | --- |
-| `chain-lens.discover` | — | List API listings for a given task type (wraps `GET /api/apis`). |
+| `chain-lens.discover` | — | Search v3 listings (wraps `GET /api/market/listings`). |
+| `chain-lens.inspect` | — | Inspect one v3 listing in depth (wraps `GET /api/market/listings/:id`). |
 | `chain-lens.status` | — | Fetch stored evidence for an on-chain job (wraps `GET /api/evidence/:jobId`). |
-| `chain-lens.request` | required | Sign USDC EIP-3009 TransferWithAuthorization, call `ApiMarketEscrowV2.createJobWithAuth` in one tx, poll for evidence. |
+| `chain-lens.call` | required | Current paid v3 flow. Signs a USDC ReceiveWithAuthorization and calls the gateway x402 endpoint for one listing. |
+| `chain-lens.request` | required | Legacy paid v2 flow. Kept for backward compatibility where `ApiMarketEscrowV2` is still relevant. |
 
-An HTTP-only alternative exists at `GET /api/x402/:apiId` on the gateway
-(returns 402 + Coinbase x402 v1 `accepts[]` on the first call, serves the
-response inline once retried with `X-Payment-Tx: 0x...`). Use that path
-if you'd rather not install this MCP server — you'll still need
-ChainLens-aware signing logic to craft the `createJobWithAuth` tx.
+An HTTP-only alternative exists at `GET /api/x402/:listingId` on the gateway.
+Use that path if you'd rather not install this MCP server — you'll still need
+ChainLens-aware signing logic to produce the `X-Payment` payload for the v3
+market flow.
 
-The default configuration below only enables the two read-only tools. That is
+The default configuration below only enables the three read-only tools. That is
 the recommended setup for everyday use.
 
 ## Environment
@@ -53,8 +54,8 @@ the recommended setup for everyday use.
 | `CHAIN_LENS_API_URL` | `http://localhost:3001/api` | Backend base URL, trailing slash stripped. |
 | `CHAIN_ID` | `84532` | Base Sepolia by default; `8453` for Base Mainnet. |
 | `RPC_URL` | `https://sepolia.base.org` | Public Base Sepolia RPC. Rate-limited; swap for an Alchemy/Infura URL if the agent gets throttled. |
-| `CHAIN_LENS_POLL_INTERVAL_MS` | `2000` | How often `chain-lens.request` polls evidence. |
-| `CHAIN_LENS_POLL_TIMEOUT_MS` | `120000` | Gives up with `status: "TIMEOUT"` after this long. |
+| `CHAIN_LENS_POLL_INTERVAL_MS` | `2000` | How often legacy `chain-lens.request` polls evidence. |
+| `CHAIN_LENS_POLL_TIMEOUT_MS` | `120000` | Timeout for legacy `chain-lens.request` evidence polling. |
 | `CHAIN_LENS_SIGN_SOCKET` | *unset* | Unix socket of a running `chain-lens-sign unlock` daemon. Preferred signing path — adds spending limits + per-tx approval prompt. Mutually exclusive with `WALLET_PRIVATE_KEY`. |
 | `WALLET_PRIVATE_KEY` | *unset* | **Legacy, testnet-only, see warnings below.** Plaintext key; enables `chain-lens.request` without prompts. Mutually exclusive with `CHAIN_LENS_SIGN_SOCKET`. |
 
@@ -82,9 +83,9 @@ Add an entry to `~/Library/Application Support/Claude/claude_desktop_config.json
 Use `http://localhost:3001/api` for `CHAIN_LENS_API_URL` if you are
 running the ChainLens backend locally.
 
-Restart Claude Desktop; `chain-lens.discover` and `chain-lens.status` appear in
-the tool menu. Use them to browse sellers and re-verify past jobs. No wallet,
-no risk.
+Restart Claude Desktop; `chain-lens.discover`, `chain-lens.inspect`, and
+`chain-lens.status` appear in the tool menu. Use them to browse listings and
+re-verify past jobs. No wallet, no risk.
 
 ## Claude Code integration
 
@@ -140,7 +141,8 @@ between the two:
 
 ## Wallet / signing
 
-Paid requests (`chain-lens.request`) need a signer. Two options:
+Paid requests (`chain-lens.call` and legacy `chain-lens.request`) need a signer.
+Two options:
 
 ### Option A — `@chain-lens/sign` daemon (recommended)
 
@@ -265,19 +267,20 @@ Read-only (works with the default config):
 
 Paid (requires `@chain-lens/sign` daemon or testnet `WALLET_PRIVATE_KEY`):
 
-> "Find a ChainLens seller for `defillama_tvl`, request Uniswap's TVL for 0.05
-> USDC, and tell me the job id."
+> "Use `chain-lens.discover` to find a good listing for `defillama_tvl`, inspect
+> the best one, then call it for Uniswap's TVL with a budget of 0.05 USDC."
 
-If you're on the sign daemon path, this prompt produces two approval
-requests in your Terminal A (approve, then createJob). Leave that terminal
-visible — the 30-second default denies if you miss the prompt.
+If you're on the sign daemon path, a v3 paid call prompts once in Terminal A
+for the USDC authorization signature. Legacy `chain-lens.request` can still
+produce transaction approval prompts.
 
 ## Verification
 
-Every response is committed on-chain as `keccak256(JSON.stringify(response))`.
-Verify independently at `https://chainlens.pelicanlab.dev/evidence/<jobId>`
-(or `<your-gateway-host>/evidence/<jobId>` for self-hosted deployments) or
-by reading the `JobCompleted` event from `ApiMarketEscrowV2` on Base Sepolia.
+Legacy v2 jobs can still be verified at
+`https://chainlens.pelicanlab.dev/evidence/<jobId>` (or
+`<your-gateway-host>/evidence/<jobId>` for self-hosted deployments). For the
+current v3 path, `chain-lens.call` returns the market settlement tx hash and
+the gateway response envelope directly.
 
 ## Troubleshooting
 

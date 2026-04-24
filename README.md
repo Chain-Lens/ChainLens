@@ -47,7 +47,7 @@ every answer is independently verifiable.
 | [`packages/backend`](packages/backend) | Express gateway: `/api/apis`, `/api/jobs`, `/api/evidence/:jobId`, `/api/reputation/:addr`. Listens for v2 events and finalizes jobs. |
 | [`packages/frontend`](packages/frontend) | Next.js 15 marketplace, evidence explorer, reputation pages. |
 | [`packages/shared`](packages/shared) | Contract ABIs, addresses, task type registry, chain configs. |
-| [`packages/mcp-tool`](packages/mcp-tool) | `@chain-lens/mcp-tool` — MCP server for Claude Desktop with `chain-lens.discover` / `chain-lens.request` / `chain-lens.status`. |
+| [`packages/mcp-tool`](packages/mcp-tool) | `@chain-lens/mcp-tool` — MCP server with `chain-lens.discover` / `inspect` / `status`, plus paid `request` (legacy v2) and `call` (current v3 x402) when a signer is configured. |
 | [`packages/sample-sellers`](packages/sample-sellers) | Reference seller agents (Blockscout / DeFiLlama / Sourcify) + Dockerfiles. |
 
 ---
@@ -98,9 +98,11 @@ pnpm --filter @chain-lens/sample-sellers dev:defillama # :8082
 
 ## Agent integration (MCP)
 
-The [`@chain-lens/mcp-tool`](packages/mcp-tool) package exposes three tools
-over Model Context Protocol stdio, so Claude Desktop (and any MCP client)
-can spend USDC on data. Install with `npx` — no clone required:
+The [`@chain-lens/mcp-tool`](packages/mcp-tool) package exposes read tools
+(`chain-lens.discover`, `chain-lens.inspect`, `chain-lens.status`) plus paid
+tools when a signer is configured. `chain-lens.call` is the current v3 x402
+path; `chain-lens.request` remains available for the legacy v2 escrow flow.
+Install with `npx` — no clone required:
 
 ```jsonc
 // ~/Library/Application Support/Claude/claude_desktop_config.json
@@ -122,12 +124,14 @@ can spend USDC on data. Install with `npx` — no clone required:
 
 Tools:
 
-- `chain-lens.discover` — find API listings for a task type
-- `chain-lens.request` — approve USDC → createJob → poll evidence
+- `chain-lens.discover` — search v3 listings via `GET /api/market/listings`
+- `chain-lens.inspect` — deep-dive on one listing via `GET /api/market/listings/:id`
 - `chain-lens.status` — fetch stored evidence for a job id
+- `chain-lens.call` — current paid v3 x402 flow
+- `chain-lens.request` — legacy paid v2 escrow flow
 
-`WALLET_PRIVATE_KEY` is optional; without it the agent can still `discover`
-and read `status`, just not spend.
+`WALLET_PRIVATE_KEY` is optional; without it the agent can still `discover`,
+`inspect`, and read `status`, just not spend.
 
 ## HTTP x402 endpoint
 
@@ -135,23 +139,20 @@ An alternative to the MCP path is the plain-HTTP x402 facade. Any x402-aware
 HTTP client can negotiate payment without installing `@chain-lens/mcp-tool`.
 
 ```bash
-# 1. Discover the payment terms (GET or POST, both return 402 without header)
-curl -i https://chainlens.pelicanlab.dev/api/x402/<apiId>
+# 1. Call the listing-specific x402 endpoint without payment to inspect terms
+curl -i https://chainlens.pelicanlab.dev/api/x402/<listingId>
 
-# 2. Sign + submit createJobWithAuth on-chain with inputsHash =
-#    keccak256(canonicalJSON(inputs)). Then POST back with body + header:
-curl -X POST https://chainlens.pelicanlab.dev/api/x402/<apiId> \
-  -H "Content-Type: application/json" \
-  -H "X-Payment-Tx: 0x<tx hash>" \
-  -d '{"inputs":{"protocol":"lido"}}'
-# → { jobId, status: "COMPLETED", response, responseHash, evidenceURI }
+# 2. Sign a USDC ReceiveWithAuthorization for ChainLensMarket, encode it as
+#    X-Payment, then retry the GET with inputs in the query string:
+curl -H "X-Payment: <base64url-json>" \
+  "https://chainlens.pelicanlab.dev/api/x402/<listingId>?protocol=lido"
+# → { jobRef, settleTxHash, delivery, untrusted_data, ... }
 ```
 
-The 402 payload follows the Coinbase x402 v1 shape; `payTo` is the ChainLens
-escrow address and `extra.chainlens` describes the required
-`createJobWithAuth` call. Server verifies `hash(inputs)` matches the
-`inputsHash` the buyer signed, kicks the gateway execution pipeline, and
-returns the seller's response inline once the job lands.
+The x402 payload is listing-specific and the retry path is the current v3
+market flow. The gateway settles on-chain only after the seller response
+passes execution checks; failed seller calls drop the signed authorization so
+no USDC moves.
 
 Standard x402 clients can parse the 402 response but need ChainLens-aware
 signing logic to complete payment — the `mcp-tool` package bundles this.

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { CONTRACT_ADDRESSES_V2, USDC_ADDRESSES } from "@chain-lens/shared";
+import { CHAIN_LENS_MARKET_ADDRESSES, USDC_ADDRESSES } from "@chain-lens/shared";
 
 const CHAIN_ID = 84532;
-const ESCROW = CONTRACT_ADDRESSES_V2[CHAIN_ID]!;
+const MARKET = CHAIN_LENS_MARKET_ADDRESSES[CHAIN_ID]!;
 const USDC = USDC_ADDRESSES[CHAIN_ID]!;
 const BASE_URL = "https://chainlens.pelicanlab.dev/api";
 
@@ -85,7 +85,37 @@ function CodeBlock({ code, language = "typescript" }: { code: string; language?:
   );
 }
 
-const quickstartCode = `import {
+const quickstartCode = `const BASE = "${BASE_URL}";
+const LISTING_ID = "3";      // from /api/market/listings
+const AMOUNT = "50000";      // 0.05 USDC (6 decimals)
+const INPUTS = { protocol: "uniswap" };
+const X_PAYMENT = "<base64url-json>"; // signed ReceiveWithAuthorization payload
+
+// Current v3 flow: call the listing-specific x402 endpoint.
+const res = await fetch(
+  \`\${BASE}/x402/\${LISTING_ID}?\${new URLSearchParams(INPUTS as Record<string, string>)}\`,
+  {
+    method: "GET",
+    headers: { "X-Payment": X_PAYMENT },
+  },
+);
+
+if (!res.ok) {
+  throw new Error(\`Gateway returned \${res.status} \${res.statusText}\`);
+}
+
+const out = await res.json();
+console.log({
+  listingId: out.listingId,
+  jobRef: out.jobRef,
+  settleTxHash: out.settleTxHash,
+  delivery: out.delivery,
+  safety: out.safety,
+  untrustedData: out.untrusted_data,
+});
+`;
+
+const legacyQuickstartCode = `import {
   createPublicClient,
   createWalletClient,
   http,
@@ -96,7 +126,7 @@ const quickstartCode = `import {
 import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
 
-const ESCROW = "${ESCROW}";
+const ESCROW = "0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E";
 const USDC   = "${USDC}";
 const BASE   = "${BASE_URL}";
 
@@ -184,8 +214,9 @@ export default function DocsPage() {
         <h1 className="mt-4 text-4xl font-bold" style={{ color: "var(--text)" }}>How to use ChainLens</h1>
         <p className="mt-3 text-lg" style={{ color: "var(--text2)" }}>
           Any AI agent with a wallet can pay for verified data in USDC. This
-          page walks through the direct-contract path — approve, createJob,
-          poll evidence. See alternatives at the end.
+          page now focuses on the current v3 market flow: discover a listing,
+          inspect it, then pay through the x402 gateway. Legacy v2 evidence
+          flow is still noted where relevant.
         </p>
       </div>
 
@@ -200,9 +231,9 @@ export default function DocsPage() {
             ["#prereqs",    "Prerequisites"],
             ["#flow",       "Payment flow overview"],
             ["#step1",      "Step 1 — Discover a listing"],
-            ["#step2",      "Step 2 — Approve USDC"],
-            ["#step3",      "Step 3 — createJob (lock USDC + start the job)"],
-            ["#step4",      "Step 4 — Poll evidence + verify the hash"],
+            ["#step2",      "Step 2 — Inspect before you spend"],
+            ["#step3",      "Step 3 — Sign and call through x402"],
+            ["#step4",      "Step 4 — Verify settlement and response"],
             ["#quickstart", "Full quickstart code"],
             ["#contract",   "Contract reference"],
             ["#alt",        "Alternatives (MCP, x402 HTTP)"],
@@ -264,32 +295,32 @@ export default function DocsPage() {
       <section id="flow" className="mb-14">
         <h2 className="text-2xl font-bold mb-4" style={{ color: "var(--text)" }}>2. Payment flow overview</h2>
         <p className="mb-4" style={{ color: "var(--text2)" }}>
-          ChainLens escrows USDC in{" "}
-          <InlineCode>ApiMarketEscrowV2</InlineCode> while the gateway calls
-          the seller and verifies the response. A successful call releases
-          funds to the seller and commits{" "}
-          <InlineCode>responseHash</InlineCode> on-chain; a failed validation
-          refunds the buyer automatically.
+          ChainLens now routes paid calls through{" "}
+          <InlineCode>ChainLensMarket</InlineCode> and the listing-specific{" "}
+          <InlineCode>/api/x402/:listingId</InlineCode> gateway path. The buyer
+          signs a USDC <InlineCode>ReceiveWithAuthorization</InlineCode>, the
+          gateway executes the seller API, and settlement happens on-chain only
+          after a successful response. Failed seller calls drop the signed
+          authorization, so no USDC moves.
         </p>
         <TerminalWindow title="terminal — flow diagram">
           <Line prompt={false} color="blue">┌─────────────────────────────────────────────────────────────┐</Line>
           <Line prompt={false} color="blue">│                 ChainLens v2 payment flow                   │</Line>
           <Line prompt={false} color="blue">├─────────────────────────────────────────────────────────────┤</Line>
-          <Line prompt={false} color="yellow">│  1. GET /api/apis?task_type=&lt;t&gt;                             │</Line>
-          <Line prompt={false} color="gray">│     → [{"{ id, onChainId, seller, price, ... }"}]                  │</Line>
+          <Line prompt={false} color="yellow">│  1. GET /api/market/listings?q=&lt;search&gt;                     │</Line>
+          <Line prompt={false} color="gray">│     → [{"{ listingId, metadata, stats, score, ... }"}]             │</Line>
           <Line prompt={false} color="blue">│                                                             │</Line>
-          <Line prompt={false} color="yellow">│  2. usdc.approve(escrow, amount)                            │</Line>
+          <Line prompt={false} color="yellow">│  2. GET /api/market/listings/&lt;listingId&gt;                    │</Line>
+          <Line prompt={false} color="gray">│     → full metadata, examples, recent errors               │</Line>
           <Line prompt={false} color="blue">│                                                             │</Line>
-          <Line prompt={false} color="yellow">│  3. escrow.createJob(seller, taskType, amount,              │</Line>
-          <Line prompt={false} color="yellow">│                      inputsHash, apiId)                     │</Line>
-          <Line prompt={false} color="gray">│     → emits JobCreated(jobId, …)                            │</Line>
+          <Line prompt={false} color="yellow">│  3. GET /api/x402/&lt;listingId&gt;?inputs...                     │</Line>
+          <Line prompt={false} color="yellow">│     + X-Payment: signed ReceiveWithAuthorization           │</Line>
           <Line prompt={false} color="blue">│                                                             │</Line>
-          <Line prompt={false} color="gray">│     Gateway calls seller → validates response against       │</Line>
-          <Line prompt={false} color="gray">│     task-type schema → submits responseHash on-chain OR     │</Line>
-          <Line prompt={false} color="gray">│     refunds if the seller fails validation.                 │</Line>
+          <Line prompt={false} color="gray">│     Gateway calls seller → validates response →             │</Line>
+          <Line prompt={false} color="gray">│     settles on ChainLensMarket only on success              │</Line>
           <Line prompt={false} color="blue">│                                                             │</Line>
-          <Line prompt={false} color="yellow">│  4. GET /api/evidence/&lt;jobId&gt;                               │</Line>
-          <Line prompt={false} color="green">│     → {"{ status, response, responseHash, evidenceURI }"}         │</Line>
+          <Line prompt={false} color="yellow">│  4. Response includes settleTxHash + seller payload         │</Line>
+          <Line prompt={false} color="green">│     → {"{ jobRef, settleTxHash, safety, untrusted_data }"}       │</Line>
           <Line prompt={false} color="blue">└─────────────────────────────────────────────────────────────┘</Line>
         </TerminalWindow>
       </section>
@@ -298,138 +329,110 @@ export default function DocsPage() {
       <section id="step1" className="mb-14">
         <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text)" }}>3. Step 1 — Discover a listing</h2>
         <p className="mb-4" style={{ color: "var(--text2)" }}>
-          Fetch APPROVED listings from the public registry. Filter by{" "}
-          <InlineCode>task_type</InlineCode> (one of{" "}
-          <InlineCode>blockscout_contract_source</InlineCode>,{" "}
-          <InlineCode>blockscout_tx_info</InlineCode>,{" "}
-          <InlineCode>defillama_tvl</InlineCode>,{" "}
-          <InlineCode>sourcify_verify</InlineCode>,{" "}
-          <InlineCode>chainlink_price_feed</InlineCode>).
+          Search active approved listings through the public market index.
+          Query by free-text, tags, success rate, price ceiling, or sort mode.
         </p>
         <TerminalWindow title="terminal — discover">
-          <Line>curl &quot;{BASE_URL}/apis?task_type=defillama_tvl&quot;</Line>
+          <Line>curl &quot;{BASE_URL}/market/listings?q=defillama&amp;sort=score_strict&quot;</Line>
           <Line prompt={false} color="gray">{"{"}</Line>
           <Line prompt={false} color="gray">{"  "}<span style={{ color: "#e3b341" }}>&quot;items&quot;</span>: [{"{"}</Line>
-          <Line prompt={false} color="gray">{"    "}<span style={{ color: "#e3b341" }}>&quot;id&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;abc-uuid&quot;</span>,</Line>
-          <Line prompt={false} color="gray">{"    "}<span style={{ color: "#e3b341" }}>&quot;onChainId&quot;</span>: <span style={{ color: "var(--green)" }}>3</span>,</Line>
-          <Line prompt={false} color="gray">{"    "}<span style={{ color: "#e3b341" }}>&quot;seller&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;0xSellerAddress…&quot;</span>,</Line>
-          <Line prompt={false} color="gray">{"    "}<span style={{ color: "#e3b341" }}>&quot;price&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;50000&quot;</span>,<span style={{ color: "var(--text3)" }} className="ml-2">// 0.05 USDC (6 decimals)</span></Line>
-          <Line prompt={false} color="gray">{"    "}<span style={{ color: "#e3b341" }}>&quot;category&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;defillama_tvl&quot;</span></Line>
+          <Line prompt={false} color="gray">{"    "}<span style={{ color: "#e3b341" }}>&quot;listingId&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;3&quot;</span>,</Line>
+          <Line prompt={false} color="gray">{"    "}<span style={{ color: "#e3b341" }}>&quot;owner&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;0xSellerAddress…&quot;</span>,</Line>
+          <Line prompt={false} color="gray">{"    "}<span style={{ color: "#e3b341" }}>&quot;priceUsdc&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;0.050000 USDC&quot;</span>,</Line>
+          <Line prompt={false} color="gray">{"    "}<span style={{ color: "#e3b341" }}>&quot;metadata&quot;</span>: {"{ "}<span style={{ color: "#e3b341" }}>&quot;name&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;DeFiLlama TVL&quot;</span> {"}"},</Line>
+          <Line prompt={false} color="gray">{"    "}<span style={{ color: "#e3b341" }}>&quot;stats&quot;</span>: {"{ "}<span style={{ color: "#e3b341" }}>&quot;successRate&quot;</span>: <span style={{ color: "var(--green)" }}>0.98</span> {"}"}</Line>
           <Line prompt={false} color="gray">{"  }], "}<span style={{ color: "#e3b341" }}>&quot;total&quot;</span>: <span style={{ color: "var(--green)" }}>1</span></Line>
           <Line prompt={false} color="gray">{"}"}</Line>
         </TerminalWindow>
         <p className="mb-2" style={{ color: "var(--text2)" }}>
-          You&apos;ll also need the <InlineCode>taskType</InlineCode> as a
-          bytes32 — fetch it from the task-type registry:
+          Once you have a promising listing id, inspect it before spending:
         </p>
-        <TerminalWindow title="terminal — task type id">
-          <Line>curl &quot;{BASE_URL}/task-types&quot;</Line>
-          <Line prompt={false} color="gray">{"// → [{ name: 'defillama_tvl', id: '0x…32-byte hash', enabled: true }]"}</Line>
+        <TerminalWindow title="terminal — inspect">
+          <Line>curl &quot;{BASE_URL}/market/listings/3&quot;</Line>
+          <Line prompt={false} color="gray">{"// → { metadata, stats, recentErrors, adminStatus, ... }"}</Line>
         </TerminalWindow>
         <div
           className="rounded-lg p-4 text-sm"
           style={{ background: "rgba(121,192,255,0.08)", border: "1px solid rgba(121,192,255,0.25)", color: "var(--cyan)" }}
         >
           <strong>Tip:</strong> Human-browsable at{" "}
-          <a href="/marketplace" className="underline font-medium" style={{ color: "var(--cyan)" }}>
-            /marketplace
+          <a href="/discover" className="underline font-medium" style={{ color: "var(--cyan)" }}>
+            /discover
           </a>
-          . Filter + click through to see sample requests and seller stats.
+          . Filter + click through to see schema hints, examples, and recent seller stats.
         </div>
       </section>
 
-      {/* Step 2 — Approve */}
+      {/* Step 2 — Inspect */}
       <section id="step2" className="mb-14">
-        <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text)" }}>4. Step 2 — Approve USDC</h2>
+        <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text)" }}>4. Step 2 — Inspect before you spend</h2>
         <p className="mb-4" style={{ color: "var(--text2)" }}>
-          ERC-20 allowance so <InlineCode>ApiMarketEscrowV2</InlineCode> can
-          pull the payment when you call{" "}
-          <InlineCode>createJob</InlineCode>. One-time per allowance cap —
-          approve a larger amount if you plan multiple calls.
+          The listing detail response tells you whether a paid call is worth it:
+          endpoint/method, example request and response, 30-day success rate,
+          latency, and recent policy rejects.
         </p>
-        <TerminalWindow title="agent.ts — approve USDC">
-          <Line prompt={false} color="purple">{"import"} <span style={{ color: "#e3b341" }}>{"{ createWalletClient, http, parseAbi }"}</span> <span style={{ color: "var(--purple)" }}>from</span> <span style={{ color: "var(--green)" }}>&quot;viem&quot;</span></Line>
-          <Line prompt={false} color="purple">{"import"} <span style={{ color: "#e3b341" }}>{"{ privateKeyToAccount }"}</span> <span style={{ color: "var(--purple)" }}>from</span> <span style={{ color: "var(--green)" }}>&quot;viem/accounts&quot;</span></Line>
-          <Line prompt={false} color="purple">{"import"} <span style={{ color: "#e3b341" }}>{"{ baseSepolia }"}</span> <span style={{ color: "var(--purple)" }}>from</span> <span style={{ color: "var(--green)" }}>&quot;viem/chains&quot;</span></Line>
-          <Line prompt={false} color="gray">{""}</Line>
-          <Line prompt={false} color="gray"><span style={{ color: "var(--cyan)" }}>const</span> <span style={{ color: "#e3b341" }}>ESCROW</span> = <span style={{ color: "var(--green)" }}>&quot;{ESCROW}&quot;</span>;</Line>
-          <Line prompt={false} color="gray"><span style={{ color: "var(--cyan)" }}>const</span> <span style={{ color: "#e3b341" }}>USDC</span>   = <span style={{ color: "var(--green)" }}>&quot;{USDC}&quot;</span>;</Line>
-          <Line prompt={false} color="gray">{""}</Line>
-          <Line prompt={false} color="gray"><span style={{ color: "var(--purple)" }}>await</span> wallet.<span style={{ color: "#e3b341" }}>writeContract</span>({"{"}</Line>
-          <Line prompt={false} color="gray">{"  "}address: USDC,</Line>
-          <Line prompt={false} color="gray">{"  "}abi: parseAbi([<span style={{ color: "var(--green)" }}>&quot;function approve(address,uint256) returns (bool)&quot;</span>]),</Line>
-          <Line prompt={false} color="gray">{"  "}functionName: <span style={{ color: "var(--green)" }}>&quot;approve&quot;</span>,</Line>
-          <Line prompt={false} color="gray">{"  "}args: [ESCROW, amount], <span style={{ color: "var(--text3)" }}>// amount in USDC wei (6 decimals)</span></Line>
-          <Line prompt={false} color="gray">{"}"});</Line>
+        <TerminalWindow title="terminal — what to check">
+          <Line prompt={false} color="gray">{"// metadata.endpoint / metadata.method"}</Line>
+          <Line prompt={false} color="gray">{"// metadata.inputs_schema / example_request"}</Line>
+          <Line prompt={false} color="gray">{"// stats.successRate / stats.avgLatencyMs"}</Line>
+          <Line prompt={false} color="gray">{"// recentErrors.breakdown.response_rejected_schema"}</Line>
         </TerminalWindow>
       </section>
 
-      {/* Step 3 — createJob */}
+      {/* Step 3 — x402 call */}
       <section id="step3" className="mb-14">
-        <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text)" }}>5. Step 3 — createJob</h2>
+        <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text)" }}>5. Step 3 — Sign and call through x402</h2>
         <p className="mb-4" style={{ color: "var(--text2)" }}>
-          Locks USDC in escrow and emits{" "}
-          <InlineCode>JobCreated(jobId, buyer, seller, apiId, taskType, amount, inputsHash, …)</InlineCode>.
-          The gateway picks up the event and calls the seller.
+          The current paid path is a signed USDC authorization sent in the{" "}
+          <InlineCode>X-Payment</InlineCode> header to the listing-specific
+          x402 route. The gateway executes the seller API first, then settles
+          on <InlineCode>ChainLensMarket</InlineCode> only on success.
         </p>
         <p className="mb-4" style={{ color: "var(--text2)" }}>
-          <InlineCode>inputsHash</InlineCode> is{" "}
-          <InlineCode>keccak256(canonicalJSON(inputs))</InlineCode> — the
-          gateway recomputes it and rejects the job if it mismatches, so
-          callers can&apos;t swap inputs after payment.
+          Inputs are forwarded as query params for GET listings or request body
+          for POST listings, depending on listing metadata. The frontend
+          purchase card already handles this flow for human users.
         </p>
-        <TerminalWindow title="agent.ts — createJob">
-          <Line prompt={false} color="gray"><span style={{ color: "var(--text3)" }}>// Canonical JSON: sorted keys at every level. Matches the gateway&apos;s stableStringify.</span></Line>
-          <Line prompt={false} color="gray"><span style={{ color: "var(--cyan)" }}>const</span> hash = keccak256(toHex(canonicalJSON(inputs)));</Line>
-          <Line prompt={false} color="gray">{""}</Line>
-          <Line prompt={false} color="gray"><span style={{ color: "var(--cyan)" }}>const</span> txHash = <span style={{ color: "var(--purple)" }}>await</span> wallet.<span style={{ color: "#e3b341" }}>writeContract</span>({"{"}</Line>
-          <Line prompt={false} color="gray">{"  "}address: ESCROW,</Line>
-          <Line prompt={false} color="gray">{"  "}abi: parseAbi([<span style={{ color: "var(--green)" }}>&quot;function createJob(address,bytes32,uint256,bytes32,uint256) returns (uint256)&quot;</span>]),</Line>
-          <Line prompt={false} color="gray">{"  "}functionName: <span style={{ color: "var(--green)" }}>&quot;createJob&quot;</span>,</Line>
-          <Line prompt={false} color="gray">{"  "}args: [seller, taskType, amount, hash, apiId],</Line>
-          <Line prompt={false} color="gray">{"}"});</Line>
-          <Line prompt={false} color="gray"><span style={{ color: "var(--cyan)" }}>const</span> receipt = <span style={{ color: "var(--purple)" }}>await</span> pub.<span style={{ color: "#e3b341" }}>waitForTransactionReceipt</span>({"{ hash: txHash }"});</Line>
-          <Line prompt={false} color="gray"><span style={{ color: "var(--cyan)" }}>const</span> jobId   = <span style={{ color: "#e3b341" }}>BigInt</span>(receipt.logs[0].topics[1]);</Line>
+        <TerminalWindow title="terminal — x402 paid call">
+          <Line>curl -H &quot;X-Payment: &lt;base64url-json&gt;&quot; &quot;{BASE_URL}/x402/3?protocol=uniswap&quot;</Line>
+          <Line prompt={false} color="gray">{"// → { jobRef, settleTxHash, safety, untrusted_data, ... }"}</Line>
         </TerminalWindow>
         <div
           className="rounded-lg p-4 text-sm"
           style={{ background: "rgba(255,166,87,0.08)", border: "1px solid rgba(255,166,87,0.25)", color: "var(--orange)" }}
         >
-          <strong>Note:</strong> If the seller fails schema validation or
-          trips the prompt-injection filter, the gateway calls{" "}
-          <InlineCode>refund(jobId)</InlineCode> and your USDC returns to your
-          wallet — usually within 10 seconds.
+          <strong>Note:</strong> If the seller fails schema validation,
+          times out, or trips the policy filter, the v3 gateway drops the
+          signed authorization and no USDC moves.
         </div>
       </section>
 
-      {/* Step 4 — Poll evidence */}
+      {/* Step 4 — verify */}
       <section id="step4" className="mb-14">
-        <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text)" }}>6. Step 4 — Poll evidence + verify the hash</h2>
+        <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text)" }}>6. Step 4 — Verify settlement and response</h2>
         <p className="mb-4" style={{ color: "var(--text2)" }}>
-          Evidence appears once the gateway submits <InlineCode>submitJob</InlineCode>
-          (success) or <InlineCode>refund</InlineCode> (failure). Status
-          stays <InlineCode>PAID</InlineCode> during execution and flips to{" "}
-          <InlineCode>COMPLETED</InlineCode> or <InlineCode>REFUNDED</InlineCode>{" "}
-          at finalization.
+          A successful v3 call returns the settlement tx hash immediately along
+          with the seller response and safety metadata. Legacy v2 clients may
+          still poll `/api/evidence/:jobId`, but that is no longer the primary
+          buyer path.
         </p>
-        <TerminalWindow title="terminal — evidence">
-          <Line>curl &quot;{BASE_URL}/evidence/{"<jobId>"}&quot;</Line>
+        <TerminalWindow title="terminal — settlement result">
+          <Line>curl -H &quot;X-Payment: &lt;base64url-json&gt;&quot; &quot;{BASE_URL}/x402/3?protocol=uniswap&quot;</Line>
           <Line prompt={false} color="gray">{"{"}</Line>
-          <Line prompt={false} color="gray">{"  "}<span style={{ color: "#e3b341" }}>&quot;onchainJobId&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;42&quot;</span>,</Line>
-          <Line prompt={false} color="gray">{"  "}<span style={{ color: "#e3b341" }}>&quot;status&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;COMPLETED&quot;</span>,</Line>
-          <Line prompt={false} color="gray">{"  "}<span style={{ color: "#e3b341" }}>&quot;response&quot;</span>: {"{ "}<span style={{ color: "#e3b341" }}>&quot;tvl_usd&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;1234567890&quot;</span> {"}"},</Line>
-          <Line prompt={false} color="gray">{"  "}<span style={{ color: "#e3b341" }}>&quot;responseHash&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;0xabc…&quot;</span>,</Line>
-          <Line prompt={false} color="gray">{"  "}<span style={{ color: "#e3b341" }}>&quot;evidenceURI&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;{BASE_URL}/evidence/42&quot;</span></Line>
+          <Line prompt={false} color="gray">{"  "}<span style={{ color: "#e3b341" }}>&quot;listingId&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;3&quot;</span>,</Line>
+          <Line prompt={false} color="gray">{"  "}<span style={{ color: "#e3b341" }}>&quot;jobRef&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;0xjobref…&quot;</span>,</Line>
+          <Line prompt={false} color="gray">{"  "}<span style={{ color: "#e3b341" }}>&quot;settleTxHash&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;0xsettle…&quot;</span>,</Line>
+          <Line prompt={false} color="gray">{"  "}<span style={{ color: "#e3b341" }}>&quot;delivery&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;relayed_unmodified&quot;</span>,</Line>
+          <Line prompt={false} color="gray">{"  "}<span style={{ color: "#e3b341" }}>&quot;untrusted_data&quot;</span>: {"{ "}<span style={{ color: "#e3b341" }}>&quot;tvl_usd&quot;</span>: <span style={{ color: "var(--green)" }}>&quot;1234567890&quot;</span> {"}"}</Line>
           <Line prompt={false} color="gray">{"}"}</Line>
         </TerminalWindow>
         <p className="mb-2" style={{ color: "var(--text2)" }}>
-          Recompute <InlineCode>keccak256(JSON.stringify(response))</InlineCode> and
-          compare against <InlineCode>responseHash</InlineCode> to verify the
-          answer wasn&apos;t altered post-commit. The{" "}
-          <a href="/evidence" className="underline" style={{ color: "var(--cyan)" }}>
-            /evidence
+          For human users, the easiest path is the listing detail page itself at{" "}
+          <a href="/discover" className="underline" style={{ color: "var(--cyan)" }}>
+            /discover
           </a>{" "}
-          explorer does this client-side for you.
+          plus the Basescan link for the returned settlement tx. Legacy v2
+          evidence verification still exists for older jobs.
         </p>
       </section>
 
@@ -437,10 +440,14 @@ export default function DocsPage() {
       <section id="quickstart" className="mb-14">
         <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text)" }}>7. Full quickstart code</h2>
         <p className="mb-4" style={{ color: "var(--text2)" }}>
-          Drop into your agent and call{" "}
-          <InlineCode>callAPI({"{"} apiId, seller, taskType, amount, inputs, privateKey {"}"})</InlineCode>.
+          Current v3 quickstart is the x402 gateway path. Legacy v2 direct
+          contract code is included below for older integrations only.
         </p>
         <CodeBlock code={quickstartCode} language="agent.ts" />
+        <p className="mt-6 mb-4" style={{ color: "var(--text2)" }}>
+          Legacy v2 quickstart:
+        </p>
+        <CodeBlock code={legacyQuickstartCode} language="legacy-agent.ts" />
       </section>
 
       {/* Contract reference */}
@@ -457,12 +464,12 @@ export default function DocsPage() {
             </thead>
             <tbody>
               {[
-                ["createJob(seller, taskType, amount, inputsHash, apiId)",                  "Buyer / Agent", "Pull USDC from allowance into escrow; emit JobCreated"],
-                ["createJobWithAuth(seller, taskType, amount, inputsHash, apiId, auth, sig)", "Buyer / Agent", "EIP-3009 one-sig variant — no prior approve() needed"],
-                ["submitJob(jobId, responseHash, evidenceURI)",                              "Gateway",       "Release USDC to seller, commit the response hash"],
-                ["refund(jobId)",                                                            "Gateway",       "Return USDC to buyer on validation failure"],
-                ["claim()",                                                                  "Seller",        "Withdraw accumulated earnings"],
-                ["approveApi(apiId)",                                                        "Admin",         "Promote listing from PENDING to APPROVED on-chain"],
+                ["settle(listingId, buyer, amount, auth, signature, jobRef)", "Gateway", "Current v3 settlement path on ChainLensMarket"],
+                ["claim()", "Seller", "Withdraw accumulated seller earnings"],
+                ["registerListing(metadataURI, payout)", "Seller", "Create a new market listing"],
+                ["deactivateListing(listingId)", "Seller", "Hide a listing from public purchase"],
+                ["createJob(...)", "Buyer / Agent", "Legacy v2 escrow path"],
+                ["createJobWithAuth(...)", "Buyer / Agent", "Legacy v2 one-sig path"],
               ].map(([fn, caller, desc], i, arr) => (
                 <tr key={fn} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none" }}>
                   <td className="px-4 py-3 font-mono text-xs" style={{ color: "var(--purple)", background: "var(--bg2)" }}>{fn}</td>
@@ -477,15 +484,15 @@ export default function DocsPage() {
           className="mt-4 p-4 rounded-lg text-sm font-mono"
           style={{ background: "var(--bg2)", border: "1px solid var(--border)" }}
         >
-          <span style={{ color: "var(--text3)" }}>ApiMarketEscrowV2:</span>{" "}
+          <span style={{ color: "var(--text3)" }}>ChainLensMarket:</span>{" "}
           <a
-            href={`https://sepolia.basescan.org/address/${ESCROW}`}
+            href={`https://sepolia.basescan.org/address/${MARKET}`}
             target="_blank"
             rel="noopener noreferrer"
             className="underline break-all"
             style={{ color: "var(--cyan)" }}
           >
-            {ESCROW}
+            {MARKET}
           </a>
           <span className="ml-3" style={{ color: "var(--text3)" }}>Base Sepolia</span>
           <br />
@@ -514,9 +521,10 @@ export default function DocsPage() {
             register <InlineCode>@chain-lens/mcp-tool</InlineCode> in your MCP
             client config. The tool exposes{" "}
             <InlineCode>chain-lens.discover</InlineCode> /{" "}
-            <InlineCode>chain-lens.request</InlineCode> /{" "}
-            <InlineCode>chain-lens.status</InlineCode> and handles the approve
-            + createJob + poll flow internally. Full walkthrough:{" "}
+            <InlineCode>chain-lens.inspect</InlineCode> /{" "}
+            <InlineCode>chain-lens.status</InlineCode> by default, plus paid{" "}
+            <InlineCode>chain-lens.call</InlineCode> when a signer is configured.
+            Full walkthrough:{" "}
             <a
               href="https://github.com/Chain-Lens/ChainLens/blob/main/docs/BUYER_GUIDE.md"
               target="_blank"
@@ -529,15 +537,13 @@ export default function DocsPage() {
           </li>
           <li>
             <strong style={{ color: "var(--text)" }}>x402 HTTP facade:</strong>{" "}
-            one-POST flow using EIP-3009{" "}
-            <InlineCode>transferWithAuthorization</InlineCode> — no prior
-            approve, one signature. Point any x402-aware HTTP client at{" "}
-            <InlineCode>{BASE_URL}/x402/{"<apiId>"}</InlineCode>; the 402
-            response carries <InlineCode>payTo</InlineCode> and{" "}
-            <InlineCode>extra.chainlens</InlineCode> describing the required{" "}
-            <InlineCode>createJobWithAuth</InlineCode> call. Standard x402
-            clients can parse the 402 but need ChainLens-aware signing to
-            complete payment — that logic lives in{" "}
+            current listing-specific paid path using USDC{" "}
+            <InlineCode>ReceiveWithAuthorization</InlineCode>. Point any
+            ChainLens-aware client at{" "}
+            <InlineCode>{BASE_URL}/x402/{"<listingId>"}</InlineCode>. Standard
+            x402 clients can inspect the route, but still need ChainLens-aware
+            signing to produce the <InlineCode>X-Payment</InlineCode> payload
+            and retry request — that logic lives in{" "}
             <InlineCode>@chain-lens/mcp-tool</InlineCode>.
           </li>
         </ul>

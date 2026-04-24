@@ -1,8 +1,8 @@
 # @chain-lens/sign
 
-Encrypted wallet keystore CLI + signing daemon for ChainLens. Planned replacement
-for the `WALLET_PRIVATE_KEY` environment-variable pattern used by
-`@chain-lens/mcp-tool`.
+Encrypted wallet keystore CLI + signing daemon for ChainLens. Current
+recommended replacement for the legacy `WALLET_PRIVATE_KEY`
+environment-variable pattern used by `@chain-lens/mcp-tool`.
 
 > **Status:** `0.0.x` **alpha**. 0.0.4 supports both transaction signing
 > and v3 MCP/x402 `ReceiveWithAuthorization` typed-data signing through
@@ -68,10 +68,11 @@ session terminal.
 Every `sign-tx` request goes through a three-step gate before the daemon
 signs anything:
 
-1. **Decode** — the transaction must match one of four known calldata
-   shapes: `USDC.approve`, `USDC.transfer`, `ApiMarketEscrow.pay`, or
-   `ApiMarketEscrowV2.createJob`. Anything else is denied as
-   `unknown_target`.
+1. **Decode** — the request must match a known ChainLens payment shape:
+   transaction signing for legacy calls such as `USDC.approve`,
+   `USDC.transfer`, `ApiMarketEscrow.pay`, `ApiMarketEscrowV2.createJob`,
+   or typed-data signing for the current v3 USDC
+   `ReceiveWithAuthorization`. Anything else is denied as `unknown_target`.
 2. **Limits** — per-tx and rolling 1-hour ceilings, both in USDC
    (6-decimal atomic units). Defaults: **5 USDC per tx**, **50 USDC
    per rolling hour**. The hour counter only increments once the tx is

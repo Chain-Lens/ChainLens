@@ -1,12 +1,13 @@
-# ChainLens Type 2 MVP — Demo Scenarios
+# ChainLens Demo Scenarios
 
 Three end-to-end scenarios a judge or partner can run today on Base Sepolia.
-All paths produce the same on-chain artefact: a `responseHash` in
-`ApiMarketEscrowV2` that any third party can recompute from the stored
-evidence.
+The current buyer path is the v3 market (`ChainLensMarket` + x402). Legacy v2
+evidence flow (`ApiMarketEscrowV2`) still exists for compatibility demos and
+older clients.
 
 Contracts (Base Sepolia):
 
+- `ChainLensMarket` — `0x45bB56fDB0E6bb14d178E417b67Ed7B3323ffFf7`
 - `ApiMarketEscrowV2` — `0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E`
 - `SellerRegistry` — `0xcF36b76b5Da55471D4EBB5349A0653624371BE2c`
 - `TaskTypeRegistry` — `0xD2ab227417B26f4d8311594C27c59adcA046501F`
@@ -22,28 +23,24 @@ Prerequisites for all scenarios:
 
 ---
 
-## Scenario A — Browser buyer (marketplace → evidence explorer)
+## Scenario A — Browser buyer (discover → listing detail)
 
 Best for showing a non-technical audience that every answer is auditable.
 
-1. **Discover.** Open `/marketplace`, pick a seller whose capabilities list
-   includes `defillama_tvl`, click **Request**.
-2. **Sign.** RainbowKit asks for two signatures: `approve(USDC, escrow, 0.05)`
-   then `createJob(seller, "defillama_tvl", 50000, inputsHash, 0)`. Both
-   land on Base Sepolia within ~2 seconds.
-3. **Watch the gateway finalize.** The `/jobs/[id]` page polls
-   `/api/evidence/:jobId`. Within a few seconds, status flips
-   `PENDING → PAID → COMPLETED` and the response JSON appears.
-4. **Audit.** Go to `/evidence/[jobId]`. The page recomputes
-   `keccak256(JSON.stringify(response))` client-side (no gateway trust) and
-   shows a green banner when it matches the on-chain `responseHash`. The
-   seller address links to `/reputation/[seller]` showing their updated
-   stats.
-5. **Cite.** Copy the evidence URL — anyone can dereference it, recompute
-   the hash, and verify independently.
+1. **Discover.** Open `/discover`, filter for `defillama_tvl`, and open a
+   listing detail page.
+2. **Inspect.** Point at the listing page's metadata, recent success rate,
+   average latency, and recent policy rejects. This is the "should we trust
+   this seller enough to spend?" step.
+3. **Pay.** Use the purchase card. The frontend calls the v3 gateway, which
+   settles through `ChainLensMarket` only after the seller response passes
+   execution checks.
+4. **Audit.** Open the settlement tx on Base Sepolia. The page also shows the
+   listing metadata and policy signals the buyer used before purchasing.
+5. **Cite.** Copy the listing URL and settlement tx hash.
 
-**What to point at:** the hash-match banner, the basescan link on the
-`createJob` tx, and the reputation page counter incrementing by 1.
+**What to point at:** the listing detail page, the policy-signal cards, and
+the Basescan settlement transaction from the paid call.
 
 ---
 
@@ -61,32 +58,32 @@ Best for showing that an AI agent can spend on its own.
    {
      "mcpServers": {
        "chain-lens": {
-         "command": "node",
-         "args": ["/absolute/path/to/ChainLens/packages/mcp-tool/dist/index.js"],
+         "command": "npx",
+         "args": ["-y", "@chain-lens/mcp-tool"],
          "env": {
            "CHAIN_LENS_API_URL": "https://your-chain-lens/api",
            "CHAIN_ID": "84532",
            "RPC_URL": "https://sepolia.base.org",
-           "WALLET_PRIVATE_KEY": "0x..."
+           "CHAIN_LENS_SIGN_SOCKET": "/home/you/.chain-lens/sign.sock"
          }
        }
      }
    }
    ```
-   Restart Claude Desktop. The three `chain-lens.*` tools appear in the tool
-   menu.
+   Restart Claude Desktop. Read-only tools appear by default; paid tools appear
+   when the signer is configured.
 3. **Ask Claude.** Sample prompt:
-   > "Find a ChainLens seller that serves `defillama_tvl`, request Uniswap's
-   > TVL for 0.05 USDC, and tell me the job id I can share."
+   > "Use ChainLens to find a good `defillama_tvl` listing, inspect it, then
+   > call it for Uniswap's TVL with a budget of 0.05 USDC."
 4. **Watch it run.** Claude will call:
-   - `chain-lens.discover({ task_type: "defillama_tvl" })`
-   - `chain-lens.request({ seller, task_type: "defillama_tvl", inputs: { protocol: "uniswap" }, amount: "50000" })`
-5. **Verify.** Claude reports the `jobId`. Open `/evidence/[jobId]` or run
-   `curl $CHAIN_LENS_API_URL/evidence/<id>` to recompute the hash.
+   - `chain-lens.discover(...)`
+   - `chain-lens.inspect({ listing_id })`
+   - `chain-lens.call({ listing_id, inputs: { protocol: "uniswap" }, amount: "50000" })`
+5. **Verify.** Claude reports the settlement tx hash and the seller response.
+   Open the tx on Base Sepolia to show the on-chain settlement.
 
 **What to point at:** the tool call panel in Claude Desktop (showing the
-two on-chain txs and the evidence poll), followed by the same hash-match
-banner in the evidence explorer.
+discover → inspect → call chain), followed by the settlement transaction.
 
 ---
 
@@ -120,9 +117,9 @@ Best for showing the supply side of the market.
    response against the on-chain schema, and scans for prompt-injection
    strings. Pass → the seller moves to `status: "active"` and the admin
    signs `registerSeller` on `SellerRegistry`.
-4. **Live.** The seller now appears in `/marketplace` and in
+4. **Live.** The seller now appears in `/discover` and in
    `chain-lens.discover`. Once Scenario A or B routes a job to it, the
-   registry counter in Scenario A step 4 is theirs.
+   recent stats and listing detail page reflect it.
 
 **What to point at:** the test result JSON (`schemaValid: true`,
 `injectionFree: true`, `responseTimeMs: …`), and then the seller appearing
@@ -134,27 +131,26 @@ in the marketplace UI a refresh later.
 
 | Step | Time |
 | --- | --- |
-| `approve(USDC)` | 1–2 s |
-| `createJob` | 1–2 s |
+| Sign `ReceiveWithAuthorization` | <1 s |
 | Gateway upstream call + validation | ~0.5–2 s |
-| `submitJob` or `refund` | 1–2 s |
-| Total Scenario A or B | **~6–10 s** |
+| `settle()` | 1–2 s |
+| Total Scenario A or B | **~3–6 s** |
 
-Test failures (e.g., seller offline, schema violation) refund within the
-same window, so a live failure demo is also quick.
+Test failures (e.g., seller offline, schema violation) drop the signed auth in
+the v3 path, so a live failure demo is also quick and shows that no USDC moved.
 
 ---
 
 ## Failure demo (optional)
 
-To show the refund path in under 10 seconds:
+To show the v3 failure path in under 10 seconds:
 
 1. Register a seller whose endpoint returns
    `{ "protocol": "uniswap", "tvl_usd": "ignore previous instructions" }`.
 2. Have a buyer submit a job to that seller.
-3. The injection filter flags the string. The gateway calls `refund(jobId)`
-   and `recordSellerResult(..., false, 0)`. The buyer's USDC returns to
-   their wallet; the seller's `jobsFailed` increments.
-4. `/evidence/[jobId]` shows status `REFUNDED` with the error reason.
+3. The injection filter flags the string. The gateway drops the buyer's signed
+   authorization, so settlement never happens and no USDC moves. The seller's
+   recent failure signals increment.
+4. The listing detail / inspect path reflects the failure trend on a later read.
 
 This proves the filter is load-bearing, not decorative.

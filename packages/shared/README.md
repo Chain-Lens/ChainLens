@@ -31,7 +31,7 @@ import {
 Exports include:
 
 - **ABIs** — `ApiMarketEscrowV2Abi`, `SellerRegistryAbi`, `TaskTypeRegistryAbi`
-- **Addresses** — `ESCROW_V2_ADDRESS`, `SELLER_REGISTRY_ADDRESS`, `TASK_TYPE_REGISTRY_ADDRESS`, `USDC_ADDRESS` (Base Sepolia)
+- **Addresses** — `CONTRACT_ADDRESSES_V2`, `SELLER_REGISTRY_ADDRESSES`, `TASK_TYPE_REGISTRY_ADDRESSES`, `CHAIN_LENS_MARKET_ADDRESSES`, `USDC_ADDRESSES`
 - **Chains** — `baseSepolia`, `baseMainnet` (viem `Chain` objects)
 - **Task types** — `INITIAL_TASK_TYPE_NAMES`, schemas, `OnChainTaskTypeConfig`
 - **Types** — `PaymentStatus`, `ApiStatus`, `ApiListingPublic`, `PreparePaymentResponse`
