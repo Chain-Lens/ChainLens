@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sudo -n true)",
+      "Bash(chmod 600 /tmp/com.cloudflare.cloudflared.plist.new)",
+      "Bash(ps -o pid,user,args -p 5917)",
+      "Bash(sudo ps *)",
+      "Bash(ps -o args= -p 5917)",
+      "Read(//Library/Logs/**)",
+      "Bash(openssl s_client -servername chainlens.pelicanlab.dev -connect chainlens.pelicanlab.dev:443)",
+      "Bash(dig +short NS pelicanlab.dev)",
+      "Bash(dig chainlens.pelicanlab.dev)",
+      "Bash(sudo dscacheutil *)",
+      "Bash(sudo killall *)"
+    ],
+    "additionalDirectories": [
+      "/opt/homebrew/etc/nginx"
+    ]
+  }
+}

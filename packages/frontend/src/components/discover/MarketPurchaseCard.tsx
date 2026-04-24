@@ -20,6 +20,11 @@ function stringifyExample(value: unknown): string {
   }
 }
 
+function formatUsdcLabel(amount: string | undefined): string | null {
+  if (!amount || !/^\d+$/.test(amount)) return null;
+  return `${formatUnits(BigInt(amount), 6).replace(/\.?0+$/, "")} USDC`;
+}
+
 export default function MarketPurchaseCard({ listing }: Props) {
   const { isConnected } = useAccount();
   const { executePayment, step, error, result, isLoading } = useMarketPayment();
@@ -30,8 +35,7 @@ export default function MarketPurchaseCard({ listing }: Props) {
 
   const amount = listing.metadata?.pricing?.amount;
   const priceLabel = useMemo(() => {
-    if (!amount || !/^\d+$/.test(amount)) return null;
-    return formatUnits(BigInt(amount), 6);
+    return formatUsdcLabel(amount);
   }, [amount]);
 
   const isPurchasable =
@@ -79,10 +83,10 @@ export default function MarketPurchaseCard({ listing }: Props) {
           </p>
         </div>
         {priceLabel && (
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--bg3)] px-3 py-2 text-right">
+          <div className="max-w-full rounded-lg border border-[var(--border)] bg-[var(--bg3)] px-3 py-2 text-right">
             <div className="text-xs text-[var(--text3)]">Price</div>
-            <div className="font-semibold text-[var(--accent)]">
-              {priceLabel} USDC
+            <div className="break-all font-semibold leading-tight text-[var(--accent)]">
+              {priceLabel}
             </div>
           </div>
         )}

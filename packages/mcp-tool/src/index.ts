@@ -42,7 +42,9 @@ const DEFAULT_USDC_EIP712_VERSION = "2";
 function chainFor(chainId: number) {
   if (chainId === baseSepolia.id) return baseSepolia;
   if (chainId === baseMainnet.id) return baseMainnet;
-  throw new Error(`Unsupported CHAIN_ID ${chainId}. Expected ${baseSepolia.id} or ${baseMainnet.id}.`);
+  throw new Error(
+    `Unsupported CHAIN_LENS_CHAIN_ID ${chainId}. Expected ${baseSepolia.id} or ${baseMainnet.id}.`,
+  );
 }
 
 function bytes32FromName(name: string): `0x${string}` {
@@ -73,7 +75,7 @@ async function main() {
   const config = loadMcpConfig();
   if (config.walletPrivateKey) {
     process.stderr.write(
-      "⚠  chain-lens-mcp: WALLET_PRIVATE_KEY is set. This is a TESTNET-ONLY pattern — the key " +
+      "⚠  chain-lens-mcp: CHAIN_LENS_WALLET_PRIVATE_KEY is set. This is a TESTNET-ONLY pattern — the key " +
         "lives in plaintext in your MCP config and the server can sign arbitrary txs without " +
         "interactive confirmation. Use a throwaway Base Sepolia wallet only. Prefer " +
         "`@chain-lens/sign` (unlock daemon + per-tx approval + spending limits) via " +

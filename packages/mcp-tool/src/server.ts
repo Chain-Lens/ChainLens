@@ -61,7 +61,7 @@ export function buildMcpServer(deps: McpServerDeps): Server {
       if (name === requestToolDefinition.name) {
         if (!deps.request) {
           throw new Error(
-            "chain-lens.request is not configured — set WALLET_PRIVATE_KEY (or CHAIN_LENS_SIGN_SOCKET) and point CHAIN_ID at a chain where v2 escrow is deployed.",
+            "chain-lens.request is not configured — set CHAIN_LENS_WALLET_PRIVATE_KEY (or CHAIN_LENS_SIGN_SOCKET) and point CHAIN_LENS_CHAIN_ID at a chain where v2 escrow is deployed.",
           );
         }
         const result = await requestHandler(args as never, deps.request);
@@ -70,7 +70,7 @@ export function buildMcpServer(deps: McpServerDeps): Server {
       if (name === callToolDefinition.name) {
         if (!deps.call) {
           throw new Error(
-            "chain-lens.call is not configured — set WALLET_PRIVATE_KEY (or CHAIN_LENS_SIGN_SOCKET) and point CHAIN_ID at a chain where ChainLensMarket is deployed.",
+            "chain-lens.call is not configured — set CHAIN_LENS_WALLET_PRIVATE_KEY (or CHAIN_LENS_SIGN_SOCKET) and point CHAIN_LENS_CHAIN_ID at a chain where ChainLensMarket is deployed.",
           );
         }
         const result = await callHandler(args as never, deps.call);

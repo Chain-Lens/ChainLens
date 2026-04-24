@@ -4,7 +4,7 @@
  * A `Signer` is anything that carries an address and can produce EIP-712
  * signatures — i.e. any viem `LocalAccount`. All built-in adapters conform:
  *
- *   - `WALLET_PRIVATE_KEY` → `privateKeyToAccount(...)` (legacy, plaintext key)
+ *   - `CHAIN_LENS_WALLET_PRIVATE_KEY` → `privateKeyToAccount(...)` (legacy, plaintext key)
  *   - `CHAIN_LENS_SIGN_SOCKET` → `daemonAccount(...)` (local signer daemon
  *     with unlock + spending limits + per-tx approval)
  *   - WaaS providers (Privy, Dynamic, Turnkey, Coinbase Smart Wallet, …):

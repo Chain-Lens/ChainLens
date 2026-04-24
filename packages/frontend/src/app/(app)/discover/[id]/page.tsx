@@ -11,6 +11,12 @@ type PageProps = {
 const BACKEND =
   process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3001/api";
 
+function formatUsdcLabel(amount: string | undefined): string {
+  if (!amount || !/^\d+$/.test(amount)) return "Unavailable";
+  const formatted = formatUnits(BigInt(amount), 6).replace(/\.?0+$/, "");
+  return `${formatted} USDC`;
+}
+
 async function fetchListing(id: string): Promise<ListingDetail | null> {
   try {
     const res = await fetch(`${BACKEND}/market/listings/${id}`, {
@@ -54,10 +60,7 @@ export default async function DiscoverDetailPage({ params }: PageProps) {
   }
 
   const meta = listing.metadata;
-  const price =
-    meta?.pricing?.amount && /^\d+$/.test(meta.pricing.amount)
-      ? `${formatUnits(BigInt(meta.pricing.amount), 6)} USDC`
-      : "Unavailable";
+  const price = formatUsdcLabel(meta?.pricing?.amount);
   const errorBreakdown = listing.recentErrors?.breakdown ?? {};
   const schemaRejects = errorBreakdown.response_rejected_schema ?? 0;
   const injectionRejects = errorBreakdown.response_rejected_injection ?? 0;
@@ -93,9 +96,9 @@ export default async function DiscoverDetailPage({ params }: PageProps) {
                 {meta?.description ?? "No description provided."}
               </p>
             </div>
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--bg3)] px-4 py-3">
+            <div className="max-w-full rounded-lg border border-[var(--border)] bg-[var(--bg3)] px-4 py-3 sm:min-w-[11rem]">
               <div className="text-xs text-[var(--text3)]">Price</div>
-              <div className="mt-1 font-semibold text-[var(--accent)]">
+              <div className="mt-1 break-all text-lg font-semibold leading-tight text-[var(--accent)] sm:text-right">
                 {price}
               </div>
             </div>

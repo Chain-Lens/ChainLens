@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: dlghwo1988
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: monapi
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -22,9 +22,9 @@ services:
     env_file:
       - packages/backend/.env
     environment:
-      DATABASE_URL: postgresql://postgres:dlghwo1988@db:5432/monapi
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/monapi
     ports:
-      - "9005:3001"
+      - "127.0.0.1:9005:3001"
     depends_on:
       db:
         condition: service_healthy
@@ -43,7 +43,7 @@ services:
       - packages/frontend/.env
     restart: unless-stopped
     ports:
-      - "3030:3000"
+      - "127.0.0.1:3030:3000"
     depends_on:
       - backend
 
