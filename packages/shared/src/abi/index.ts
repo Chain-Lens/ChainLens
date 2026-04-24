@@ -1,8 +1,8 @@
-import ApiMarketEscrowAbi from "./ApiMarketEscrow.json";
-import ApiMarketEscrowV2Abi from "./ApiMarketEscrowV2.json";
-import SellerRegistryAbi from "./SellerRegistry.json";
-import TaskTypeRegistryAbi from "./TaskTypeRegistry.json";
-import ChainLensMarketAbi from "./ChainLensMarket.json";
+import ApiMarketEscrowAbi from "./ApiMarketEscrow.js";
+import ApiMarketEscrowV2Abi from "./ApiMarketEscrowV2.js";
+import SellerRegistryAbi from "./SellerRegistry.js";
+import TaskTypeRegistryAbi from "./TaskTypeRegistry.js";
+import ChainLensMarketAbi from "./ChainLensMarket.js";
 
 export {
   ApiMarketEscrowAbi,

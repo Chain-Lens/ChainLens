@@ -1,6 +1,6 @@
 {
   "name": "@chain-lens/shared",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Shared types, ABIs, addresses, and task-type registry for ChainLens (Type 2 MVP).",
   "license": "MIT",
   "repository": {
@@ -8,16 +8,28 @@
     "url": "https://github.com/Chain-Lens/ChainLens.git",
     "directory": "packages/shared"
   },
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "type": "module",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    }
+  },
   "files": [
     "dist",
     "README.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "pnpm build:esm && pnpm build:cjs && pnpm postbuild",
+    "build:esm": "tsc -p tsconfig.json",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "postbuild": "echo '{\"type\":\"module\"}' > dist/esm/package.json && echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
     "clean": "rm -rf dist",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm clean && pnpm build"
   },
   "dependencies": {
     "viem": "^2.21.0"

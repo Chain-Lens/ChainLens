@@ -1,4 +1,4 @@
-[
+export default [
   {
     "inputs": [
       {
@@ -932,4 +932,4 @@
     "stateMutability": "view",
     "type": "function"
   }
-]
+] as const;

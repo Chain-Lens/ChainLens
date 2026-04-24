@@ -38,6 +38,9 @@ coverage/
 .codex
 caution.md
 AUDIT_REMAINING.md
+docs/BACKLOG.md
+docs/postmortems/
+WORKLOG-*.md
 
 # TypeScript incremental build cache
 *.tsbuildinfo
