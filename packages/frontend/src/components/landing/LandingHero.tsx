@@ -3,10 +3,10 @@ import { TerminalWindow, TLine, T, Cursor } from "./Terminal";
 import styles from "./LandingHero.module.css";
 
 const STATS = [
-  { num: "~1s", label: "Payment → Execution" },
-  { num: "0", label: "Trusted Intermediaries" },
-  { num: "100%", label: "Curated APIs" },
-  { num: "EVM", label: "Compatible (Base)" },
+  { num: "~3-6s", label: "Inspect → Settle" },
+  { num: "0", label: "API Accounts Needed" },
+  { num: "x402", label: "Gateway Path" },
+  { num: "Base", label: "Settlement Layer" },
 ];
 
 export default function LandingHero() {
@@ -29,9 +29,9 @@ export default function LandingHero() {
 
       <p className={styles.sub}>
         Autonomous AI agents can now{" "}
-        <strong>discover, pay for, and execute</strong> verified APIs — all
-        on-chain, in real-time. No accounts. No credit cards. No trust
-        assumptions.
+        <strong>discover, inspect, and pay for</strong> verified APIs with a
+        wallet-native flow. Browse live listings, check reliability signals,
+        then settle on Base only after the seller response succeeds.
       </p>
 
       <div className={styles.actions}>
@@ -54,56 +54,52 @@ export default function LandingHero() {
       <div className={styles.termWrap}>
         <TerminalWindow title="agent.js — ChainLens quickstart">
           <TLine>
-            <T.cmt>{"// Autonomous agent pays for an API — no human needed"}</T.cmt>
+            <T.cmt>{"// Agent-native API purchase: discover → inspect → call"}</T.cmt>
           </TLine>
           <TLine />
           <TLine>
             <T.kw>const</T.kw>{" "}
-            <T.val>apis</T.val>{" "}
+            <T.val>listings</T.val>{" "}
             <T.out>= await</T.out>{" "}
             <T.cmd>chainLens</T.cmd>
             <T.out>.</T.out>
             <T.ok>discover</T.ok>
-            <T.out>();</T.out>
+            <T.out>({"{"} q: </T.out><T.str>&quot;defillama&quot;</T.str><T.out> {"}"});</T.out>
           </TLine>
           <TLine>
-            <T.cmt>{"// → [{ id: \"weather-v2\", price: \"1.00 USDC\", verified: true }]"}</T.cmt>
+            <T.cmt>{"// → [{ listingId: \"3\", priceUsdc: \"0.050000 USDC\", ... }]"}</T.cmt>
           </TLine>
           <TLine />
           <TLine>
             <T.kw>const</T.kw>{" "}
-            <T.val>req</T.val>{" "}
+            <T.val>detail</T.val>{" "}
             <T.out>= await</T.out>{" "}
             <T.cmd>chainLens</T.cmd>
             <T.out>.</T.out>
-            <T.ok>prepare</T.ok>
-            <T.out>(</T.out>
-            <T.str>&quot;weather-v2&quot;</T.str>
-            <T.out>);</T.out>
+            <T.ok>inspect</T.ok>
+            <T.out>({"{"} listing_id: </T.out><T.str>&quot;3&quot;</T.str><T.out> {"}"});</T.out>
           </TLine>
           <TLine>
             <T.kw>const</T.kw>{" "}
-            <T.val>tx</T.val>{" "}
+            <T.val>out</T.val>{" "}
             <T.out>= await</T.out>{" "}
-            <T.cmd>wallet</T.cmd>
+            <T.cmd>chainLens</T.cmd>
             <T.out>.</T.out>
-            <T.ok>pay</T.ok>
-            <T.out>(</T.out>
-            <T.val>req</T.val>
-            <T.out>.</T.out>
-            <T.key>requestId</T.key>
-            <T.out>{", { value: "}</T.out>
-            <T.val>req</T.val>
-            <T.out>.</T.out>
-            <T.key>price</T.key>
-            <T.out>{" });"}</T.out>
+            <T.ok>call</T.ok>
+            <T.out>({"{"} listing_id: </T.out>
+            <T.str>&quot;3&quot;</T.str>
+            <T.out>, amount: </T.out>
+            <T.str>&quot;50000&quot;</T.str>
+            <T.out>, inputs: {"{"} protocol: </T.out>
+            <T.str>&quot;uniswap&quot;</T.str>
+            <T.out> {"}"} {"}"});</T.out>
           </TLine>
           <TLine />
           <TLine>
-            <T.cmt>{"// tx confirms in ~1s on Base → Gateway executes API"}</T.cmt>
+            <T.cmt>{"// Gateway executes seller → settles on Base only on success"}</T.cmt>
           </TLine>
           <TLine>
-            <T.ok>✓ Response received · Seller paid · Escrow cleared</T.ok>{" "}
+            <T.ok>✓ Response received · Safety checks passed · Market settled</T.ok>{" "}
             <Cursor />
           </TLine>
         </TerminalWindow>

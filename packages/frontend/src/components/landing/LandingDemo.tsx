@@ -16,7 +16,8 @@ export default function LandingDemo() {
           </h2>
           <p className={sStyles.sub}>
             The testnet is running on Base Sepolia. Connect your wallet, pick a
-            verified API, and experience agent-native payments firsthand.
+            listing, inspect the live quality signals, and experience
+            wallet-native API settlement firsthand.
           </p>
         </FadeIn>
 
@@ -24,60 +25,57 @@ export default function LandingDemo() {
           <div style={{ marginTop: "2.5rem" }}>
             <TerminalWindow title="bash — Quick Start">
               <TLine>
-                <T.cmt>{"# 1. Browse the curated marketplace"}</T.cmt>
+                <T.cmt>{"# 1. Search live listings"}</T.cmt>
               </TLine>
               <TLine>
                 <T.prompt>$</T.prompt>{" "}
-                <T.cmd>curl https://chainlens.pelicanlab.dev/api/apis</T.cmd>
+                <T.cmd>curl "https://chainlens.pelicanlab.dev/api/market/listings?q=weather"</T.cmd>
               </TLine>
               <TLine />
               <TLine>
-                <T.cmt>{"# 2. Prepare a payment request"}</T.cmt>
+                <T.cmt>{"# 2. Inspect one listing before spending"}</T.cmt>
               </TLine>
               <TLine>
                 <T.prompt>$</T.prompt>{" "}
-                <T.cmd>{"curl -X POST https://chainlens.pelicanlab.dev/prepare \\"}</T.cmd>
-              </TLine>
-              <TLine indent={1}>
-                <T.cmd>
-                  {"-H "}<T.str>&quot;Content-Type: application/json&quot;</T.str>{" \\"}
-                </T.cmd>
-              </TLine>
-              <TLine indent={1}>
-                <T.cmd>
-                  {"-d "}<T.str>&apos;{"{\"apiId\":\"weather-v2\"}"}&apos;</T.str>
-                </T.cmd>
+                <T.cmd>curl https://chainlens.pelicanlab.dev/api/market/listings/7</T.cmd>
               </TLine>
               <TLine>
                 <T.out>{"{"}</T.out>
               </TLine>
               <TLine indent={1}>
-                <T.key>&quot;requestId&quot;</T.key>
+                <T.key>&quot;listingId&quot;</T.key>
                 <T.out>{": "}</T.out>
-                <T.str>&quot;0xab12...ef&quot;</T.str>
+                <T.str>&quot;7&quot;</T.str>
+                <T.out>,</T.out>
+              </TLine>
+              <TLine indent={1}>
+                <T.key>&quot;successRate&quot;</T.key>
+                <T.out>{": "}</T.out>
+                <T.str>&quot;0.98&quot;</T.str>
                 <T.out>,</T.out>
               </TLine>
               <TLine indent={1}>
                 <T.key>&quot;price&quot;</T.key>
                 <T.out>{": "}</T.out>
                 <T.str>&quot;0.05 USDC&quot;</T.str>
-                <T.out>,</T.out>
-              </TLine>
-              <TLine indent={1}>
-                <T.key>&quot;contract&quot;</T.key>
-                <T.out>{": "}</T.out>
-                <T.str>&quot;0x1234...dead&quot;</T.str>
               </TLine>
               <TLine>
                 <T.out>{"}"}</T.out>
               </TLine>
               <TLine />
               <TLine>
-                <T.cmt>{"# 3. Sign the tx with your wallet → API executes automatically"}</T.cmt>
+                <T.cmt>{"# 3. Pay through the x402 gateway"}</T.cmt>
+              </TLine>
+              <TLine>
+                <T.prompt>$</T.prompt>{" "}
+                <T.cmd>{"curl -H \"X-Payment: <signed-auth>\" \\"}</T.cmd>
+              </TLine>
+              <TLine indent={1}>
+                <T.cmd>&quot;https://chainlens.pelicanlab.dev/api/x402/7?city=seoul&quot;</T.cmd>
               </TLine>
               <TLine />
               <TLine>
-                <T.ok>→ Full UI available at https://chainlens.pelicanlab.dev</T.ok>{" "}
+                <T.ok>→ Returns seller response + settlement tx hash</T.ok>{" "}
                 <Cursor />
               </TLine>
             </TerminalWindow>

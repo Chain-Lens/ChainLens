@@ -4,11 +4,11 @@ import sStyles from "./Section.module.css";
 import styles from "./LandingHowItWorks.module.css";
 
 const STEPS = [
-  { num: "01", title: "Discover", desc: "Agent queries the curated marketplace and finds a verified API." },
-  { num: "02", title: "Prepare", desc: "Gateway returns price + a unique request ID. No account needed." },
-  { num: "03", title: "Pay On-Chain", desc: "Agent signs a tx. Funds lock in the escrow smart contract." },
-  { num: "04", title: "Execute", desc: "Gateway detects the on-chain event and calls the seller API." },
-  { num: "05", title: "Settle", desc: "Success → seller receives funds. Failure → agent is refunded." },
+  { num: "01", title: "Discover", desc: "Agent queries live listings ranked by price, quality, and recency." },
+  { num: "02", title: "Inspect", desc: "Before spending, the agent reads schemas, examples, latency, and recent failures." },
+  { num: "03", title: "Sign", desc: "Buyer signs a USDC ReceiveWithAuthorization for the chosen listing." },
+  { num: "04", title: "Execute", desc: "Gateway calls the seller API and applies policy + schema checks." },
+  { num: "05", title: "Settle", desc: "Success settles on ChainLensMarket. Failure drops the auth so no USDC moves." },
 ];
 
 export default function LandingHowItWorks() {
@@ -20,11 +20,11 @@ export default function LandingHowItWorks() {
           <h2 className={sStyles.title}>
             From request to result
             <br />
-            in a single transaction
+            in one wallet-native flow
           </h2>
           <p className={sStyles.sub}>
-            ChainLens connects on-chain payment with off-chain API execution
-            through a transparent, escrow-based flow.
+            ChainLens connects listing discovery, pre-call inspection, and
+            Base settlement through a transparent x402 buyer flow.
           </p>
         </FadeIn>
 
@@ -47,57 +47,46 @@ export default function LandingHowItWorks() {
           <div style={{ marginTop: "3rem" }}>
             <TerminalWindow title="agent.js — With ChainLens">
               <TLine>
-                <T.cmt>{"// ✅ Fully autonomous — no human required"}</T.cmt>
+                <T.cmt>{"// ✅ Wallet-native agent flow"}</T.cmt>
               </TLine>
               <TLine />
               <TLine>
                 <T.kw>const</T.kw>
-                {" "}<T.val>apis</T.val>{" "}
+                {" "}<T.val>listings</T.val>{" "}
                 <T.out>{"= await fetch("}</T.out>
-                <T.str>&apos;https://chainlens.pelicanlab.dev/api/apis&apos;</T.str>
+                <T.str>&apos;https://chainlens.pelicanlab.dev/api/market/listings?q=weather&apos;</T.str>
                 <T.out>{");"}</T.out>
               </TLine>
               <TLine>
-                <T.cmt>{"// → [{ id: \"weather-v2\", price: \"0.05 USDC\", verified: true }]"}</T.cmt>
+                <T.cmt>{"// → [{ listingId: \"7\", metadata, stats, score }]"}</T.cmt>
               </TLine>
               <TLine />
               <TLine>
                 <T.kw>const</T.kw>{" "}
-                <T.val>req</T.val>{" "}
+                <T.val>detail</T.val>{" "}
                 <T.out>{"= await fetch("}</T.out>
-                <T.str>&apos;/prepare&apos;</T.str>
-                <T.out>{", { method: "}</T.out>
-                <T.str>&apos;POST&apos;</T.str>
-                <T.out>{", body: { apiId: "}</T.out>
-                <T.str>&apos;weather-v2&apos;</T.str>
-                <T.out>{" } });"}</T.out>
+                <T.str>&apos;https://chainlens.pelicanlab.dev/api/market/listings/7&apos;</T.str>
+                <T.out>{");"}</T.out>
               </TLine>
               <TLine>
-                <T.cmt>{"// → { requestId: \"0xab12...ef\", price: \"0.001\", contract: \"0x...\" }"}</T.cmt>
+                <T.cmt>{"// → inspect schemas, examples, and recent policy rejects"}</T.cmt>
               </TLine>
               <TLine />
               <TLine>
                 <T.kw>await</T.kw>{" "}
-                <T.cmd>escrow</T.cmd>
-                <T.out>.</T.out>
-                <T.ok>pay</T.ok>
+                <T.cmd>fetch</T.cmd>
                 <T.out>(</T.out>
-                <T.val>req</T.val>
-                <T.out>.</T.out>
-                <T.key>requestId</T.key>
-                <T.out>{", { value: "}</T.out>
-                <T.val>req</T.val>
-                <T.out>.</T.out>
-                <T.key>price</T.key>
-                <T.out>{"  });  "}</T.out>
-                <T.cmt>{"// on-chain tx"}</T.cmt>
+                <T.str>&apos;https://chainlens.pelicanlab.dev/api/x402/7?city=seoul&apos;</T.str>
+                <T.out>{", { headers: { "}</T.out>
+                <T.key>&apos;X-Payment&apos;</T.key>
+                <T.out>{": signedAuth } });"}</T.out>
               </TLine>
               <TLine>
-                <T.cmt>{"// Base confirms in ~1s → Gateway triggers API automatically"}</T.cmt>
+                <T.cmt>{"// Gateway executes seller → settles only on success"}</T.cmt>
               </TLine>
               <TLine />
               <TLine>
-                <T.ok>✓ API response delivered · Seller paid · Agent continues</T.ok>{" "}
+                <T.ok>✓ Seller response delivered · Settlement tx returned</T.ok>{" "}
                 <Cursor />
               </TLine>
             </TerminalWindow>

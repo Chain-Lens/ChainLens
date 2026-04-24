@@ -6,29 +6,29 @@ import styles from "./LandingArchitecture.module.css";
 const POINTS = [
   {
     icon: "🔗",
-    title: "Smart Contract (Escrow Layer)",
+    title: "Smart Contract (Market Layer)",
     desc: (
       <>
-        Solidity contract on Base handles all payment logic. Funds lock on{" "}
-        <code>pay()</code>, release on <code>complete()</code>, or return on{" "}
-        <code>refund()</code>. Trustless by design.
+        <code>ChainLensMarket</code> on Base handles listing state, gateway
+        settlement, and seller claims. Funds only move on successful
+        settlement.
       </>
     ),
   },
   {
     icon: "⚙️",
     title: "Gateway (Orchestration Layer)",
-    desc: "Listens for on-chain events, triggers seller APIs, validates responses, and issues settlements — connecting payment to execution without exposing seller credentials.",
+    desc: "Serves market discovery, runs seller calls, validates responses, and triggers settlement — connecting wallet payment to real API execution.",
   },
   {
     icon: "🛍️",
     title: "Curated Marketplace",
-    desc: "Every API is pre-tested before listing. The Gateway validates endpoints, checks response schemas, and monitors uptime. Only verified APIs get listed.",
+    desc: "Every listing exposes metadata, example payloads, and recent quality signals. Buyers can inspect before they spend.",
   },
   {
     icon: "🤖",
     title: "Agent SDK (Buyer Layer)",
-    desc: "Any agent with an EVM wallet can interact via standard HTTP + Web3. No SDK lock-in. Works with any agent framework — LangChain, AutoGen, custom.",
+    desc: "Any agent with an EVM wallet can use standard HTTP, MCP, or custom x402 signing. No SDK lock-in.",
   },
 ];
 
@@ -41,11 +41,11 @@ export default function LandingArchitecture() {
           <h2 className={sStyles.title}>
             Three layers.
             <br />
-            One seamless flow.
+            One current flow.
           </h2>
           <p className={sStyles.sub}>
             ChainLens separates concerns cleanly — on-chain security,
-            off-chain performance, curated trust.
+            off-chain execution, and pre-purchase trust signals.
           </p>
         </FadeIn>
 
@@ -65,33 +65,33 @@ export default function LandingArchitecture() {
           </div>
 
           <FadeIn delay={200}>
-            <TerminalWindow title="ChainLens.sol — Escrow Core">
+            <TerminalWindow title="ChainLensMarket.sol — settlement core">
               <TLine>
                 <T.cmt>{"// SPDX-License-Identifier: MIT"}</T.cmt>
               </TLine>
               <TLine>
                 <T.kw>pragma</T.kw>{" "}
                 <T.cmd>solidity</T.cmd>{" "}
-                <T.str>^0.8.20</T.str>
+                <T.str>^0.8.28</T.str>
                 <T.out>;</T.out>
               </TLine>
               <TLine />
               <TLine>
                 <T.kw>struct</T.kw>{" "}
-                <T.cyan>Payment</T.cyan>
+                <T.cyan>Listing</T.cyan>
                 <T.out>{" {"}</T.out>
               </TLine>
               <TLine indent={1}>
-                <T.cyan>address</T.cyan> <T.out>buyer;</T.out>
+                <T.cyan>address</T.cyan> <T.out>owner;</T.out>
               </TLine>
               <TLine indent={1}>
-                <T.cyan>address</T.cyan> <T.out>seller;</T.out>
+                <T.cyan>address</T.cyan> <T.out>payout;</T.out>
               </TLine>
               <TLine indent={1}>
-                <T.cyan>uint256</T.cyan> <T.out>amount;</T.out>
+                <T.cyan>string</T.cyan>{"  "} <T.out>metadataURI;</T.out>
               </TLine>
               <TLine indent={1}>
-                <T.cyan>bool</T.cyan>{"    "}<T.out>completed;</T.out>
+                <T.cyan>bool</T.cyan>{"    "}<T.out>active;</T.out>
               </TLine>
               <TLine>
                 <T.out>{"}"}</T.out>
@@ -99,30 +99,13 @@ export default function LandingArchitecture() {
               <TLine />
               <TLine>
                 <T.kw>function</T.kw>{" "}
-                <T.ok>pay</T.ok>
+                <T.ok>settle</T.ok>
                 <T.out>(</T.out>
+                <T.cyan>uint256</T.cyan>{" "}
+                <T.val>listingId</T.val>
+                <T.out>, </T.out>
                 <T.cyan>bytes32</T.cyan>{" "}
-                <T.val>requestId</T.val>
-                <T.out>)</T.out>
-              </TLine>
-              <TLine indent={1}>
-                <T.kw>external</T.kw>{" "}
-                <T.kw>payable</T.kw>
-                <T.out>{" {"}</T.out>
-              </TLine>
-              <TLine indent={2}>
-                <T.cmt>{"// lock funds in escrow"}</T.cmt>
-              </TLine>
-              <TLine>
-                <T.out>{"}"}</T.out>
-              </TLine>
-              <TLine />
-              <TLine>
-                <T.kw>function</T.kw>{" "}
-                <T.ok>complete</T.ok>
-                <T.out>(</T.out>
-                <T.cyan>bytes32</T.cyan>{" "}
-                <T.val>requestId</T.val>
+                <T.val>jobRef</T.val>
                 <T.out>)</T.out>
               </TLine>
               <TLine indent={1}>
@@ -131,7 +114,7 @@ export default function LandingArchitecture() {
                 <T.out>{" {"}</T.out>
               </TLine>
               <TLine indent={2}>
-                <T.cmt>{"// release funds → seller"}</T.cmt>
+                <T.cmt>{"// pull USDC with signed auth, credit seller, emit Settled"}</T.cmt>
               </TLine>
               <TLine>
                 <T.out>{"}"}</T.out>
@@ -139,19 +122,16 @@ export default function LandingArchitecture() {
               <TLine />
               <TLine>
                 <T.kw>function</T.kw>{" "}
-                <T.err>refund</T.err>
+                <T.ok>claim</T.ok>
                 <T.out>(</T.out>
-                <T.cyan>bytes32</T.cyan>{" "}
-                <T.val>requestId</T.val>
                 <T.out>)</T.out>
               </TLine>
               <TLine indent={1}>
-                <T.kw>external</T.kw>{" "}
-                <T.kw>onlyGateway</T.kw>
+                <T.kw>external</T.kw>
                 <T.out>{" {"}</T.out>
               </TLine>
               <TLine indent={2}>
-                <T.cmt>{"// return funds → buyer"}</T.cmt>
+                <T.cmt>{"// seller withdraws accrued USDC"}</T.cmt>
               </TLine>
               <TLine>
                 <T.out>{"}"}</T.out>

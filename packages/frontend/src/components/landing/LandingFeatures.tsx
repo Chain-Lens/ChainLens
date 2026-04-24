@@ -11,38 +11,38 @@ const FEATURES = [
   {
     label: "02 · On-Chain",
     title: "Transparent Settlement",
-    desc: "All payments live on-chain. Every pay(), complete(), and refund() is publicly verifiable on Base. No black-box billing.",
+    desc: "Successful calls settle on-chain through ChainLensMarket. Buyers get a tx hash, sellers get claimable balances, and the flow is auditable on Base.",
   },
   {
     label: "03 · Curated",
-    title: "Verified APIs Only",
-    desc: "We test every API before listing it. Response validation, uptime monitoring, and schema checks ensure agents never pay for a broken endpoint.",
+    title: "Inspect Before Spend",
+    desc: "Buyers see schema hints, example payloads, latency, success rate, and recent policy rejects before sending payment.",
   },
   {
     label: "04 · Real-Time",
-    title: "~1s Payment → Execution",
-    desc: "Built on Base's high-throughput EVM chain. Block finality is near-instant, so agents receive API responses in real-time after payment.",
+    title: "Fast Buyer Loop",
+    desc: "Discover, inspect, and settle in seconds. The gateway runs the seller call immediately and only finalizes payment after a clean response.",
   },
   {
     label: "05 · Protected",
-    title: "Escrow-Based Safety",
-    desc: "Funds are always held in escrow until execution succeeds. If an API fails, the agent is automatically refunded — no disputes, no support tickets.",
+    title: "Failure-Safe Payments",
+    desc: "If the seller fails or policy checks reject the response, the v3 gateway drops the signed authorization and no USDC moves.",
   },
   {
     label: "06 · Extensible",
     title: "Built for Scale",
-    desc: "Roadmap includes reputation scoring, seller staking, usage-based billing, and multi-agent coordination. The foundation is live today.",
+    desc: "The stack already supports browser buyers, MCP agents, and direct x402 clients. Mainnet hardening and broader listing supply come next.",
   },
 ];
 
 const TAGS = [
   "Base EVM",
-  "Solidity Escrow",
+  "ChainLensMarket",
   "Node.js Gateway",
-  "Event-Driven",
-  "HTTP + Web3",
+  "x402",
+  "HTTP + MCP",
   "No KYC",
-  "No Accounts",
+  "Pre-Call Inspect",
 ];
 
 export default function LandingFeatures() {
