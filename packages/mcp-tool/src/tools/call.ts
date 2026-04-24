@@ -20,6 +20,7 @@
  * without viem or network access.
  */
 
+import { Buffer } from "node:buffer";
 import { parseSignature } from "viem";
 import type { Signer } from "../signer.js";
 
