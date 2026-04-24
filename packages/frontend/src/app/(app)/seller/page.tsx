@@ -230,9 +230,9 @@ function ApiRow({
           <StatusBadge status={api.status} />
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          {api.status === "APPROVED" && (
+          {api.status === "APPROVED" && typeof api.onChainId === "number" && (
             <Link
-              href={`/apis/${api.id}`}
+              href={`/discover/${api.onChainId}`}
               className="whitespace-nowrap text-xs font-medium text-[var(--cyan)] hover:underline"
             >
               View →
