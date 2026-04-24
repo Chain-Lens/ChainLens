@@ -14,7 +14,21 @@
       "Bash(curl:*)",
       "Bash(npx hardhat:*)",
       "Bash(psql:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(npm ls *)",
+      "Bash(codex --version)",
+      "Bash(codex --help)",
+      "Bash(codex mcp *)",
+      "Bash(openclaw --version)",
+      "Bash(openclaw --help)",
+      "Bash(openclaw mcp *)",
+      "Bash(openclaw gateway *)",
+      "Bash(kill %1)",
+      "Bash(openclaw status *)",
+      "Bash(chmod 600 ~/.openclaw/openclaw.json)",
+      "Bash(node -e ' *)",
+      "Bash(python3 -m json.tool ~/.openclaw/openclaw.json)",
+      "Bash(openclaw channels *)"
     ]
   }
 }

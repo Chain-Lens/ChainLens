@@ -219,7 +219,6 @@ function ApiRow({
   onEdit: (id: string, patch: SellerPatch) => Promise<void>;
 }) {
   const priceInUsdc = formatUnits(BigInt(api.price), 6);
-  const canDelete = api.status === "APPROVED" || api.status === "REJECTED" || api.status === "REVOKED";
   const [editing, setEditing] = useState(false);
 
   return (
@@ -246,14 +245,12 @@ function ApiRow({
               Edit
             </button>
           )}
-          {canDelete && (
-            <button
-              onClick={() => onDelete(api.id)}
-              className="whitespace-nowrap text-xs font-medium text-[var(--text3)] transition-colors hover:text-[var(--red)]"
-            >
-              Delete
-            </button>
-          )}
+          <button
+            onClick={() => onDelete(api.id)}
+            className="whitespace-nowrap text-xs font-medium text-[var(--text3)] transition-colors hover:text-[var(--red)]"
+          >
+            Delete
+          </button>
         </div>
       </div>
 

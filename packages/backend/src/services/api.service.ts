@@ -1,10 +1,6 @@
 import prisma from "../config/prisma.js";
 import { ApiStatus } from "@chain-lens/shared";
-import {
-  BadRequestError,
-  ForbiddenError,
-  NotFoundError,
-} from "../utils/errors.js";
+import { ForbiddenError, NotFoundError } from "../utils/errors.js";
 
 export const SELLER_EDITABLE_FIELDS = [
   "name",
@@ -161,13 +157,10 @@ export async function deleteApi(id: string, sellerAddress: string) {
   if (api.sellerAddress.toLowerCase() !== sellerAddress.toLowerCase()) {
     throw new NotFoundError("API not found");
   }
-  if (api.status === "APPROVED" || api.status === "REJECTED" || api.status === "REVOKED") {
-    await prisma.adminAction.deleteMany({ where: { apiId: id } });
-    await prisma.paymentRequest.deleteMany({ where: { apiId: id } });
-    await prisma.apiListing.delete({ where: { id } });
-    return { success: true };
-  }
-  throw new BadRequestError(`Cannot delete API in ${api.status} status`);
+  await prisma.adminAction.deleteMany({ where: { apiId: id } });
+  await prisma.paymentRequest.deleteMany({ where: { apiId: id } });
+  await prisma.apiListing.delete({ where: { id } });
+  return { success: true };
 }
 
 export async function getNextOnChainId(): Promise<number> {
