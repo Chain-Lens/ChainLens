@@ -23,6 +23,8 @@ export default function LandingNavbar() {
         <a href="#problem">Problem</a>
         <a href="#how">How it Works</a>
         <a href="#features">Features</a>
+        <a href="#token">$LENS</a>
+        <a href="#roadmap">Roadmap</a>
         <a href="#demo">Demo</a>
         <a
           href="https://forms.gle/EtCpnWtRcMeM7UtC7"

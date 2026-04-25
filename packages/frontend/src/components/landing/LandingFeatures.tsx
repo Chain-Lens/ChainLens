@@ -15,8 +15,8 @@ const FEATURES = [
   },
   {
     label: "03 · Curated",
-    title: "Inspect Before Spend",
-    desc: "Buyers see schema hints, example payloads, latency, success rate, and recent policy rejects before sending payment.",
+    title: "Reviewed by ChainLens",
+    desc: "Every listing is screened by the ChainLens team — null-response checks, schema match, and a first-pass prompt-injection filter — before it ever reaches buyers.",
   },
   {
     label: "04 · Real-Time",
@@ -32,6 +32,11 @@ const FEATURES = [
     label: "06 · Extensible",
     title: "Built for Scale",
     desc: "The stack already supports browser buyers, MCP agents, and direct x402 clients. Mainnet hardening and broader listing supply come next.",
+  },
+  {
+    label: "07 · Aligned",
+    title: "Free to List · 5% on Settlement",
+    desc: "Sellers register for free. ChainLens only earns when a call settles successfully — a flat 5% USDC fee on each settled payment, taken from the buyer's authorization.",
   },
 ];
 

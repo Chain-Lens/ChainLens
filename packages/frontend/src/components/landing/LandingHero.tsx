@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { TerminalWindow, TLine, T, Cursor } from "./Terminal";
 import styles from "./LandingHero.module.css";
 
@@ -14,7 +15,7 @@ export default function LandingHero() {
     <section className={styles.hero}>
       <div className={styles.glow} />
 
-      <Image src="/chainlens_coin_256.png" alt="ChainLens" width={64} height={64} style={{ marginBottom: "1rem" }} />
+      <Image src="/chainlens_coin_256.png" alt="ChainLens" width={64} height={64} className={styles.coin} priority />
 
       <div className={styles.badge}>
         <span className={styles.dot} />
@@ -35,12 +36,13 @@ export default function LandingHero() {
       </p>
 
       <div className={styles.actions}>
-        <a
+        <Link
           href="/discover"
+          prefetch
           className={styles.btnPrimary}
         >
           Try Testnet
-        </a>
+        </Link>
         <a
           href="https://forms.gle/EtCpnWtRcMeM7UtC7"
           target="_blank"

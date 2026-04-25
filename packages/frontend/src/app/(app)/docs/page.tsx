@@ -7,6 +7,7 @@ const CHAIN_ID = 84532;
 const MARKET = CHAIN_LENS_MARKET_ADDRESSES[CHAIN_ID]!;
 const USDC = USDC_ADDRESSES[CHAIN_ID]!;
 const BASE_URL = "https://chainlens.pelicanlab.dev/api";
+const FEE_BPS_DISPLAY = "5%";
 
 function TerminalWindow({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -87,11 +88,12 @@ function CodeBlock({ code, language = "typescript" }: { code: string; language?:
 
 const quickstartCode = `const BASE = "${BASE_URL}";
 const LISTING_ID = "3";      // from /api/market/listings
-const AMOUNT = "50000";      // 0.05 USDC (6 decimals)
 const INPUTS = { protocol: "uniswap" };
 const X_PAYMENT = "<base64url-json>"; // signed ReceiveWithAuthorization payload
 
-// Current v3 flow: call the listing-specific x402 endpoint.
+// Call the listing-specific x402 endpoint. The gateway runs the seller
+// API, validates the response, and only settles on-chain on success —
+// failed calls drop the signature, no USDC moves.
 const res = await fetch(
   \`\${BASE}/x402/\${LISTING_ID}?\${new URLSearchParams(INPUTS as Record<string, string>)}\`,
   {
@@ -114,80 +116,6 @@ console.log({
   untrustedData: out.untrusted_data,
 });
 `;
-
-const legacyQuickstartCode = `import {
-  createPublicClient,
-  createWalletClient,
-  http,
-  parseAbi,
-  keccak256,
-  toHex,
-} from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { baseSepolia } from "viem/chains";
-
-const ESCROW = "0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E";
-const USDC   = "${USDC}";
-const BASE   = "${BASE_URL}";
-
-// Sorted-key JSON so buyer + gateway compute the same inputsHash.
-function canonicalJSON(v: unknown): string {
-  if (v === null || typeof v !== "object" || Array.isArray(v)) return JSON.stringify(v);
-  const keys = Object.keys(v as object).sort();
-  const pairs = keys.map((k) => \`\${JSON.stringify(k)}:\${canonicalJSON((v as Record<string, unknown>)[k])}\`);
-  return \`{\${pairs.join(",")}}\`;
-}
-const inputsHash = (inputs: unknown) => keccak256(toHex(canonicalJSON(inputs)));
-
-const ERC20_ABI  = parseAbi(["function approve(address spender, uint256 amount) returns (bool)"]);
-const ESCROW_ABI = parseAbi([
-  "function createJob(address seller, bytes32 taskType, uint256 amount, bytes32 inputsHash, uint256 apiId) returns (uint256)",
-]);
-
-export async function callAPI(params: {
-  apiId: bigint;          // on-chain apiId from /api/apis
-  seller: \`0x\${string}\`;  // seller address from the listing
-  taskType: \`0x\${string}\`; // keccak256(taskType name), from /api/task-types
-  amount: bigint;         // USDC in wei (6 decimals, e.g. 50_000n = 0.05 USDC)
-  inputs: Record<string, unknown>;
-  privateKey: \`0x\${string}\`;
-}) {
-  const account = privateKeyToAccount(params.privateKey);
-  const wallet  = createWalletClient({ account, chain: baseSepolia, transport: http() });
-  const pub     = createPublicClient({ chain: baseSepolia, transport: http() });
-
-  // 1. Approve USDC to the escrow (skip if already approved for >= amount).
-  const approveTx = await wallet.writeContract({
-    address: USDC, abi: ERC20_ABI, functionName: "approve",
-    args: [ESCROW, params.amount],
-  });
-  await pub.waitForTransactionReceipt({ hash: approveTx });
-
-  // 2. createJob — locks USDC in escrow, emits JobCreated(jobId, ...).
-  const hash = inputsHash(params.inputs);
-  const createTx = await wallet.writeContract({
-    address: ESCROW, abi: ESCROW_ABI, functionName: "createJob",
-    args: [params.seller, params.taskType, params.amount, hash, params.apiId],
-  });
-  const receipt = await pub.waitForTransactionReceipt({ hash: createTx });
-
-  // 3. Decode the emitted jobId (first topic of JobCreated), then poll evidence.
-  //    The gateway fetches the seller's response, validates it against the
-  //    task-type schema, and submits responseHash on-chain. Evidence appears
-  //    as soon as submitJob lands — usually within 5-10 seconds.
-  const jobIdHex = receipt.logs[0]?.topics[1]!;
-  const jobId = BigInt(jobIdHex);
-
-  for (let i = 0; i < 30; i++) {
-    const res = await fetch(\`\${BASE}/evidence/\${jobId}\`);
-    if (res.ok) {
-      const ev = await res.json();
-      if (ev.status === "COMPLETED" || ev.status === "REFUNDED") return ev;
-    }
-    await new Promise((r) => setTimeout(r, 1000));
-  }
-  throw new Error(\`evidence poll timed out for job \${jobId}\`);
-}`;
 
 function InlineCode({ children }: { children: React.ReactNode }) {
   return (
@@ -213,10 +141,10 @@ export default function DocsPage() {
         </span>
         <h1 className="mt-4 text-4xl font-bold" style={{ color: "var(--text)" }}>How to use ChainLens</h1>
         <p className="mt-3 text-lg" style={{ color: "var(--text2)" }}>
-          Any AI agent with a wallet can pay for verified data in USDC. This
-          page now focuses on the current v3 market flow: discover a listing,
-          inspect it, then pay through the x402 gateway. Legacy v2 evidence
-          flow is still noted where relevant.
+          Any AI agent with a wallet can pay for ChainLens-reviewed APIs in
+          USDC. The flow is short: discover a listing, inspect it, then pay
+          through the x402 gateway. Settlement happens on-chain only after
+          the seller call succeeds — failed calls move no USDC.
         </p>
       </div>
 
@@ -295,17 +223,19 @@ export default function DocsPage() {
       <section id="flow" className="mb-14">
         <h2 className="text-2xl font-bold mb-4" style={{ color: "var(--text)" }}>2. Payment flow overview</h2>
         <p className="mb-4" style={{ color: "var(--text2)" }}>
-          ChainLens now routes paid calls through{" "}
-          <InlineCode>ChainLensMarket</InlineCode> and the listing-specific{" "}
+          Paid calls route through <InlineCode>ChainLensMarket</InlineCode> and
+          the listing-specific{" "}
           <InlineCode>/api/x402/:listingId</InlineCode> gateway path. The buyer
           signs a USDC <InlineCode>ReceiveWithAuthorization</InlineCode>, the
           gateway executes the seller API, and settlement happens on-chain only
           after a successful response. Failed seller calls drop the signed
-          authorization, so no USDC moves.
+          authorization, so no USDC moves. ChainLens earns a flat{" "}
+          <strong style={{ color: "var(--text)" }}>{FEE_BPS_DISPLAY}</strong>{" "}
+          USDC fee on each settled call — sellers receive the remainder.
         </p>
         <TerminalWindow title="terminal — flow diagram">
           <Line prompt={false} color="blue">┌─────────────────────────────────────────────────────────────┐</Line>
-          <Line prompt={false} color="blue">│                 ChainLens v2 payment flow                   │</Line>
+          <Line prompt={false} color="blue">│                 ChainLens v3 payment flow                   │</Line>
           <Line prompt={false} color="blue">├─────────────────────────────────────────────────────────────┤</Line>
           <Line prompt={false} color="yellow">│  1. GET /api/market/listings?q=&lt;search&gt;                     │</Line>
           <Line prompt={false} color="gray">│     → [{"{ listingId, metadata, stats, score, ... }"}]             │</Line>
@@ -383,7 +313,7 @@ export default function DocsPage() {
       <section id="step3" className="mb-14">
         <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text)" }}>5. Step 3 — Sign and call through x402</h2>
         <p className="mb-4" style={{ color: "var(--text2)" }}>
-          The current paid path is a signed USDC authorization sent in the{" "}
+          The paid path is a signed USDC authorization sent in the{" "}
           <InlineCode>X-Payment</InlineCode> header to the listing-specific
           x402 route. The gateway executes the seller API first, then settles
           on <InlineCode>ChainLensMarket</InlineCode> only on success.
@@ -402,7 +332,7 @@ export default function DocsPage() {
           style={{ background: "rgba(255,166,87,0.08)", border: "1px solid rgba(255,166,87,0.25)", color: "var(--orange)" }}
         >
           <strong>Note:</strong> If the seller fails schema validation,
-          times out, or trips the policy filter, the v3 gateway drops the
+          times out, or trips the policy filter, the gateway drops the
           signed authorization and no USDC moves.
         </div>
       </section>
@@ -411,10 +341,9 @@ export default function DocsPage() {
       <section id="step4" className="mb-14">
         <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text)" }}>6. Step 4 — Verify settlement and response</h2>
         <p className="mb-4" style={{ color: "var(--text2)" }}>
-          A successful v3 call returns the settlement tx hash immediately along
-          with the seller response and safety metadata. Legacy v2 clients may
-          still poll `/api/evidence/:jobId`, but that is no longer the primary
-          buyer path.
+          A successful call returns the settlement tx hash immediately along
+          with the seller response and safety metadata — there is no separate
+          polling step.
         </p>
         <TerminalWindow title="terminal — settlement result">
           <Line>curl -H &quot;X-Payment: &lt;base64url-json&gt;&quot; &quot;{BASE_URL}/x402/3?protocol=uniswap&quot;</Line>
@@ -431,8 +360,7 @@ export default function DocsPage() {
           <a href="/discover" className="underline" style={{ color: "var(--cyan)" }}>
             /discover
           </a>{" "}
-          plus the Basescan link for the returned settlement tx. Legacy v2
-          evidence verification still exists for older jobs.
+          plus the Basescan link for the returned settlement tx hash.
         </p>
       </section>
 
@@ -440,14 +368,10 @@ export default function DocsPage() {
       <section id="quickstart" className="mb-14">
         <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text)" }}>7. Full quickstart code</h2>
         <p className="mb-4" style={{ color: "var(--text2)" }}>
-          Current v3 quickstart is the x402 gateway path. Legacy v2 direct
-          contract code is included below for older integrations only.
+          Single x402 gateway call — the gateway handles seller execution,
+          schema and safety checks, and on-chain settlement in one round trip.
         </p>
         <CodeBlock code={quickstartCode} language="agent.ts" />
-        <p className="mt-6 mb-4" style={{ color: "var(--text2)" }}>
-          Legacy v2 quickstart:
-        </p>
-        <CodeBlock code={legacyQuickstartCode} language="legacy-agent.ts" />
       </section>
 
       {/* Contract reference */}
@@ -464,12 +388,10 @@ export default function DocsPage() {
             </thead>
             <tbody>
               {[
-                ["settle(listingId, buyer, amount, auth, signature, jobRef)", "Gateway", "Current v3 settlement path on ChainLensMarket"],
+                ["settle(listingId, buyer, amount, auth, signature, jobRef)", "Gateway", "Pulls signed USDC, credits seller (95%) and protocol fee (5%), emits Settled"],
                 ["claim()", "Seller", "Withdraw accumulated seller earnings"],
-                ["registerListing(metadataURI, payout)", "Seller", "Create a new market listing"],
+                ["registerListing(metadataURI, payout)", "Seller", "Create a new market listing (requires ChainLens approval to go public)"],
                 ["deactivateListing(listingId)", "Seller", "Hide a listing from public purchase"],
-                ["createJob(...)", "Buyer / Agent", "Legacy v2 escrow path"],
-                ["createJobWithAuth(...)", "Buyer / Agent", "Legacy v2 one-sig path"],
               ].map(([fn, caller, desc], i, arr) => (
                 <tr key={fn} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none" }}>
                   <td className="px-4 py-3 font-mono text-xs" style={{ color: "var(--purple)", background: "var(--bg2)" }}>{fn}</td>

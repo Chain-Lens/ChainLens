@@ -21,6 +21,22 @@
   pointer-events: none;
 }
 
+.coin {
+  margin-bottom: 1rem;
+  animation: wobble 3.6s ease-in-out infinite;
+  transform-origin: 50% 90%;
+  will-change: transform;
+}
+
+@keyframes wobble {
+  0%, 100% { transform: rotate(-9deg); }
+  50%      { transform: rotate(9deg);  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coin { animation: none; }
+}
+
 .badge {
   display: inline-flex;
   align-items: center;

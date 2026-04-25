@@ -12,7 +12,8 @@
       "Bash(dig chainlens.pelicanlab.dev)",
       "Bash(sudo dscacheutil *)",
       "Bash(sudo killall *)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(npx prisma *)"
     ],
     "additionalDirectories": [
       "/opt/homebrew/etc/nginx"

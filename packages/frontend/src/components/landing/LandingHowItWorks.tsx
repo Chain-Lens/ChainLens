@@ -4,7 +4,7 @@ import sStyles from "./Section.module.css";
 import styles from "./LandingHowItWorks.module.css";
 
 const STEPS = [
-  { num: "01", title: "Discover", desc: "Agent queries live listings ranked by price, quality, and recency." },
+  { num: "01", title: "Discover", desc: "Agent queries live listings — every entry is ChainLens-reviewed before going public." },
   { num: "02", title: "Inspect", desc: "Before spending, the agent reads schemas, examples, latency, and recent failures." },
   { num: "03", title: "Sign", desc: "Buyer signs a USDC ReceiveWithAuthorization for the chosen listing." },
   { num: "04", title: "Execute", desc: "Gateway calls the seller API and applies policy + schema checks." },
