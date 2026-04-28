@@ -89,9 +89,7 @@ export function usdcToAtomic(decimal: string): bigint {
   }
   const [whole, frac = ""] = decimal.split(".");
   if (frac.length > USDC_DECIMALS) {
-    throw new Error(
-      `USDC has ${USDC_DECIMALS} decimals, got ${frac.length} in '${decimal}'`,
-    );
+    throw new Error(`USDC has ${USDC_DECIMALS} decimals, got ${frac.length} in '${decimal}'`);
   }
   const padded = frac.padEnd(USDC_DECIMALS, "0");
   return BigInt(whole) * 10n ** BigInt(USDC_DECIMALS) + BigInt(padded);

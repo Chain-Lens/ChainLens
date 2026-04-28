@@ -38,9 +38,9 @@ export default function LandingToken() {
             the marketplace.
           </h2>
           <p className={sStyles.sub}>
-            $LENS launched on Solana under the EASYA grant program — issuance,
-            allocation, and DEX listing already complete. Utility activates as
-            ChainLens moves from hackathon MVP to a multi-chain agent economy.
+            $LENS launched on Solana under the EASYA grant program — issuance, allocation, and DEX
+            listing already complete. Utility activates as ChainLens moves from hackathon MVP to a
+            multi-chain agent economy.
           </p>
         </FadeIn>
 
@@ -69,8 +69,8 @@ export default function LandingToken() {
 
         <FadeIn delay={350}>
           <p className={styles.note}>
-            Phase 0 (token genesis) is complete. Utility wiring above ships in
-            Phase 3 — see the roadmap below.
+            Phase 0 (token genesis) is complete. Utility wiring above ships in Phase 3 — see the
+            roadmap below.
           </p>
         </FadeIn>
       </div>

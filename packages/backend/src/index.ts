@@ -18,7 +18,7 @@ async function main() {
   } catch (error) {
     logger.warn(
       { error },
-      "market listener failed to start (ChainLensMarket may not be deployed for this chain)"
+      "market listener failed to start (ChainLensMarket may not be deployed for this chain)",
     );
   }
 }

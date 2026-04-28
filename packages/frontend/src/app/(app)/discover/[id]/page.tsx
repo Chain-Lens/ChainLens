@@ -8,8 +8,7 @@ type PageProps = {
   params: Promise<{ id: string }>;
 };
 
-const BACKEND =
-  process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3001/api";
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3001/api";
 
 function formatUsdcLabel(amount: string | undefined): string {
   if (!amount || !/^\d+$/.test(amount)) return "Unavailable";
@@ -29,9 +28,7 @@ async function fetchListing(id: string): Promise<ListingDetail | null> {
   }
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const listing = await fetchListing(id);
   return {
@@ -113,9 +110,7 @@ export default async function DiscoverDetailPage({ params }: PageProps) {
             </div>
             <div className="rounded-lg border border-[var(--border)] bg-[var(--bg3)] p-4">
               <div className="text-xs text-[var(--text3)]">Method</div>
-              <div className="mt-1 text-sm text-[var(--text)]">
-                {meta?.method ?? "GET"}
-              </div>
+              <div className="mt-1 text-sm text-[var(--text)]">{meta?.method ?? "GET"}</div>
             </div>
             <div className="rounded-lg border border-[var(--border)] bg-[var(--bg3)] p-4">
               <div className="text-xs text-[var(--text3)]">Success Rate</div>
@@ -125,9 +120,7 @@ export default async function DiscoverDetailPage({ params }: PageProps) {
             </div>
             <div className="rounded-lg border border-[var(--border)] bg-[var(--bg3)] p-4">
               <div className="text-xs text-[var(--text3)]">Avg Latency</div>
-              <div className="mt-1 text-sm text-[var(--text)]">
-                {listing.stats.avgLatencyMs} ms
-              </div>
+              <div className="mt-1 text-sm text-[var(--text)]">{listing.stats.avgLatencyMs} ms</div>
             </div>
           </div>
 
@@ -152,9 +145,9 @@ export default async function DiscoverDetailPage({ params }: PageProps) {
                   Inspect: Recent Policy Signals
                 </h2>
                 <p className="mt-1 text-xs text-[var(--text3)]">
-                  Last {listing.recentErrors?.windowDays ?? 7} days. Schema
-                  rejects block settlement; untrusted responses are surfaced for
-                  inspection instead of silently accepted.
+                  Last {listing.recentErrors?.windowDays ?? 7} days. Schema rejects block
+                  settlement; untrusted responses are surfaced for inspection instead of silently
+                  accepted.
                 </p>
               </div>
               <div
@@ -171,23 +164,15 @@ export default async function DiscoverDetailPage({ params }: PageProps) {
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <div className="rounded border border-[var(--border)] bg-[var(--bg)] p-3">
                 <div className="text-xs text-[var(--text3)]">Policy rejects</div>
-                <div className="mt-1 text-sm text-[var(--text)]">
-                  {policyRejects}
-                </div>
+                <div className="mt-1 text-sm text-[var(--text)]">{policyRejects}</div>
               </div>
               <div className="rounded border border-[var(--border)] bg-[var(--bg)] p-3">
                 <div className="text-xs text-[var(--text3)]">Schema rejects</div>
-                <div className="mt-1 text-sm text-[var(--text)]">
-                  {schemaRejects}
-                </div>
+                <div className="mt-1 text-sm text-[var(--text)]">{schemaRejects}</div>
               </div>
               <div className="rounded border border-[var(--border)] bg-[var(--bg)] p-3">
-                <div className="text-xs text-[var(--text3)]">
-                  Injection rejects
-                </div>
-                <div className="mt-1 text-sm text-[var(--text)]">
-                  {injectionRejects}
-                </div>
+                <div className="text-xs text-[var(--text3)]">Injection rejects</div>
+                <div className="mt-1 text-sm text-[var(--text)]">{injectionRejects}</div>
               </div>
             </div>
 
@@ -215,9 +200,7 @@ export default async function DiscoverDetailPage({ params }: PageProps) {
 
           {meta?.example_response != null && (
             <div className="mt-6">
-              <h2 className="mb-2 text-sm font-medium text-[var(--text2)]">
-                Example Response
-              </h2>
+              <h2 className="mb-2 text-sm font-medium text-[var(--text2)]">Example Response</h2>
               <pre className="overflow-auto rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4 font-mono text-xs text-[var(--text)]">
                 {JSON.stringify(meta.example_response, null, 2)}
               </pre>

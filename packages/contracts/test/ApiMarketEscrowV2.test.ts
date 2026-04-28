@@ -1,13 +1,7 @@
 import { expect } from "chai";
 import hre from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
-import {
-  getAddress,
-  keccak256,
-  stringToBytes,
-  zeroAddress,
-  zeroHash,
-} from "viem";
+import { getAddress, keccak256, stringToBytes, zeroAddress, zeroHash } from "viem";
 
 const USDC = (n: bigint) => n * 1_000_000n;
 const FEE_BPS = 500n; // 5%
@@ -18,8 +12,7 @@ const EVIDENCE_A = "ipfs://bafyEvidence";
 
 describe("ApiMarketEscrowV2", function () {
   async function deployFixture() {
-    const [owner, gateway, buyer, seller, other] =
-      await hre.viem.getWalletClients();
+    const [owner, gateway, buyer, seller, other] = await hre.viem.getWalletClients();
     const usdc = await hre.viem.deployContract("MockUSDC");
     const escrow = await hre.viem.deployContract("ApiMarketEscrowV2", [
       gateway.account.address,
@@ -30,11 +23,9 @@ describe("ApiMarketEscrowV2", function () {
 
     // fund buyer and approve escrow
     await usdc.write.mint([buyer.account.address, USDC(1_000n)]);
-    const usdcAsBuyer = await hre.viem.getContractAt(
-      "MockUSDC",
-      usdc.address,
-      { client: { wallet: buyer } },
-    );
+    const usdcAsBuyer = await hre.viem.getContractAt("MockUSDC", usdc.address, {
+      client: { wallet: buyer },
+    });
     await usdcAsBuyer.write.approve([escrow.address, USDC(1_000n)]);
 
     return { escrow, usdc, owner, gateway, buyer, seller, other, publicClient };
@@ -49,23 +40,15 @@ describe("ApiMarketEscrowV2", function () {
   describe("Deployment", function () {
     it("sets owner, gateway, feeRate, usdc", async function () {
       const { escrow, owner, gateway, usdc } = await loadFixture(deployFixture);
-      expect(getAddress(await escrow.read.owner())).to.equal(
-        getAddress(owner.account.address),
-      );
-      expect(getAddress(await escrow.read.gateway())).to.equal(
-        getAddress(gateway.account.address),
-      );
+      expect(getAddress(await escrow.read.owner())).to.equal(getAddress(owner.account.address));
+      expect(getAddress(await escrow.read.gateway())).to.equal(getAddress(gateway.account.address));
       expect(await escrow.read.feeRate()).to.equal(FEE_BPS);
-      expect(getAddress(await escrow.read.usdc())).to.equal(
-        getAddress(usdc.address),
-      );
+      expect(getAddress(await escrow.read.usdc())).to.equal(getAddress(usdc.address));
       expect(await escrow.read.nextJobId()).to.equal(0n);
     });
 
     it("emits GatewayUpdated on deploy", async function () {
-      const { escrow, gateway, publicClient } = await loadFixture(
-        deployFixture,
-      );
+      const { escrow, gateway, publicClient } = await loadFixture(deployFixture);
       const logs = await publicClient.getContractEvents({
         abi: escrow.abi,
         address: escrow.address,
@@ -82,11 +65,7 @@ describe("ApiMarketEscrowV2", function () {
     it("reverts on zero gateway / zero usdc / feeRate > 3000", async function () {
       const { usdc, gateway } = await loadFixture(deployFixture);
       await expect(
-        hre.viem.deployContract("ApiMarketEscrowV2", [
-          zeroAddress,
-          FEE_BPS,
-          usdc.address,
-        ]),
+        hre.viem.deployContract("ApiMarketEscrowV2", [zeroAddress, FEE_BPS, usdc.address]),
       ).to.be.rejectedWith(/zero gateway/);
       await expect(
         hre.viem.deployContract("ApiMarketEscrowV2", [
@@ -123,9 +102,7 @@ describe("ApiMarketEscrowV2", function () {
     it("non-owner cannot approveApi", async function () {
       const { escrow, other } = await loadFixture(deployFixture);
       const asOther = await as(escrow, other);
-      await expect(asOther.write.approveApi([1n])).to.be.rejectedWith(
-        /OwnableUnauthorizedAccount/,
-      );
+      await expect(asOther.write.approveApi([1n])).to.be.rejectedWith(/OwnableUnauthorizedAccount/);
     });
 
     it("setFeeRate updates and emits", async function () {
@@ -144,24 +121,18 @@ describe("ApiMarketEscrowV2", function () {
 
     it("setFeeRate reverts above 3000", async function () {
       const { escrow } = await loadFixture(deployFixture);
-      await expect(escrow.write.setFeeRate([3_001n])).to.be.rejectedWith(
-        /fee too high/,
-      );
+      await expect(escrow.write.setFeeRate([3_001n])).to.be.rejectedWith(/fee too high/);
     });
 
     it("setGateway rotates and emits GatewayUpdated", async function () {
       const { escrow, other } = await loadFixture(deployFixture);
       await escrow.write.setGateway([other.account.address]);
-      expect(getAddress(await escrow.read.gateway())).to.equal(
-        getAddress(other.account.address),
-      );
+      expect(getAddress(await escrow.read.gateway())).to.equal(getAddress(other.account.address));
     });
 
     it("setGateway rejects zero address", async function () {
       const { escrow } = await loadFixture(deployFixture);
-      await expect(escrow.write.setGateway([zeroAddress])).to.be.rejectedWith(
-        /zero gateway/,
-      );
+      await expect(escrow.write.setGateway([zeroAddress])).to.be.rejectedWith(/zero gateway/);
     });
   });
 
@@ -178,13 +149,7 @@ describe("ApiMarketEscrowV2", function () {
       const { escrow, buyer, seller } = await loadFixture(deployFixture);
       await escrow.write.approveApi([1n]);
       const asBuyer = await as(escrow, buyer);
-      await asBuyer.write.pay([
-        1n,
-        seller.account.address,
-        USDC(10n),
-        zeroHash,
-        zeroHash,
-      ]);
+      await asBuyer.write.pay([1n, seller.account.address, USDC(10n), zeroHash, zeroHash]);
       const j = await escrow.read.getJob([0n]);
       expect(j.apiId).to.equal(1n);
       expect(j.taskType).to.equal(zeroHash);
@@ -211,9 +176,7 @@ describe("ApiMarketEscrowV2", function () {
     });
 
     it("createJob alias routes to same storage + same events", async function () {
-      const { escrow, buyer, seller, publicClient } = await loadFixture(
-        deployFixture,
-      );
+      const { escrow, buyer, seller, publicClient } = await loadFixture(deployFixture);
       const asBuyer = await as(escrow, buyer);
       await asBuyer.write.createJob([
         seller.account.address,
@@ -264,36 +227,16 @@ describe("ApiMarketEscrowV2", function () {
     it("transfers USDC to escrow balance", async function () {
       const { escrow, usdc, buyer, seller } = await loadFixture(deployFixture);
       const asBuyer = await as(escrow, buyer);
-      await asBuyer.write.pay([
-        0n,
-        seller.account.address,
-        USDC(10n),
-        TASK_A,
-        INPUTS_A,
-      ]);
+      await asBuyer.write.pay([0n, seller.account.address, USDC(10n), TASK_A, INPUTS_A]);
       expect(await usdc.read.balanceOf([escrow.address])).to.equal(USDC(10n));
-      expect(await usdc.read.balanceOf([buyer.account.address])).to.equal(
-        USDC(990n),
-      );
+      expect(await usdc.read.balanceOf([buyer.account.address])).to.equal(USDC(990n));
     });
 
     it("increments nextJobId", async function () {
       const { escrow, buyer, seller } = await loadFixture(deployFixture);
       const asBuyer = await as(escrow, buyer);
-      await asBuyer.write.pay([
-        0n,
-        seller.account.address,
-        USDC(1n),
-        TASK_A,
-        INPUTS_A,
-      ]);
-      await asBuyer.write.pay([
-        0n,
-        seller.account.address,
-        USDC(2n),
-        TASK_A,
-        INPUTS_A,
-      ]);
+      await asBuyer.write.pay([0n, seller.account.address, USDC(1n), TASK_A, INPUTS_A]);
+      await asBuyer.write.pay([0n, seller.account.address, USDC(2n), TASK_A, INPUTS_A]);
       expect(await escrow.read.nextJobId()).to.equal(2n);
     });
   });
@@ -302,13 +245,7 @@ describe("ApiMarketEscrowV2", function () {
     async function withJob() {
       const fx = await loadFixture(deployFixture);
       const asBuyer = await as(fx.escrow, fx.buyer);
-      await asBuyer.write.pay([
-        0n,
-        fx.seller.account.address,
-        USDC(10n),
-        TASK_A,
-        INPUTS_A,
-      ]);
+      await asBuyer.write.pay([0n, fx.seller.account.address, USDC(10n), TASK_A, INPUTS_A]);
       return fx;
     }
 
@@ -325,12 +262,10 @@ describe("ApiMarketEscrowV2", function () {
       // fee 5% of 10 USDC = 0.5 USDC → owner; seller gets 9.5 USDC
       const fee = (USDC(10n) * FEE_BPS) / 10_000n;
       const sellerPortion = USDC(10n) - fee;
-      expect(
-        await fx.escrow.read.pendingWithdrawals([fx.seller.account.address]),
-      ).to.equal(sellerPortion);
-      expect(
-        await fx.escrow.read.pendingWithdrawals([fx.owner.account.address]),
-      ).to.equal(fee);
+      expect(await fx.escrow.read.pendingWithdrawals([fx.seller.account.address])).to.equal(
+        sellerPortion,
+      );
+      expect(await fx.escrow.read.pendingWithdrawals([fx.owner.account.address])).to.equal(fee);
     });
 
     it("emits JobSubmitted and PaymentCompleted", async function () {
@@ -378,61 +313,47 @@ describe("ApiMarketEscrowV2", function () {
     it("reverts for non-gateway caller", async function () {
       const fx = await withJob();
       const asBuyer = await as(fx.escrow, fx.buyer);
-      await expect(
-        asBuyer.write.complete([0n, RESP_A, EVIDENCE_A]),
-      ).to.be.rejectedWith(/only gateway/);
+      await expect(asBuyer.write.complete([0n, RESP_A, EVIDENCE_A])).to.be.rejectedWith(
+        /only gateway/,
+      );
     });
 
     it("reverts on job not found", async function () {
       const { escrow, gateway } = await loadFixture(deployFixture);
       const asGateway = await as(escrow, gateway);
-      await expect(
-        asGateway.write.complete([99n, RESP_A, EVIDENCE_A]),
-      ).to.be.rejectedWith(/job not found/);
+      await expect(asGateway.write.complete([99n, RESP_A, EVIDENCE_A])).to.be.rejectedWith(
+        /job not found/,
+      );
     });
 
     it("reverts on double-complete and complete-after-refund", async function () {
       const fx = await withJob();
       const asGateway = await as(fx.escrow, fx.gateway);
       await asGateway.write.complete([0n, RESP_A, EVIDENCE_A]);
-      await expect(
-        asGateway.write.complete([0n, RESP_A, EVIDENCE_A]),
-      ).to.be.rejectedWith(/already completed/);
+      await expect(asGateway.write.complete([0n, RESP_A, EVIDENCE_A])).to.be.rejectedWith(
+        /already completed/,
+      );
 
       // new job, then refund, then try complete
       const asBuyer = await as(fx.escrow, fx.buyer);
-      await asBuyer.write.pay([
-        0n,
-        fx.seller.account.address,
-        USDC(1n),
-        TASK_A,
-        INPUTS_A,
-      ]);
+      await asBuyer.write.pay([0n, fx.seller.account.address, USDC(1n), TASK_A, INPUTS_A]);
       await asGateway.write.refund([1n]);
-      await expect(
-        asGateway.write.complete([1n, RESP_A, EVIDENCE_A]),
-      ).to.be.rejectedWith(/already refunded/);
+      await expect(asGateway.write.complete([1n, RESP_A, EVIDENCE_A])).to.be.rejectedWith(
+        /already refunded/,
+      );
     });
 
     it("zero feeRate sends 100% to seller", async function () {
       const fx = await loadFixture(deployFixture);
       await fx.escrow.write.setFeeRate([0n]);
       const asBuyer = await as(fx.escrow, fx.buyer);
-      await asBuyer.write.pay([
-        0n,
-        fx.seller.account.address,
-        USDC(10n),
-        TASK_A,
-        INPUTS_A,
-      ]);
+      await asBuyer.write.pay([0n, fx.seller.account.address, USDC(10n), TASK_A, INPUTS_A]);
       const asGateway = await as(fx.escrow, fx.gateway);
       await asGateway.write.complete([0n, RESP_A, EVIDENCE_A]);
-      expect(
-        await fx.escrow.read.pendingWithdrawals([fx.seller.account.address]),
-      ).to.equal(USDC(10n));
-      expect(
-        await fx.escrow.read.pendingWithdrawals([fx.owner.account.address]),
-      ).to.equal(0n);
+      expect(await fx.escrow.read.pendingWithdrawals([fx.seller.account.address])).to.equal(
+        USDC(10n),
+      );
+      expect(await fx.escrow.read.pendingWithdrawals([fx.owner.account.address])).to.equal(0n);
     });
   });
 
@@ -440,13 +361,7 @@ describe("ApiMarketEscrowV2", function () {
     async function withJob() {
       const fx = await loadFixture(deployFixture);
       const asBuyer = await as(fx.escrow, fx.buyer);
-      await asBuyer.write.pay([
-        0n,
-        fx.seller.account.address,
-        USDC(10n),
-        TASK_A,
-        INPUTS_A,
-      ]);
+      await asBuyer.write.pay([0n, fx.seller.account.address, USDC(10n), TASK_A, INPUTS_A]);
       return fx;
     }
 
@@ -464,27 +379,21 @@ describe("ApiMarketEscrowV2", function () {
     it("reverts for non-gateway", async function () {
       const fx = await withJob();
       const asBuyer = await as(fx.escrow, fx.buyer);
-      await expect(asBuyer.write.refund([0n])).to.be.rejectedWith(
-        /only gateway/,
-      );
+      await expect(asBuyer.write.refund([0n])).to.be.rejectedWith(/only gateway/);
     });
 
     it("reverts on double-refund", async function () {
       const fx = await withJob();
       const asGateway = await as(fx.escrow, fx.gateway);
       await asGateway.write.refund([0n]);
-      await expect(asGateway.write.refund([0n])).to.be.rejectedWith(
-        /already refunded/,
-      );
+      await expect(asGateway.write.refund([0n])).to.be.rejectedWith(/already refunded/);
     });
 
     it("reverts after complete", async function () {
       const fx = await withJob();
       const asGateway = await as(fx.escrow, fx.gateway);
       await asGateway.write.complete([0n, RESP_A, EVIDENCE_A]);
-      await expect(asGateway.write.refund([0n])).to.be.rejectedWith(
-        /already completed/,
-      );
+      await expect(asGateway.write.refund([0n])).to.be.rejectedWith(/already completed/);
     });
   });
 
@@ -492,13 +401,7 @@ describe("ApiMarketEscrowV2", function () {
     it("seller can claim after complete", async function () {
       const fx = await loadFixture(deployFixture);
       const asBuyer = await as(fx.escrow, fx.buyer);
-      await asBuyer.write.pay([
-        0n,
-        fx.seller.account.address,
-        USDC(10n),
-        TASK_A,
-        INPUTS_A,
-      ]);
+      await asBuyer.write.pay([0n, fx.seller.account.address, USDC(10n), TASK_A, INPUTS_A]);
       const asGateway = await as(fx.escrow, fx.gateway);
       await asGateway.write.complete([0n, RESP_A, EVIDENCE_A]);
 
@@ -507,12 +410,8 @@ describe("ApiMarketEscrowV2", function () {
 
       const asSeller = await as(fx.escrow, fx.seller);
       await asSeller.write.claim();
-      expect(await fx.usdc.read.balanceOf([fx.seller.account.address])).to.equal(
-        sellerPortion,
-      );
-      expect(
-        await fx.escrow.read.pendingWithdrawals([fx.seller.account.address]),
-      ).to.equal(0n);
+      expect(await fx.usdc.read.balanceOf([fx.seller.account.address])).to.equal(sellerPortion);
+      expect(await fx.escrow.read.pendingWithdrawals([fx.seller.account.address])).to.equal(0n);
     });
 
     it("reverts when nothing to claim", async function () {
@@ -526,21 +425,13 @@ describe("ApiMarketEscrowV2", function () {
     it("both revert for unknown id", async function () {
       const { escrow } = await loadFixture(deployFixture);
       await expect(escrow.read.getJob([0n])).to.be.rejectedWith(/job not found/);
-      await expect(escrow.read.getPayment([0n])).to.be.rejectedWith(
-        /job not found/,
-      );
+      await expect(escrow.read.getPayment([0n])).to.be.rejectedWith(/job not found/);
     });
 
     it("return the same struct", async function () {
       const { escrow, buyer, seller } = await loadFixture(deployFixture);
       const asBuyer = await as(escrow, buyer);
-      await asBuyer.write.pay([
-        0n,
-        seller.account.address,
-        USDC(3n),
-        TASK_A,
-        INPUTS_A,
-      ]);
+      await asBuyer.write.pay([0n, seller.account.address, USDC(3n), TASK_A, INPUTS_A]);
       const a = await escrow.read.getJob([0n]);
       const b = await escrow.read.getPayment([0n]);
       expect(a).to.deep.equal(b);
@@ -576,11 +467,9 @@ describe("ApiMarketEscrowV2", function () {
       const base = await deployFixture();
       // Revoke the standard approve so we prove auth path doesn't rely on
       // an existing allowance.
-      const usdcAsBuyer = await hre.viem.getContractAt(
-        "MockUSDC",
-        base.usdc.address,
-        { client: { wallet: base.buyer } },
-      );
+      const usdcAsBuyer = await hre.viem.getContractAt("MockUSDC", base.usdc.address, {
+        client: { wallet: base.buyer },
+      });
       await usdcAsBuyer.write.approve([base.escrow.address, 0n]);
       return { ...base, usdcAsBuyer };
     }
@@ -612,9 +501,7 @@ describe("ApiMarketEscrowV2", function () {
       expect(job.amount).to.equal(USDC(5n));
       expect(job.apiId).to.equal(123n);
 
-      expect(await usdc.read.balanceOf([escrow.address])).to.equal(
-        escrowBalBefore + USDC(5n),
-      );
+      expect(await usdc.read.balanceOf([escrow.address])).to.equal(escrowBalBefore + USDC(5n));
       expect(await usdc.read.balanceOf([buyer.account.address])).to.equal(
         buyerBalBefore - USDC(5n),
       );

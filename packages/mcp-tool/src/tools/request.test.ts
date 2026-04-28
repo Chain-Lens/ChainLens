@@ -39,10 +39,7 @@ type SignCall = {
 };
 
 function fakeDeps(options: {
-  fetchImpl: (
-    url: string,
-    init?: RequestInit,
-  ) => { status: number; body?: unknown };
+  fetchImpl: (url: string, init?: RequestInit) => { status: number; body?: unknown };
   jobIdTopic?: `0x${string}`;
   pollTimeoutMs?: number;
   pollIntervalMs?: number;
@@ -62,9 +59,7 @@ function fakeDeps(options: {
     return new Response(body === undefined ? null : JSON.stringify(body), { status });
   }) as typeof fetch;
 
-  const jobIdTopic =
-    options.jobIdTopic ??
-    (`0x${"0".repeat(63)}7`); // jobId = 7
+  const jobIdTopic = options.jobIdTopic ?? `0x${"0".repeat(63)}7`; // jobId = 7
 
   const walletClient = {
     chain: { id: 84532 },
@@ -96,7 +91,11 @@ function fakeDeps(options: {
         // stays exercised.
         {
           address: USDC_ADDR,
-          topics: [TRANSFER_TOPIC, BUYER_AS_TOPIC, BUYER_AS_TOPIC] as unknown as readonly `0x${string}`[],
+          topics: [
+            TRANSFER_TOPIC,
+            BUYER_AS_TOPIC,
+            BUYER_AS_TOPIC,
+          ] as unknown as readonly `0x${string}`[],
           data: "0x" as `0x${string}`,
         },
         {
@@ -127,9 +126,9 @@ function fakeDeps(options: {
     usdcAddress: USDC_ADDR,
     usdcEip712Name: "USD Coin",
     usdcEip712Version: "2",
-    keccak256: () => (`0x${"f".repeat(64)}`) as `0x${string}`,
-    taskTypeId: () => (`0x${"1".repeat(64)}`) as `0x${string}`,
-    inputsHash: () => (`0x${"2".repeat(64)}`) as `0x${string}`,
+    keccak256: () => `0x${"f".repeat(64)}` as `0x${string}`,
+    taskTypeId: () => `0x${"1".repeat(64)}` as `0x${string}`,
+    inputsHash: () => `0x${"2".repeat(64)}` as `0x${string}`,
     randomNonce: () => FAKE_NONCE,
     nowSeconds: () => 1_700_000_000n,
     pollIntervalMs: options.pollIntervalMs ?? 10,
@@ -288,9 +287,7 @@ describe("requestHandler", () => {
   it("fails fast when the backend execution trigger is rejected", async () => {
     const { deps } = fakeDeps({
       fetchImpl: (url) =>
-        url.endsWith("/jobs/execute")
-          ? { status: 500, body: { error: "boom" } }
-          : { status: 404 },
+        url.endsWith("/jobs/execute") ? { status: 500, body: { error: "boom" } } : { status: 404 },
     });
     await assert.rejects(
       requestHandler(
@@ -308,7 +305,7 @@ describe("requestHandler", () => {
 });
 
 describe("pickJobIdFromReceipt", () => {
-  const jobIdTopic = (`0x${"0".repeat(63)}7`) as `0x${string}`;
+  const jobIdTopic = `0x${"0".repeat(63)}7` as `0x${string}`;
 
   it("skips ERC20 Transfer logs and returns jobId from the JobCreated log", async () => {
     const receipt = {
@@ -338,10 +335,7 @@ describe("pickJobIdFromReceipt", () => {
         },
       ],
     } as unknown as Parameters<typeof pickJobIdFromReceipt>[0];
-    assert.throws(
-      () => pickJobIdFromReceipt(receipt, ESCROW),
-      /JobCreated event not found/,
-    );
+    assert.throws(() => pickJobIdFromReceipt(receipt, ESCROW), /JobCreated event not found/);
   });
 
   it("throws when no JobCreated log is present", async () => {
@@ -354,15 +348,14 @@ describe("pickJobIdFromReceipt", () => {
         },
       ],
     } as unknown as Parameters<typeof pickJobIdFromReceipt>[0];
-    assert.throws(
-      () => pickJobIdFromReceipt(receipt, ESCROW),
-      /JobCreated event not found/,
-    );
+    assert.throws(() => pickJobIdFromReceipt(receipt, ESCROW), /JobCreated event not found/);
   });
 
   it("matches the keccak256 of the JobCreated event in the shipped ABI", () => {
     const event = ApiMarketEscrowV2Abi.find(
-      (item): item is typeof item & { type: "event"; name: string; inputs: Array<{ type: string }> } =>
+      (
+        item,
+      ): item is typeof item & { type: "event"; name: string; inputs: Array<{ type: string }> } =>
         item.type === "event" && item.name === "JobCreated",
     );
     if (!event) throw new Error("JobCreated event missing from ABI");

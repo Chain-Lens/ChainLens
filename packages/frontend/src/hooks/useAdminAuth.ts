@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useSignMessage, useAccount, useChainId } from "wagmi";
 import { SiweMessage } from "siwe";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001/api";
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001/api";
 
 export function useAdminAuth() {
   const { address } = useAccount();
@@ -44,9 +43,7 @@ export function useAdminAuth() {
 
     try {
       // 1. Fetch nonce from server
-      const { nonce } = await fetch(`${BASE_URL}/auth/nonce`).then((r) =>
-        r.json()
-      );
+      const { nonce } = await fetch(`${BASE_URL}/auth/nonce`).then((r) => r.json());
 
       // 2. Build SIWE message
       const message = new SiweMessage({

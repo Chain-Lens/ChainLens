@@ -14,7 +14,9 @@ export default function StatusBadge({ status }: { status: string }) {
   const statusClass = statusStyles[status] ?? "status-badge-default";
 
   return (
-    <span className={`status-badge inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>
+    <span
+      className={`status-badge inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}
+    >
       {status}
     </span>
   );

@@ -11,11 +11,7 @@ export interface SellerAuthenticatedRequest extends Request {
   sellerAddress?: string;
 }
 
-export function requireAdmin(
-  req: AuthenticatedRequest,
-  _res: Response,
-  next: NextFunction
-) {
+export function requireAdmin(req: AuthenticatedRequest, _res: Response, next: NextFunction) {
   const token = req.cookies?.admin_token;
 
   if (!token) {
@@ -40,11 +36,7 @@ export function requireAdmin(
 // prevents an admin JWT (same signing secret, same shape) from being
 // pasted into the `seller_token` cookie to impersonate a seller, and
 // vice versa.
-export function requireSeller(
-  req: SellerAuthenticatedRequest,
-  _res: Response,
-  next: NextFunction
-) {
+export function requireSeller(req: SellerAuthenticatedRequest, _res: Response, next: NextFunction) {
   const token = req.cookies?.seller_token;
 
   if (!token) {

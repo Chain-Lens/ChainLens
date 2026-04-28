@@ -4,9 +4,9 @@ import { PassThrough } from "node:stream";
 import { createApprovalPrompt } from "./approval-prompt.js";
 import type { DecodedTx } from "./tx-decoder.js";
 
-function mkCtx(overrides?: { timeoutSec?: number }): Parameters<
-  ReturnType<typeof createApprovalPrompt>
->[0] {
+function mkCtx(overrides?: {
+  timeoutSec?: number;
+}): Parameters<ReturnType<typeof createApprovalPrompt>>[0] {
   const decoded: DecodedTx = {
     kind: "pay",
     target: "0xD4c40710576f582c49e5E6417F6cA2023E30d3aD",

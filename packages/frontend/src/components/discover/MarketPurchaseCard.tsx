@@ -28,9 +28,7 @@ function formatUsdcLabel(amount: string | undefined): string | null {
 export default function MarketPurchaseCard({ listing }: Props) {
   const { isConnected } = useAccount();
   const { executePayment, step, error, result, isLoading } = useMarketPayment();
-  const [inputsText, setInputsText] = useState(
-    stringifyExample(listing.metadata?.example_request),
-  );
+  const [inputsText, setInputsText] = useState(stringifyExample(listing.metadata?.example_request));
   const [inputError, setInputError] = useState<string | null>(null);
 
   const amount = listing.metadata?.pricing?.amount;
@@ -74,12 +72,10 @@ export default function MarketPurchaseCard({ listing }: Props) {
     <section className="card p-5">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-[var(--text)]">
-            Live Test Call
-          </h2>
+          <h2 className="text-lg font-semibold text-[var(--text)]">Live Test Call</h2>
           <p className="mt-1 text-sm text-[var(--text2)]">
-            Sign a USDC authorization, let the gateway execute the seller API,
-            then settle on-chain only after a successful response.
+            Sign a USDC authorization, let the gateway execute the seller API, then settle on-chain
+            only after a successful response.
           </p>
         </div>
         {priceLabel && (
@@ -118,9 +114,7 @@ export default function MarketPurchaseCard({ listing }: Props) {
         className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4 font-mono text-sm text-[var(--text)] outline-none transition focus:border-[var(--accent)]"
       />
 
-      {inputError && (
-        <p className="mt-2 text-sm text-[var(--red)]">{inputError}</p>
-      )}
+      {inputError && <p className="mt-2 text-sm text-[var(--red)]">{inputError}</p>}
 
       {!isConnected && (
         <p className="mt-3 text-sm text-[var(--text2)]">
@@ -130,8 +124,8 @@ export default function MarketPurchaseCard({ listing }: Props) {
 
       {!isPurchasable && (
         <p className="mt-3 text-sm text-[var(--red)]">
-          This listing is not currently purchasable. It must be active,
-          approved, and have a valid price and endpoint.
+          This listing is not currently purchasable. It must be active, approved, and have a valid
+          price and endpoint.
         </p>
       )}
 

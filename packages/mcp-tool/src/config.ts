@@ -39,7 +39,11 @@ function warnDeprecatedEnvName(oldName: string, newName: string) {
   );
 }
 
-function readEnv(env: NodeJS.ProcessEnv, primaryName: string, deprecatedName?: string): string | undefined {
+function readEnv(
+  env: NodeJS.ProcessEnv,
+  primaryName: string,
+  deprecatedName?: string,
+): string | undefined {
   const primaryValue = env[primaryName];
   if (primaryValue) return primaryValue;
   if (deprecatedName) {
@@ -92,5 +96,13 @@ export function loadMcpConfig(env: NodeJS.ProcessEnv = process.env): McpConfig {
   if (!Number.isInteger(pollTimeoutMs) || pollTimeoutMs <= 0) {
     throw new Error(`Invalid CHAIN_LENS_POLL_TIMEOUT_MS: ${env.CHAIN_LENS_POLL_TIMEOUT_MS}`);
   }
-  return { apiBaseUrl, chainId, rpcUrl, walletPrivateKey, signSocketPath, pollIntervalMs, pollTimeoutMs };
+  return {
+    apiBaseUrl,
+    chainId,
+    rpcUrl,
+    walletPrivateKey,
+    signSocketPath,
+    pollIntervalMs,
+    pollTimeoutMs,
+  };
 }

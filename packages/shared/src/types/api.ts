@@ -21,5 +21,4 @@ export interface ApiListing {
   updatedAt: string;
 }
 
-export interface ApiListingPublic
-  extends Omit<ApiListing, "endpoint"> {}
+export interface ApiListingPublic extends Omit<ApiListing, "endpoint"> {}

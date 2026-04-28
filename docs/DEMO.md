@@ -64,10 +64,10 @@ Best for showing that an AI agent can spend on its own.
            "CHAIN_LENS_API_URL": "https://your-chain-lens/api",
            "CHAIN_ID": "84532",
            "RPC_URL": "https://sepolia.base.org",
-           "CHAIN_LENS_SIGN_SOCKET": "/home/you/.chain-lens/sign.sock"
-         }
-       }
-     }
+           "CHAIN_LENS_SIGN_SOCKET": "/home/you/.chain-lens/sign.sock",
+         },
+       },
+     },
    }
    ```
    Restart Claude Desktop. Read-only tools appear by default; paid tools appear
@@ -129,12 +129,12 @@ in the marketplace UI a refresh later.
 
 ## Expected timings (Base Sepolia)
 
-| Step | Time |
-| --- | --- |
-| Sign `ReceiveWithAuthorization` | <1 s |
-| Gateway upstream call + validation | ~0.5–2 s |
-| `settle()` | 1–2 s |
-| Total Scenario A or B | **~3–6 s** |
+| Step                               | Time       |
+| ---------------------------------- | ---------- |
+| Sign `ReceiveWithAuthorization`    | <1 s       |
+| Gateway upstream call + validation | ~0.5–2 s   |
+| `settle()`                         | 1–2 s      |
+| Total Scenario A or B              | **~3–6 s** |
 
 Test failures (e.g., seller offline, schema violation) drop the signed auth in
 the v3 path, so a live failure demo is also quick and shows that no USDC moved.

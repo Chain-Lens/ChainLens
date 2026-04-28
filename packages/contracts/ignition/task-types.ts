@@ -8,11 +8,7 @@ export interface InitialTaskType {
   minBudget: bigint;
 }
 
-function tt(
-  name: string,
-  maxResponseTime: bigint,
-  minBudgetUsd: string,
-): InitialTaskType {
+function tt(name: string, maxResponseTime: bigint, minBudgetUsd: string): InitialTaskType {
   return {
     id: keccak256(stringToBytes(name)),
     name,

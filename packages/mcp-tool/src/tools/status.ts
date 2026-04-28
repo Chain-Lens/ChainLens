@@ -19,12 +19,8 @@ export interface StatusResult {
   evidence?: unknown;
 }
 
-export async function statusHandler(
-  input: StatusInput,
-  deps: StatusDeps,
-): Promise<StatusResult> {
-  const raw =
-    typeof input.job_id === "bigint" ? input.job_id.toString() : String(input.job_id);
+export async function statusHandler(input: StatusInput, deps: StatusDeps): Promise<StatusResult> {
+  const raw = typeof input.job_id === "bigint" ? input.job_id.toString() : String(input.job_id);
   if (!/^\d+$/.test(raw)) {
     throw new Error(`chain-lens.status: job_id must be a non-negative integer, got '${raw}'`);
   }

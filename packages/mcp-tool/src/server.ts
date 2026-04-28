@@ -5,10 +5,7 @@
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
 import { discoverHandler, discoverToolDefinition, type DiscoverDeps } from "./tools/discover.js";
 import { statusHandler, statusToolDefinition, type StatusDeps } from "./tools/status.js";
@@ -33,11 +30,7 @@ export function buildMcpServer(deps: McpServerDeps): Server {
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
-    const tools: unknown[] = [
-      discoverToolDefinition,
-      inspectToolDefinition,
-      statusToolDefinition,
-    ];
+    const tools: unknown[] = [discoverToolDefinition, inspectToolDefinition, statusToolDefinition];
     if (deps.request) tools.push(requestToolDefinition);
     if (deps.call) tools.push(callToolDefinition);
     return { tools };

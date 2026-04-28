@@ -93,19 +93,12 @@ const defaultRandomNonce = (): `0x${string}` => {
 
 const defaultNowSeconds = (): bigint => BigInt(Math.floor(Date.now() / 1000));
 
-export async function callHandler(
-  input: CallInput,
-  deps: CallDeps,
-): Promise<CallResult> {
+export async function callHandler(input: CallInput, deps: CallDeps): Promise<CallResult> {
   // ---------- input validation ----------
   if (!/^\d+$/.test(input.listing_id)) {
     throw new Error("chain-lens.call: listing_id must be a decimal string");
   }
-  if (
-    !input.inputs ||
-    typeof input.inputs !== "object" ||
-    Array.isArray(input.inputs)
-  ) {
+  if (!input.inputs || typeof input.inputs !== "object" || Array.isArray(input.inputs)) {
     throw new Error("chain-lens.call: inputs must be a JSON object");
   }
   if (!/^\d+$/.test(input.amount)) {

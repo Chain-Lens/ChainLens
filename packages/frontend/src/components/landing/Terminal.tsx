@@ -20,13 +20,7 @@ export function TerminalWindow({
   );
 }
 
-export function TLine({
-  children,
-  indent = 0,
-}: {
-  children?: React.ReactNode;
-  indent?: number;
-}) {
+export function TLine({ children, indent = 0 }: { children?: React.ReactNode; indent?: number }) {
   return (
     <div className={styles.line} style={{ paddingLeft: indent * 16 }}>
       {children}

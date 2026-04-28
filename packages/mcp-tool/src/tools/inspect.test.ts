@@ -79,10 +79,7 @@ describe("inspectHandler", () => {
 
   it("derives priceUsdc from metadata.pricing.amount", async () => {
     const { fetch } = fakeFetch(() => ({ status: 200, body: SAMPLE_DETAIL }));
-    const out = await inspectHandler(
-      { listing_id: "7" },
-      { apiBaseUrl: "http://x/api", fetch },
-    );
+    const out = await inspectHandler({ listing_id: "7" }, { apiBaseUrl: "http://x/api", fetch });
     assert.equal(out.priceUsdc, "0.050000 USDC");
   });
 
@@ -94,10 +91,7 @@ describe("inspectHandler", () => {
         metadata: { ...SAMPLE_DETAIL.metadata, pricing: {} },
       },
     }));
-    const out = await inspectHandler(
-      { listing_id: "7" },
-      { apiBaseUrl: "http://x/api", fetch },
-    );
+    const out = await inspectHandler({ listing_id: "7" }, { apiBaseUrl: "http://x/api", fetch });
     assert.equal(out.priceUsdc, null);
   });
 
@@ -110,10 +104,7 @@ describe("inspectHandler", () => {
         metadataError: "metadata fetch 500",
       },
     }));
-    const out = await inspectHandler(
-      { listing_id: "7" },
-      { apiBaseUrl: "http://x/api", fetch },
-    );
+    const out = await inspectHandler({ listing_id: "7" }, { apiBaseUrl: "http://x/api", fetch });
     assert.equal(out.metadataError, "metadata fetch 500");
     assert.equal(out.priceUsdc, null);
   });
@@ -121,10 +112,7 @@ describe("inspectHandler", () => {
   it("rejects non-decimal listing_id before hitting the network", async () => {
     const { fetch, calls } = fakeFetch(() => ({ status: 200, body: SAMPLE_DETAIL }));
     await assert.rejects(
-      inspectHandler(
-        { listing_id: "abc" },
-        { apiBaseUrl: "http://x/api", fetch },
-      ),
+      inspectHandler({ listing_id: "abc" }, { apiBaseUrl: "http://x/api", fetch }),
       /listing_id must be a decimal string/,
     );
     assert.equal(calls.length, 0);
@@ -133,10 +121,7 @@ describe("inspectHandler", () => {
   it("surfaces backend 404 with status text", async () => {
     const { fetch } = fakeFetch(() => ({ status: 404, body: { error: "not found" } }));
     await assert.rejects(
-      inspectHandler(
-        { listing_id: "999" },
-        { apiBaseUrl: "http://x/api", fetch },
-      ),
+      inspectHandler({ listing_id: "999" }, { apiBaseUrl: "http://x/api", fetch }),
       /backend returned 404/,
     );
   });

@@ -10,9 +10,7 @@ export const publicClient = createPublicClient({
   transport: http(env.RPC_URL),
 });
 
-export const gatewayAccount = privateKeyToAccount(
-  env.PRIVATE_KEY as `0x${string}`
-);
+export const gatewayAccount = privateKeyToAccount(env.PRIVATE_KEY as `0x${string}`);
 
 export const walletClient = createWalletClient({
   account: gatewayAccount,

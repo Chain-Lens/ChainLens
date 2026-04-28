@@ -30,13 +30,11 @@ export default function LandingProblem() {
           <h2 className={sStyles.title}>
             Agents can act.
             <br />
-            But they can&apos;t{" "}
-            <span style={{ color: "var(--red)" }}>pay</span>.
+            But they can&apos;t <span style={{ color: "var(--red)" }}>pay</span>.
           </h2>
           <p className={sStyles.sub}>
-            The rise of autonomous AI agents exposes a fundamental gap in
-            today&apos;s API economy. Agents are powerful — but economically
-            paralyzed.
+            The rise of autonomous AI agents exposes a fundamental gap in today&apos;s API economy.
+            Agents are powerful — but economically paralyzed.
           </p>
         </FadeIn>
 
@@ -66,7 +64,8 @@ export default function LandingProblem() {
               </TLine>
               <TLine indent={1}>
                 <T.cmd>
-                  {"-H "}<T.str>&quot;Authorization: Bearer ???&quot;</T.str>
+                  {"-H "}
+                  <T.str>&quot;Authorization: Bearer ???&quot;</T.str>
                 </T.cmd>
               </TLine>
               <TLine />
@@ -84,8 +83,7 @@ export default function LandingProblem() {
               <TLine>
                 <T.prompt>agent</T.prompt>
                 <T.out>@autonomous:~$ </T.out>
-                <T.err>Task failed. Human intervention required.</T.err>{" "}
-                <Cursor />
+                <T.err>Task failed. Human intervention required.</T.err> <Cursor />
               </TLine>
             </TerminalWindow>
           </div>

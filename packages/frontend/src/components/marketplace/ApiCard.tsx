@@ -3,8 +3,7 @@ import { formatUnits } from "viem";
 import type { ApiListingPublic } from "@chain-lens/shared";
 
 export default function ApiCard({ api }: { api: ApiListingPublic }) {
-  const href =
-    typeof api.onChainId === "number" ? `/discover/${api.onChainId}` : null;
+  const href = typeof api.onChainId === "number" ? `/discover/${api.onChainId}` : null;
 
   const content = (
     <div className="card cursor-pointer border-[var(--border)] transition-all hover:border-[var(--border2)] hover:bg-[var(--bg3)]">
@@ -14,9 +13,7 @@ export default function ApiCard({ api }: { api: ApiListingPublic }) {
           {api.category}
         </span>
       </div>
-      <p className="mb-4 line-clamp-2 text-sm text-[var(--text2)]">
-        {api.description}
-      </p>
+      <p className="mb-4 line-clamp-2 text-sm text-[var(--text2)]">{api.description}</p>
       <div className="flex justify-between items-center">
         <span className="text-base font-bold text-[var(--accent)]">
           {formatUnits(BigInt(api.price), 6)} USDC
@@ -32,9 +29,5 @@ export default function ApiCard({ api }: { api: ApiListingPublic }) {
     return content;
   }
 
-  return (
-    <Link href={href}>
-      {content}
-    </Link>
-  );
+  return <Link href={href}>{content}</Link>;
 }

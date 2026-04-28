@@ -21,22 +21,14 @@ export function validateResponseShape(
 ): ResponseSchemaResult {
   const explicitSchema = metadata.output_schema;
   if (explicitSchema && typeof explicitSchema === "object") {
-    const check = validateAgainstJsonSchemaLike(
-      data,
-      explicitSchema as JsonSchemaLike,
-      "$",
-    );
+    const check = validateAgainstJsonSchemaLike(data, explicitSchema as JsonSchemaLike, "$");
     return check.valid
       ? { applicable: true, valid: true }
       : { applicable: true, valid: false, reason: check.reason };
   }
 
   if (metadata.example_response !== undefined) {
-    const check = validateAgainstExampleShape(
-      data,
-      metadata.example_response,
-      "$",
-    );
+    const check = validateAgainstExampleShape(data, metadata.example_response, "$");
     return check.valid
       ? { applicable: true, valid: true }
       : { applicable: true, valid: false, reason: check.reason };
@@ -101,11 +93,7 @@ function validateAgainstJsonSchemaLike(
       return { valid: false, reason: `${path}: expected array` };
     }
     for (let i = 0; i < value.length; i++) {
-      const nested = validateAgainstJsonSchemaLike(
-        value[i],
-        schema.items,
-        `${path}[${i}]`,
-      );
+      const nested = validateAgainstJsonSchemaLike(value[i], schema.items, `${path}[${i}]`);
       if (!nested.valid) return nested;
     }
   }
@@ -145,11 +133,7 @@ function validateAgainstExampleShape(
       if (!(key in valueObject)) {
         return { valid: false, reason: `${path}.${key}: missing` };
       }
-      const nested = validateAgainstExampleShape(
-        valueObject[key],
-        exampleChild,
-        `${path}.${key}`,
-      );
+      const nested = validateAgainstExampleShape(valueObject[key], exampleChild, `${path}.${key}`);
       if (!nested.valid) return nested;
     }
   }

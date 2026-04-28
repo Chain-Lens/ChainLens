@@ -61,8 +61,7 @@ export function marketAddressOrNull(): `0x${string}` | null {
 
 export function usdcAddress(): `0x${string}` {
   const chainId = publicClient.chain?.id;
-  if (chainId === undefined)
-    throw new Error("publicClient.chain not configured");
+  if (chainId === undefined) throw new Error("publicClient.chain not configured");
   return USDC_ADDRESSES[chainId] as `0x${string}`;
 }
 
@@ -97,9 +96,7 @@ export async function resolveMetadata(uri: string): Promise<ListingMetadata> {
     return (await res.json()) as ListingMetadata;
   }
 
-  throw new Error(
-    "unsupported metadataURI scheme (use data:, http(s):, or raw JSON)",
-  );
+  throw new Error("unsupported metadataURI scheme (use data:, http(s):, or raw JSON)");
 }
 
 export async function readListing(listingId: bigint): Promise<OnChainListing> {

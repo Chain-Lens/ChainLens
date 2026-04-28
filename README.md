@@ -7,12 +7,12 @@
 
 **Type 2 MVP (Base Sepolia)**
 
-| Contract | Address |
-| --- | --- |
-| `ApiMarketEscrowV2` | `0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E` |
+| Contract                               | Address                                      |
+| -------------------------------------- | -------------------------------------------- |
+| `ApiMarketEscrowV2`                    | `0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E` |
 | `SellerRegistry` (ERC-8004 compatible) | `0xcF36b76b5Da55471D4EBB5349A0653624371BE2c` |
-| `TaskTypeRegistry` | `0xD2ab227417B26f4d8311594C27c59adcA046501F` |
-| USDC (payment token) | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
+| `TaskTypeRegistry`                     | `0xD2ab227417B26f4d8311594C27c59adcA046501F` |
+| USDC (payment token)                   | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` |
 
 ---
 
@@ -41,14 +41,14 @@ every answer is independently verifiable.
 
 ## Monorepo layout
 
-| Package | Purpose |
-| --- | --- |
-| [`packages/contracts`](packages/contracts) | `ApiMarketEscrowV2`, `SellerRegistry`, `TaskTypeRegistry`, `MockUSDC`. Hardhat + Ignition. |
-| [`packages/backend`](packages/backend) | Express gateway: `/api/apis`, `/api/jobs`, `/api/evidence/:jobId`, `/api/reputation/:addr`. Listens for v2 events and finalizes jobs. |
-| [`packages/frontend`](packages/frontend) | Next.js 15 marketplace, evidence explorer, reputation pages. |
-| [`packages/shared`](packages/shared) | Contract ABIs, addresses, task type registry, chain configs. |
-| [`packages/mcp-tool`](packages/mcp-tool) | `@chain-lens/mcp-tool` — MCP server with `chain-lens.discover` / `inspect` / `status`, plus paid `request` (legacy v2) and `call` (current v3 x402) when a signer is configured. |
-| [`packages/sample-sellers`](packages/sample-sellers) | Reference seller agents (Blockscout / DeFiLlama / Sourcify) + Dockerfiles. |
+| Package                                              | Purpose                                                                                                                                                                          |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`packages/contracts`](packages/contracts)           | `ApiMarketEscrowV2`, `SellerRegistry`, `TaskTypeRegistry`, `MockUSDC`. Hardhat + Ignition.                                                                                       |
+| [`packages/backend`](packages/backend)               | Express gateway: `/api/apis`, `/api/jobs`, `/api/evidence/:jobId`, `/api/reputation/:addr`. Listens for v2 events and finalizes jobs.                                            |
+| [`packages/frontend`](packages/frontend)             | Next.js 15 marketplace, evidence explorer, reputation pages.                                                                                                                     |
+| [`packages/shared`](packages/shared)                 | Contract ABIs, addresses, task type registry, chain configs.                                                                                                                     |
+| [`packages/mcp-tool`](packages/mcp-tool)             | `@chain-lens/mcp-tool` — MCP server with `chain-lens.discover` / `inspect` / `status`, plus paid `request` (legacy v2) and `call` (current v3 x402) when a signer is configured. |
+| [`packages/sample-sellers`](packages/sample-sellers) | Reference seller agents (Blockscout / DeFiLlama / Sourcify) + Dockerfiles.                                                                                                       |
 
 ---
 
@@ -56,13 +56,13 @@ every answer is independently verifiable.
 
 Registered at deploy time (spec §8):
 
-| Task type | Description |
-| --- | --- |
-| `blockscout_contract_source` | Verified contract source code + ABI |
-| `blockscout_tx_info` | Transaction details (gas, value, status) |
-| `defillama_tvl` | DeFi protocol TVL + per-chain breakdown |
-| `sourcify_verify` | Contract bytecode verification status |
-| `chainlink_price_feed` | On-chain price oracle read |
+| Task type                    | Description                              |
+| ---------------------------- | ---------------------------------------- |
+| `blockscout_contract_source` | Verified contract source code + ABI      |
+| `blockscout_tx_info`         | Transaction details (gas, value, status) |
+| `defillama_tvl`              | DeFi protocol TVL + per-chain breakdown  |
+| `sourcify_verify`            | Contract bytecode verification status    |
+| `chainlink_price_feed`       | On-chain price oracle read               |
 
 Each has a JSON schema the gateway enforces before `responseHash` is
 committed. Bad responses trigger refund + reputation penalty automatically.
@@ -115,10 +115,10 @@ Install with `npx` — no clone required:
         "CHAIN_LENS_API_URL": "https://your-chain-lens/api",
         "CHAIN_ID": "84532",
         "RPC_URL": "https://base-sepolia.g.alchemy.com/v2/<YOUR_KEY>",
-        "WALLET_PRIVATE_KEY": "0x..."
-      }
-    }
-  }
+        "WALLET_PRIVATE_KEY": "0x...",
+      },
+    },
+  },
 }
 ```
 
@@ -200,11 +200,11 @@ via `TaskTypeRegistry.maxResponseTime`).
 
 ## Security posture
 
-| Layer | Control |
-| --- | --- |
-| Contract | `ReentrancyGuard` + `SafeERC20` on v2 escrow; `Ownable2Step` + pausable on registries. |
-| Backend | Ajv schema validation on every seller response; regex + string scan for prompt-injection before commit; per-seller rate limits. |
-| Frontend | `responseHash` re-computation on the client so users can audit without trusting the gateway. |
+| Layer    | Control                                                                                                                         |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Contract | `ReentrancyGuard` + `SafeERC20` on v2 escrow; `Ownable2Step` + pausable on registries.                                          |
+| Backend  | Ajv schema validation on every seller response; regex + string scan for prompt-injection before commit; per-seller rate limits. |
+| Frontend | `responseHash` re-computation on the client so users can audit without trusting the gateway.                                    |
 
 See [TYPE2_MVP_CLEAN_BUILD_SPEC.md](TYPE2_MVP_CLEAN_BUILD_SPEC.md) §9 for
 the full checklist.

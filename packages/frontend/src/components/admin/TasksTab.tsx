@@ -5,8 +5,7 @@ import { useAdminTaskTypes } from "@/hooks/useAdminTaskTypes";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 
 export default function TasksTab({ enabled }: { enabled: boolean }) {
-  const { taskTypes, loading, error, toggle, togglingName } =
-    useAdminTaskTypes(enabled);
+  const { taskTypes, loading, error, toggle, togglingName } = useAdminTaskTypes(enabled);
 
   async function handleToggle(name: string, currentEnabled: boolean) {
     const action = currentEnabled ? "disable" : "enable";
@@ -27,16 +26,11 @@ export default function TasksTab({ enabled }: { enabled: boolean }) {
       <table className="w-full text-sm">
         <thead className="border-b border-[var(--border)] bg-[var(--bg3)]">
           <tr>
-            {["Name", "Enabled", "Max response", "Min budget", "Registered", ""].map(
-              (h) => (
-                <th
-                  key={h}
-                  className="px-4 py-3 text-left font-medium text-[var(--text2)]"
-                >
-                  {h}
-                </th>
-              ),
-            )}
+            {["Name", "Enabled", "Max response", "Min budget", "Registered", ""].map((h) => (
+              <th key={h} className="px-4 py-3 text-left font-medium text-[var(--text2)]">
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -70,11 +64,7 @@ export default function TasksTab({ enabled }: { enabled: boolean }) {
                   disabled={togglingName === t.name}
                   className="text-xs text-[var(--text3)] transition-colors hover:text-[var(--cyan)] disabled:opacity-40"
                 >
-                  {togglingName === t.name
-                    ? "…"
-                    : t.enabled
-                      ? "Disable"
-                      : "Enable"}
+                  {togglingName === t.name ? "…" : t.enabled ? "Disable" : "Enable"}
                 </button>
               </td>
             </tr>

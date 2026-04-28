@@ -9,19 +9,11 @@ export default function ConnectButton() {
     theme === "dark"
       ? "border-[rgba(63,185,80,0.3)] bg-[rgba(63,185,80,0.12)] text-[var(--green)] hover:bg-[rgba(63,185,80,0.2)]"
       : "border-[rgba(37,99,235,0.3)] bg-[rgba(37,99,235,0.1)] text-[var(--accent)] hover:bg-[rgba(37,99,235,0.18)]";
-  const statusDotClass =
-    theme === "dark" ? "bg-[var(--green)]" : "bg-[var(--accent)]";
+  const statusDotClass = theme === "dark" ? "bg-[var(--green)]" : "bg-[var(--accent)]";
 
   return (
     <RainbowConnectButton.Custom>
-      {({
-        account,
-        chain,
-        openAccountModal,
-        openChainModal,
-        openConnectModal,
-        mounted,
-      }) => {
+      {({ account, chain, openAccountModal, openChainModal, openConnectModal, mounted }) => {
         const ready = mounted;
         const connected = ready && account && chain;
 
@@ -54,7 +46,11 @@ export default function ConnectButton() {
                   className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--border2)] bg-[var(--bg3)] px-3 py-[0.4375rem] text-[0.8125rem] font-medium text-[var(--text2)] transition-colors hover:bg-[var(--border)]"
                 >
                   {chain?.hasIcon && chain.iconUrl && (
-                    <img src={chain.iconUrl} alt={chain.name} className="h-[14px] w-[14px] rounded-full" />
+                    <img
+                      src={chain.iconUrl}
+                      alt={chain.name}
+                      className="h-[14px] w-[14px] rounded-full"
+                    />
                   )}
                   {chain?.name}
                 </button>

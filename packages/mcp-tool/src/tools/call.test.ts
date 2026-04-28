@@ -8,14 +8,10 @@ const MARKET = "0x45bB56fDB0E6bb14d178E417b67Ed7B3323ffFf7" as `0x${string}`;
 const USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as `0x${string}`;
 const CHAIN_ID = 84532;
 // 65-byte concatenated r(32) | s(32) | v(1)
-const FAKE_SIG =
-  ("0x" + "aa".repeat(32) + "bb".repeat(32) + "1b") as `0x${string}`;
-const FAKE_NONCE =
-  ("0x" + "cd".repeat(32)) as `0x${string}`;
-const FAKE_JOB_REF =
-  ("0x" + "ef".repeat(32)) as `0x${string}`;
-const FAKE_TX =
-  ("0x" + "12".repeat(32)) as `0x${string}`;
+const FAKE_SIG = ("0x" + "aa".repeat(32) + "bb".repeat(32) + "1b") as `0x${string}`;
+const FAKE_NONCE = ("0x" + "cd".repeat(32)) as `0x${string}`;
+const FAKE_JOB_REF = ("0x" + "ef".repeat(32)) as `0x${string}`;
+const FAKE_TX = ("0x" + "12".repeat(32)) as `0x${string}`;
 
 type SignCapture = {
   domain: unknown;
@@ -51,9 +47,7 @@ interface FetchCall {
 
 function fakeFetch(
   capture: FetchCall[],
-  response:
-    | { status: number; body: unknown }
-    | { status: number; bodyText: string },
+  response: { status: number; body: unknown } | { status: number; bodyText: string },
 ): typeof fetch {
   return (async (url: unknown, init: RequestInit = {}) => {
     let body: unknown;
@@ -68,10 +62,7 @@ function fakeFetch(
       headers: Object.fromEntries(new Headers(init.headers).entries()),
       body,
     });
-    const resBody =
-      "bodyText" in response
-        ? response.bodyText
-        : JSON.stringify(response.body);
+    const resBody = "bodyText" in response ? response.bodyText : JSON.stringify(response.body);
     return new Response(resBody, {
       status: response.status,
       headers: { "Content-Type": "application/json" },
@@ -136,10 +127,7 @@ describe("chain-lens.call — happy path", () => {
 
   it("signs ReceiveWithAuthorization over the right domain + message", async () => {
     const { deps, sign } = makeDeps();
-    await callHandler(
-      { listing_id: "7", inputs: { ticker: "TSLA" }, amount: "50000" },
-      deps,
-    );
+    await callHandler({ listing_id: "7", inputs: { ticker: "TSLA" }, amount: "50000" }, deps);
     assert.equal(sign.length, 1);
     const s = sign[0]!;
     assert.equal(s.primaryType, "ReceiveWithAuthorization");
@@ -159,10 +147,7 @@ describe("chain-lens.call — happy path", () => {
 
   it("GETs /x402/:id with query inputs and X-Payment header", async () => {
     const { deps, calls } = makeDeps();
-    await callHandler(
-      { listing_id: "7", inputs: { ticker: "TSLA" }, amount: "50000" },
-      deps,
-    );
+    await callHandler({ listing_id: "7", inputs: { ticker: "TSLA" }, amount: "50000" }, deps);
     assert.equal(calls.length, 1);
     const c = calls[0]!;
     assert.equal(c.url, "https://gw.example/api/x402/7?ticker=TSLA");
@@ -188,10 +173,7 @@ describe("chain-lens.call — happy path", () => {
     assert.equal(payment.payload.authorization["to"], MARKET);
     assert.equal(payment.payload.authorization["value"], "50000");
     assert.equal(payment.payload.authorization["validAfter"], "0");
-    assert.equal(
-      payment.payload.authorization["validBefore"],
-      String(1_776_800_000n + 3_600n),
-    );
+    assert.equal(payment.payload.authorization["validBefore"], String(1_776_800_000n + 3_600n));
     assert.equal(payment.payload.authorization["nonce"], FAKE_NONCE);
     assert.equal(typeof payment.payload.signature["v"], "number");
     assert.match(String(payment.payload.signature["r"]), /^0x[0-9a-f]{64}$/);
@@ -203,10 +185,7 @@ describe("chain-lens.call — input validation", () => {
   it("rejects non-decimal listing_id", async () => {
     const { deps } = makeDeps();
     await assert.rejects(
-      callHandler(
-        { listing_id: "abc", inputs: { a: 1 }, amount: "1" },
-        deps,
-      ),
+      callHandler({ listing_id: "abc", inputs: { a: 1 }, amount: "1" }, deps),
       /listing_id must be a decimal string/,
     );
   });
@@ -225,10 +204,7 @@ describe("chain-lens.call — input validation", () => {
   it("rejects non-decimal amount", async () => {
     const { deps } = makeDeps();
     await assert.rejects(
-      callHandler(
-        { listing_id: "0", inputs: { a: 1 }, amount: "-5" },
-        deps,
-      ),
+      callHandler({ listing_id: "0", inputs: { a: 1 }, amount: "-5" }, deps),
       /amount must be a non-negative integer string/,
     );
   });
@@ -236,10 +212,7 @@ describe("chain-lens.call — input validation", () => {
   it("rejects zero amount", async () => {
     const { deps } = makeDeps();
     await assert.rejects(
-      callHandler(
-        { listing_id: "0", inputs: { a: 1 }, amount: "0" },
-        deps,
-      ),
+      callHandler({ listing_id: "0", inputs: { a: 1 }, amount: "0" }, deps),
       /amount must be > 0/,
     );
   });
@@ -258,10 +231,7 @@ describe("chain-lens.call — gateway errors", () => {
       }),
     });
     await assert.rejects(
-      callHandler(
-        { listing_id: "7", inputs: { a: 1 }, amount: "100" },
-        deps,
-      ),
+      callHandler({ listing_id: "7", inputs: { a: 1 }, amount: "100" }, deps),
       /gateway returned 502.*seller returned non-2xx/s,
     );
   });
@@ -275,10 +245,7 @@ describe("chain-lens.call — gateway errors", () => {
       }),
     });
     await assert.rejects(
-      callHandler(
-        { listing_id: "7", inputs: { a: 1 }, amount: "100" },
-        deps,
-      ),
+      callHandler({ listing_id: "7", inputs: { a: 1 }, amount: "100" }, deps),
       /missing jobRef or settleTxHash/,
     );
   });
@@ -290,10 +257,7 @@ describe("chain-lens.call — custom domain overrides", () => {
       usdcEip712Name: "TestUSD",
       usdcEip712Version: "1",
     });
-    await callHandler(
-      { listing_id: "0", inputs: { k: 1 }, amount: "100" },
-      deps,
-    );
+    await callHandler({ listing_id: "0", inputs: { k: 1 }, amount: "100" }, deps);
     assert.deepEqual(sign[0]!.domain, {
       name: "TestUSD",
       version: "1",
@@ -304,10 +268,7 @@ describe("chain-lens.call — custom domain overrides", () => {
 
   it("respects authValidSeconds", async () => {
     const { deps, sign } = makeDeps({ authValidSeconds: 60 });
-    await callHandler(
-      { listing_id: "0", inputs: { k: 1 }, amount: "100" },
-      deps,
-    );
+    await callHandler({ listing_id: "0", inputs: { k: 1 }, amount: "100" }, deps);
     assert.equal(sign[0]!.message["validBefore"], 1_776_800_000n + 60n);
   });
 });

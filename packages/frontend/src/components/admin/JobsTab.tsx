@@ -50,9 +50,7 @@ export default function JobsTab({ enabled }: { enabled: boolean }) {
           the job never made it into the table below. */}
       <div className="card flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="flex-1">
-          <p className="text-sm font-medium text-[var(--text2)]">
-            Refund by on-chain job ID
-          </p>
+          <p className="text-sm font-medium text-[var(--text2)]">Refund by on-chain job ID</p>
           <p className="text-xs text-[var(--text3)]">
             For orphan jobs not listed below. Calls escrow.refund() directly.
           </p>
@@ -141,9 +139,7 @@ export default function JobsTab({ enabled }: { enabled: boolean }) {
             ))}
           </tbody>
         </table>
-        {jobs.length === 0 && (
-          <p className="py-8 text-center text-[var(--text2)]">No jobs yet.</p>
-        )}
+        {jobs.length === 0 && <p className="py-8 text-center text-[var(--text2)]">No jobs yet.</p>}
       </div>
     </div>
   );

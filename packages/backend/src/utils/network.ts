@@ -2,17 +2,9 @@ import { lookup } from "node:dns/promises";
 import net from "node:net";
 import { BadRequestError } from "./errors.js";
 
-const BLOCKED_HOSTNAMES = new Set([
-  "localhost",
-  "metadata.google.internal",
-]);
+const BLOCKED_HOSTNAMES = new Set(["localhost", "metadata.google.internal"]);
 
-const BLOCKED_SUFFIXES = [
-  ".internal",
-  ".local",
-  ".localhost",
-  ".localdomain",
-];
+const BLOCKED_SUFFIXES = [".internal", ".local", ".localhost", ".localdomain"];
 
 function isBlockedHostname(hostname: string): boolean {
   const normalized = hostname.toLowerCase();

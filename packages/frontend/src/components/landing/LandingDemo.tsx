@@ -15,9 +15,8 @@ export default function LandingDemo() {
             No signup needed.
           </h2>
           <p className={sStyles.sub}>
-            The testnet is running on Base Sepolia. Connect your wallet, pick a
-            listing, inspect the live quality signals, and experience
-            wallet-native API settlement firsthand.
+            The testnet is running on Base Sepolia. Connect your wallet, pick a listing, inspect the
+            live quality signals, and experience wallet-native API settlement firsthand.
           </p>
         </FadeIn>
 
@@ -67,16 +66,14 @@ export default function LandingDemo() {
                 <T.cmt>{"# 3. Pay through the x402 gateway"}</T.cmt>
               </TLine>
               <TLine>
-                <T.prompt>$</T.prompt>{" "}
-                <T.cmd>{"curl -H \"X-Payment: <signed-auth>\" \\"}</T.cmd>
+                <T.prompt>$</T.prompt> <T.cmd>{'curl -H "X-Payment: <signed-auth>" \\'}</T.cmd>
               </TLine>
               <TLine indent={1}>
                 <T.cmd>&quot;https://chainlens.pelicanlab.dev/api/x402/7?city=seoul&quot;</T.cmd>
               </TLine>
               <TLine />
               <TLine>
-                <T.ok>→ Returns seller response + settlement tx hash</T.ok>{" "}
-                <Cursor />
+                <T.ok>→ Returns seller response + settlement tx hash</T.ok> <Cursor />
               </TLine>
             </TerminalWindow>
           </div>

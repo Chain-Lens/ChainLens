@@ -76,7 +76,9 @@ function parseArgs(argv: string[]): SendTxArgs {
 
   for (let i = 0; i < argv.length; i++) {
     const key = argv[i];
-    const [flag, inline] = key.includes("=") ? [key.split("=", 2)[0], key.split("=", 2)[1]] : [key, undefined];
+    const [flag, inline] = key.includes("=")
+      ? [key.split("=", 2)[0], key.split("=", 2)[1]]
+      : [key, undefined];
     const read = (): string => {
       if (inline !== undefined) return inline;
       const v = argv[++i];

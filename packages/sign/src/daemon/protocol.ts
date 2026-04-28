@@ -115,7 +115,10 @@ export function createFrameDecoder(onFrame: (message: unknown) => void): FrameDe
   let buffered: Buffer<ArrayBufferLike> = Buffer.alloc(0);
   return {
     push(chunk: Buffer): void {
-      buffered = buffered.length === 0 ? (chunk as Buffer<ArrayBufferLike>) : Buffer.concat([buffered, chunk]);
+      buffered =
+        buffered.length === 0
+          ? (chunk as Buffer<ArrayBufferLike>)
+          : Buffer.concat([buffered, chunk]);
       while (buffered.length >= 4) {
         const bodyLen = buffered.readUInt32BE(0);
         if (bodyLen > MAX_FRAME_SIZE) {

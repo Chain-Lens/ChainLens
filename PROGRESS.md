@@ -11,43 +11,43 @@
 
 ### Week 1 — 컨트랙트 확장
 
-| Day | 작업 | Status |
-|-----|------|--------|
-| 1 | TaskTypeRegistry.sol + 테스트 + Ignition + 배포 + task_type 5개 등록 | ✅ Done |
-| 2 | SellerRegistry.sol (ERC-8004 호환) + 테스트 + 배포 | ✅ Done |
-| 3-4 | ApiMarketEscrow v2 evolve (Job 개념, ERC-8183 alias, 하위 호환) | ✅ Done |
-| 5 | shared ABI + types 업데이트 (v2 + 2개 Registry) | ✅ Done |
+| Day | 작업                                                                 | Status  |
+| --- | -------------------------------------------------------------------- | ------- |
+| 1   | TaskTypeRegistry.sol + 테스트 + Ignition + 배포 + task_type 5개 등록 | ✅ Done |
+| 2   | SellerRegistry.sol (ERC-8004 호환) + 테스트 + 배포                   | ✅ Done |
+| 3-4 | ApiMarketEscrow v2 evolve (Job 개념, ERC-8183 alias, 하위 호환)      | ✅ Done |
+| 5   | shared ABI + types 업데이트 (v2 + 2개 Registry)                      | ✅ Done |
 
 ### Week 2 — 백엔드 확장
 
-| Day | 작업 | Status |
-|-----|------|--------|
-| 1 | schema-validator (ajv) + injection-filter (OWASP) | ✅ Done |
-| 2 | seller-tester 자동 API 테스트 서비스 | ✅ Done |
-| 3 | Gateway 확장 (validation + responseHash/evidenceURI + reputation) | ✅ Done |
-| 4 | Evidence 저장 (Phase 1: DB) + `/api/evidence/:jobId` | ✅ Done |
-| 5 | Prisma 마이그레이션 (Job, SellerProfile, ApiTestResult) + reputation 엔드포인트 | ✅ Done |
-| 6-7 | Event listener 확장 + E2E 테스트 | ✅ Done |
+| Day | 작업                                                                            | Status  |
+| --- | ------------------------------------------------------------------------------- | ------- |
+| 1   | schema-validator (ajv) + injection-filter (OWASP)                               | ✅ Done |
+| 2   | seller-tester 자동 API 테스트 서비스                                            | ✅ Done |
+| 3   | Gateway 확장 (validation + responseHash/evidenceURI + reputation)               | ✅ Done |
+| 4   | Evidence 저장 (Phase 1: DB) + `/api/evidence/:jobId`                            | ✅ Done |
+| 5   | Prisma 마이그레이션 (Job, SellerProfile, ApiTestResult) + reputation 엔드포인트 | ✅ Done |
+| 6-7 | Event listener 확장 + E2E 테스트                                                | ✅ Done |
 
 ### Week 3 — 프론트엔드 + MCP + 데모
 
-| Day | 작업 | Status |
-|-----|------|--------|
-| 1-2 | `/marketplace` 개선 + `/evidence/[jobId]` + `/reputation/[sellerAddress]` + 훅 3개 | ✅ Done |
-| 3-4 | `packages/mcp-tool/` 신규 + discover/request/status 3개 도구 | ✅ Done |
-| 5 | Sample seller 3개 (Blockscout/DeFiLlama/Sourcify) | ✅ Done |
-| 6-7 | 통합·문서·데모 시나리오·영상 | ✅ Done (영상 제외) |
+| Day | 작업                                                                               | Status              |
+| --- | ---------------------------------------------------------------------------------- | ------------------- |
+| 1-2 | `/marketplace` 개선 + `/evidence/[jobId]` + `/reputation/[sellerAddress]` + 훅 3개 | ✅ Done             |
+| 3-4 | `packages/mcp-tool/` 신규 + discover/request/status 3개 도구                       | ✅ Done             |
+| 5   | Sample seller 3개 (Blockscout/DeFiLlama/Sourcify)                                  | ✅ Done             |
+| 6-7 | 통합·문서·데모 시나리오·영상                                                       | ✅ Done (영상 제외) |
 
 ---
 
 ## Smart Contracts (spec §3)
 
-| Contract | File | Tests | Deployed |
-|----------|------|-------|----------|
-| ApiMarketEscrow (v1, legacy) | `contracts/ApiMarketEscrow.sol` | 기존 457L | `0xDAa04e9BD451F9D27EcEd569303181c71F0A7b27` (Base Sepolia) |
-| TaskTypeRegistry | `contracts/TaskTypeRegistry.sol` + `types/TaskTypeRegistryTypes.sol` | 30/30 passing | ✅ `0xD2ab227417B26f4d8311594C27c59adcA046501F` (Base Sepolia) |
-| SellerRegistry | `contracts/SellerRegistry.sol` + `types/SellerRegistryTypes.sol` | 40/40 passing | ✅ `0xcF36b76b5Da55471D4EBB5349A0653624371BE2c` (Base Sepolia) |
-| ApiMarketEscrow v2 | `contracts/ApiMarketEscrowV2.sol` + `types/ApiMarketEscrowV2Types.sol` + `mocks/MockUSDC.sol` | 34/34 passing | ✅ `0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E` (Base Sepolia) |
+| Contract                     | File                                                                                          | Tests         | Deployed                                                       |
+| ---------------------------- | --------------------------------------------------------------------------------------------- | ------------- | -------------------------------------------------------------- |
+| ApiMarketEscrow (v1, legacy) | `contracts/ApiMarketEscrow.sol`                                                               | 기존 457L     | `0xDAa04e9BD451F9D27EcEd569303181c71F0A7b27` (Base Sepolia)    |
+| TaskTypeRegistry             | `contracts/TaskTypeRegistry.sol` + `types/TaskTypeRegistryTypes.sol`                          | 30/30 passing | ✅ `0xD2ab227417B26f4d8311594C27c59adcA046501F` (Base Sepolia) |
+| SellerRegistry               | `contracts/SellerRegistry.sol` + `types/SellerRegistryTypes.sol`                              | 40/40 passing | ✅ `0xcF36b76b5Da55471D4EBB5349A0653624371BE2c` (Base Sepolia) |
+| ApiMarketEscrow v2           | `contracts/ApiMarketEscrowV2.sol` + `types/ApiMarketEscrowV2Types.sol` + `mocks/MockUSDC.sol` | 34/34 passing | ✅ `0x1F7dE3fdDA5216236c7F413F2AD03bF19A3F319E` (Base Sepolia) |
 
 ---
 
@@ -87,7 +87,7 @@
   - [packages/mcp-tool/src/config.ts](packages/mcp-tool/src/config.ts) — `signSocketPath?` 필드 추가. `CHAIN_LENS_SIGN_SOCKET` 읽고, `WALLET_PRIVATE_KEY`와 동시에 세팅 시 fail-fast (메시지에 "migrated to the sign daemon" 안내). [packages/mcp-tool/src/index.ts](packages/mcp-tool/src/index.ts)에 `resolveAccount()` 추가 — 소켓 우선 → pk fallback → 둘 다 없으면 `undefined`(read-only). 소켓 경로일 땐 `daemonAccount(await connectDaemon(path))` 반환. 기존 viem `writeContract` 라인은 Account 객체만 받으므로 그대로 동작.
   - 테스트: sign 46/46 (config 7 + decoder 6 + enforcer 4 + prompt 6 + policy 5 + 기존 18) pass. mcp-tool 19/19 (config 7 = 기존 5 + 신규 2). 프로젝트 전체 `tsc --noEmit` 깨끗.
   - 다음 릴리스에서 검토할 것: 프롬프트 요약에 계산된 "예상 총 지출" 표시(`approve` + 직후 `pay` 시퀀스 묶기), 소켓 peer credential 체크(현재는 파일 권한만), Ethereum Ledger/Trezor 어댑터.
-  - **증상 1 (mcp-tool)**: `request` 도구 호출 시 노드가 "unknown account" 리턴 → createJob tx 자체가 송신 안 됨. [packages/mcp-tool/src/index.ts:107](packages/mcp-tool/src/index.ts#L107)에서 `account: account.address`(주소 문자열)을 `writeContract`에 넘겨서 viem이 JSON-RPC account 경로(`eth_sendTransaction`)로 분기 → 노드가 키를 모르니 거절. 로컬 서명(`eth_sendRawTransaction`)으로 가려면 `Account` 객체 전체를 넘겨야 함. 수정: `account: account.address` → `account`, `RequestDeps.account` 타입 `\`0x\${string}\`` → viem `Account`, 테스트 fixture도 `{address, type: "local"}` 형태로. 17/17 pass. 버전 0.0.4 → 0.0.5, `server.ts`의 MCP handshake 버전 상수 동기.
+  - **증상 1 (mcp-tool)**: `request` 도구 호출 시 노드가 "unknown account" 리턴 → createJob tx 자체가 송신 안 됨. [packages/mcp-tool/src/index.ts:107](packages/mcp-tool/src/index.ts#L107)에서 `account: account.address`(주소 문자열)을 `writeContract`에 넘겨서 viem이 JSON-RPC account 경로(`eth_sendTransaction`)로 분기 → 노드가 키를 모르니 거절. 로컬 서명(`eth_sendRawTransaction`)으로 가려면 `Account` 객체 전체를 넘겨야 함. 수정: `account: account.address` → `account`, `RequestDeps.account` 타입 `\`0x\${string}\``→ viem`Account`, 테스트 fixture도 `{address, type: "local"}`형태로. 17/17 pass. 버전 0.0.4 → 0.0.5,`server.ts`의 MCP handshake 버전 상수 동기.
   - **증상 2 (프론트)**: `/api-detail` 결제 버튼에서 `pay()` tx가 on-chain revert (MetaMask Gas Limit 140M은 estimateGas 실패 후 wallet이 블록 한도로 폴백). [packages/frontend/src/hooks/usePayment.ts](packages/frontend/src/hooks/usePayment.ts)가 `taskType = inputsHash = ZERO_BYTES32`로 호출 → [ApiMarketEscrowV2.sol:186-188](packages/contracts/contracts/ApiMarketEscrowV2.sol#L186-L188) `if (taskType == bytes32(0)) require(approvedApis[apiId])` 게이트에 걸림. 해당 apiId는 admin approveApi() tx가 안 타거나 실패한 상태라 revert.
   - 수정: **`taskType != 0` 경로로 이동** — mcp-tool이 쓰는 패턴과 동일. `api.category`를 keccak256(utf8) 해서 bytes32로 사용하면 `approvedApis` 체크가 스킵됨. 1) [packages/shared/src/types/payment.ts](packages/shared/src/types/payment.ts) `PreparePaymentResponse`에 `taskType: string` 추가. 2) [packages/backend/src/services/payment.service.ts](packages/backend/src/services/payment.service.ts) prepare 응답에 `taskType: api.category` 포함. 3) [packages/frontend/src/hooks/usePayment.ts](packages/frontend/src/hooks/usePayment.ts)가 `keccak256(stringToBytes(prepareData.taskType))`을 `pay()`의 4번째 인자로 전달 (`inputsHash`는 ZERO 유지 — 컨트랙트 미검증). 효과: 관리자 approveApi() 성공 여부와 독립적으로 결제 성공. 보너스: 게이트웨이 쪽 job 분류도 category와 일치.
   - 검증: shared/backend/mcp-tool `tsc --noEmit` 깨끗, mcp-tool 17/17 pass. 프론트는 기존 테스트 없음.
@@ -121,9 +121,9 @@
 
 - **`@chain-lens/mcp-tool` 0.0.4 — 0.0.3 긴급 수정: `workspace:*` publish 누출**
   - 0.0.3 tarball `dependencies["@chain-lens/shared"]`이 `workspace:*` 문자열 그대로 올라가 `npm install -g @chain-lens/mcp-tool` 시 `EUNSUPPORTEDPROTOCOL` — 신규 사용자 설치 전면 차단. 외부 사용자 신고로 발견.
-  - 원인: 0.0.2는 `pnpm publish`(workspace:* → 실버전 변환 수행)를 썼는데, 0.0.3 releasing 때 `npm publish`로 바꿔서 변환이 일어나지 않음. 문서화된 사전 체크 누락 — 앞으로 workspace 의존 있는 패키지는 `pnpm publish --dry-run` 후 tarball의 manifest `dependencies` 실버전 여부 확인하는 걸 필수화.
+  - 원인: 0.0.2는 `pnpm publish`(workspace:\* → 실버전 변환 수행)를 썼는데, 0.0.3 releasing 때 `npm publish`로 바꿔서 변환이 일어나지 않음. 문서화된 사전 체크 누락 — 앞으로 workspace 의존 있는 패키지는 `pnpm publish --dry-run` 후 tarball의 manifest `dependencies` 실버전 여부 확인하는 걸 필수화.
   - 수정: `packages/mcp-tool/package.json` 0.0.3 → 0.0.4, `src/server.ts` MCP handshake 버전 상수도 동기. `pnpm pack --pack-destination /tmp` 후 `tar -xzOf` 로 0.0.4 tarball 검증 → `dependencies["@chain-lens/shared"] = "0.0.2"` 확인.
-  - 0.0.3 deprecate 예정: "broken: workspace:* published unresolved — use 0.0.4".
+  - 0.0.3 deprecate 예정: "broken: workspace:\* published unresolved — use 0.0.4".
   - `create-seller` 0.0.3은 의존성 0개라 무관, 계속 유효.
 
 - **`@chain-lens/create-seller` 0.0.3 — 첫 실행 사용자 실패 경로 전면 대응**
@@ -194,7 +194,7 @@
   - `packages/mcp-tool/package.json` — `license`, `repository`, `keywords` (mcp/claude/base/web3/agents), `prepublishOnly`, `publishConfig.access: public` 추가. `bin: chain-lens-mcp`와 `files: [dist, README.md]`는 기존 유지.
   - `packages/mcp-tool/README.md` — 사용자 가이드를 `npx -y @chain-lens/mcp-tool` 중심으로 재작성. Claude Desktop config 예시도 `command: "npx"` 형태로 교체 (git clone + 절대 경로 제거). Alchemy/Infura RPC 권장 노트 추가.
   - 루트 `package.json` 이름 `monapi-market` → `chain-lens`.
-  - 검증: `pnpm install` 성공(workspace 해결), `@chain-lens/shared` + `@chain-lens/mcp-tool` build 성공, MCP 17/17 pass, frontend `tsc --noEmit` 클린. `pnpm publish --dry-run`은 네트워크/인증 필요해 보류 — workspace:* 자동 버전 치환은 pnpm 공식 동작.
+  - 검증: `pnpm install` 성공(workspace 해결), `@chain-lens/shared` + `@chain-lens/mcp-tool` build 성공, MCP 17/17 pass, frontend `tsc --noEmit` 클린. `pnpm publish --dry-run`은 네트워크/인증 필요해 보류 — workspace:\* 자동 버전 치환은 pnpm 공식 동작.
   - 설계 결정: v0.1.0 그대로 유지 (아직 미출판 초기 릴리즈). 실제 `pnpm publish`는 npm 로그인 + 2FA 필요하므로 사용자가 직접 실행.
 
 - **Week 3 Day 6-7: 문서 + 데모 시나리오 (Type 2 MVP 완료)**
@@ -237,8 +237,8 @@
   - [packages/frontend/src/hooks/useJob.ts](packages/frontend/src/hooks/useJob.ts) — `GET /api/evidence/:jobId`를 래핑. jobId는 `string | bigint | undefined` 수용 (언마운트/누락 시 로딩만 해제하고 요청은 보내지 않음). `cancelled` 플래그로 리랜더 중 응답 폐기. 프론트엔드 내부 `JobEvidence` 타입은 백엔드 `EvidenceView`와 1:1 (string 직렬화 포함).
   - [packages/frontend/src/hooks/useReputation.ts](packages/frontend/src/hooks/useReputation.ts) — `GET /api/reputation/:sellerAddress`. 동일 패턴(`undefined` 가드 + cancel). BigInt 값은 모두 문자열로 렌더에 넘김.
   - [packages/frontend/src/hooks/useTaskTypes.ts](packages/frontend/src/hooks/useTaskTypes.ts) — 현재 MVP에선 shared의 `INITIAL_TASK_TYPE_NAMES` 정적 리스트만 반환. 주석으로 백엔드 `/api/task-types` 추가 시 확장 경로 명시 (premature abstraction 회피).
-  - [packages/frontend/src/app/(app)/evidence/[jobId]/page.tsx](packages/frontend/src/app/(app)/evidence/[jobId]/page.tsx) — Evidence Explorer. Job 상세 + 상태 뱃지 + 해시 섹션에서 **로컬 `keccak256(stringToBytes(JSON.stringify(response)))`와 on-chain `responseHash` 비교 표시** (스펙 "responseHash 검증 UI"). Seller 주소는 reputation 페이지로 연결. 입력/응답 JSON pretty-printed. `inputsHash` / `evidenceURI` / 에러 원인 모두 노출. 재사용 UI는 기존 `StatusBadge` / `LoadingSpinner` / `.card` 스타일 재활용.
-  - [packages/frontend/src/app/(app)/reputation/[sellerAddress]/page.tsx](packages/frontend/src/app/(app)/reputation/[sellerAddress]/page.tsx) — Seller Reputation. 0x40 regex로 라우트 파라미터 검증, active/inactive 뱃지, reputationBps → 퍼센트 표시, `jobsCompleted / (completed+failed)` 기반 success rate 계산. 총 earnings는 raw uint256 문자열을 BigInt로 나눠 6 decimals USDC 포맷 (float 오차 회피). 등록 시각은 유닉스 초 → 날짜. capabilities / metadataURI(ipfs:// 자동 게이트웨이 변환) 섹션 포함.
+  - [packages/frontend/src/app/(app)/evidence/[jobId]/page.tsx](<packages/frontend/src/app/(app)/evidence/[jobId]/page.tsx>) — Evidence Explorer. Job 상세 + 상태 뱃지 + 해시 섹션에서 **로컬 `keccak256(stringToBytes(JSON.stringify(response)))`와 on-chain `responseHash` 비교 표시** (스펙 "responseHash 검증 UI"). Seller 주소는 reputation 페이지로 연결. 입력/응답 JSON pretty-printed. `inputsHash` / `evidenceURI` / 에러 원인 모두 노출. 재사용 UI는 기존 `StatusBadge` / `LoadingSpinner` / `.card` 스타일 재활용.
+  - [packages/frontend/src/app/(app)/reputation/[sellerAddress]/page.tsx](<packages/frontend/src/app/(app)/reputation/[sellerAddress]/page.tsx>) — Seller Reputation. 0x40 regex로 라우트 파라미터 검증, active/inactive 뱃지, reputationBps → 퍼센트 표시, `jobsCompleted / (completed+failed)` 기반 success rate 계산. 총 earnings는 raw uint256 문자열을 BigInt로 나눠 6 decimals USDC 포맷 (float 오차 회피). 등록 시각은 유닉스 초 → 날짜. capabilities / metadataURI(ipfs:// 자동 게이트웨이 변환) 섹션 포함.
   - marketplace task_type 필터는 의도적으로 미반영: `ApiListing`이 taskType 컬럼/필터를 지원하지 않음 → UI만 추가하면 백엔드와 불일치. 훅은 준비됐고 Week 3 Day 3-4 MCP 단계나 백엔드 필터 확장 시점에 붙일 예정.
   - `tsc --noEmit` 클린 (ES2017 타겟이라 `1_000_000n` 리터럴 대신 `BigInt(1_000_000)` 사용). 백엔드 73/73 회귀 없음.
 
@@ -287,7 +287,7 @@
 - **Week 2 Day 1: schema-validator + injection-filter (백엔드 보안 서비스)**
   - [packages/backend/src/services/schema-validator.service.ts](packages/backend/src/services/schema-validator.service.ts) — ajv (strict + allErrors) + ajv-formats, **컴파일된 validator 캐싱**(스펙은 raw schema만 캐시해서 compile 반복 — 개선), `primeSchemaCache`/`clearSchemaCache` 테스트 훅 노출, ipfs:// → https://ipfs.io 게이트웨이 변환
   - [packages/backend/src/services/injection-filter.service.ts](packages/backend/src/services/injection-filter.service.ts) — 13개 OWASP LLM01 패턴 (`[SYSTEM:`, `<|im_start|>`, `[INST]`, ignore/disregard/forget previous, persona hijack 등) + 1MB 사이즈 캡 + cycle/bigint/function 직렬화 실패 방어 (`response_unserializable`)
-  - [packages/backend/src/services/*.test.ts](packages/backend/src/services/) — node:test 기반 12 케이스 전부 통과 (injection 패턴 12개 + benign 4개 + scanResponse 5개 + schema 5개)
+  - [packages/backend/src/services/\*.test.ts](packages/backend/src/services/) — node:test 기반 12 케이스 전부 통과 (injection 패턴 12개 + benign 4개 + scanResponse 5개 + schema 5개)
   - `pnpm test` 스크립트 추가 (`tsx --test 'src/**/*.test.ts'`) — 별도 테스트 런타임 없이 Node 내장 사용
   - 의존성: `ajv@^8.18`, `ajv-formats@^3.0` 추가
 - **Week 1 Day 5: shared ABI + 타입 확장 (v2 + 2개 Registry)**

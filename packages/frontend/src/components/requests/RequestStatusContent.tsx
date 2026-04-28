@@ -3,11 +3,7 @@
 import { useState } from "react";
 import { useAccount } from "wagmi";
 import StatusBadge from "@/components/shared/StatusBadge";
-import {
-  fetchRequestStatus,
-  refundRequest,
-  type RequestWithApi,
-} from "@/lib/requests";
+import { fetchRequestStatus, refundRequest, type RequestWithApi } from "@/lib/requests";
 
 const STEPS = ["PENDING", "PAID", "EXECUTING", "COMPLETED"];
 
@@ -134,7 +130,9 @@ export default function RequestStatusContent({
 
         <div>
           <span className="text-sm text-[var(--text2)]">Amount: </span>
-          <span className="font-mono text-[var(--text)]">{(Number(request.amount) / 1_000_000).toFixed(2)} USDC</span>
+          <span className="font-mono text-[var(--text)]">
+            {(Number(request.amount) / 1_000_000).toFixed(2)} USDC
+          </span>
         </div>
 
         {request.txHash && (
@@ -147,7 +145,9 @@ export default function RequestStatusContent({
         {request.completionTxHash && (
           <div>
             <span className="text-sm text-[var(--text2)]">Settlement TX: </span>
-            <span className="font-mono text-xs break-all text-[var(--cyan)]">{request.completionTxHash}</span>
+            <span className="font-mono text-xs break-all text-[var(--cyan)]">
+              {request.completionTxHash}
+            </span>
           </div>
         )}
 
@@ -176,11 +176,10 @@ export default function RequestStatusContent({
         {isStuck && isBuyer && (
           <div className="mt-2 border-t border-[var(--border)] pt-4">
             <p className="mb-3 text-xs text-[var(--text2)]">
-              If settlement doesn't complete within 5 minutes after payment, you can request a refund.
+              If settlement doesn't complete within 5 minutes after payment, you can request a
+              refund.
             </p>
-            {refundError && (
-              <p className="mb-2 text-xs text-[var(--red)]">{refundError}</p>
-            )}
+            {refundError && <p className="mb-2 text-xs text-[var(--red)]">{refundError}</p>}
             <button
               type="button"
               onClick={handleRefund}

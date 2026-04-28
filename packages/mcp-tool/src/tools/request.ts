@@ -121,15 +121,13 @@ export async function requestHandler(
   if (!/^0x[0-9a-fA-F]{40}$/.test(input.seller)) {
     throw new Error(`chain-lens.request: invalid seller address '${input.seller}'`);
   }
-  if (
-    !input.inputs ||
-    typeof input.inputs !== "object" ||
-    Array.isArray(input.inputs)
-  ) {
+  if (!input.inputs || typeof input.inputs !== "object" || Array.isArray(input.inputs)) {
     throw new Error("chain-lens.request: inputs must be a JSON object");
   }
   if (!/^\d+$/.test(input.amount)) {
-    throw new Error(`chain-lens.request: amount must be a non-negative integer string (USDC atomic units)`);
+    throw new Error(
+      `chain-lens.request: amount must be a non-negative integer string (USDC atomic units)`,
+    );
   }
   const amount = BigInt(input.amount);
   if (amount <= 0n) throw new Error("chain-lens.request: amount must be > 0");
@@ -250,7 +248,12 @@ export async function requestHandler(
       const st = body.status;
       if (typeof st === "string" && TERMINAL.has(st)) {
         lastStatus = st as RequestResult["status"];
-        return { jobId: jobId.toString(), txHash: createHash, status: lastStatus, evidence: lastEvidence };
+        return {
+          jobId: jobId.toString(),
+          txHash: createHash,
+          status: lastStatus,
+          evidence: lastEvidence,
+        };
       }
     } else if (res.status !== 404) {
       // 404 just means evidence row not yet written — keep polling.

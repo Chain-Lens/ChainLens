@@ -4,10 +4,7 @@ import { useState } from "react";
 import { useAccount, useWalletClient } from "wagmi";
 import { parseSignature, toHex } from "viem";
 import { apiClient } from "@/lib/api-client";
-import {
-  CHAIN_LENS_MARKET_ADDRESS,
-  USDC_ADDRESS,
-} from "@/config/contracts";
+import { CHAIN_LENS_MARKET_ADDRESS, USDC_ADDRESS } from "@/config/contracts";
 import type { MarketCallResponse } from "@/types/market";
 
 const receiveWithAuthorizationTypes = {
@@ -24,11 +21,7 @@ const receiveWithAuthorizationTypes = {
 const TARGET_CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || "84532");
 const AUTH_WINDOW_SECS = 60 * 60;
 
-export type MarketPaymentStep =
-  | "idle"
-  | "signing"
-  | "submitting"
-  | "success";
+export type MarketPaymentStep = "idle" | "signing" | "submitting" | "success";
 
 function randomNonce(): `0x${string}` {
   const bytes = new Uint8Array(32);
@@ -70,9 +63,7 @@ export function useMarketPayment() {
 
     try {
       const validAfter = BigInt(0);
-      const validBefore = BigInt(
-        Math.floor(Date.now() / 1000) + AUTH_WINDOW_SECS,
-      );
+      const validBefore = BigInt(Math.floor(Date.now() / 1000) + AUTH_WINDOW_SECS);
       const nonce = randomNonce();
 
       const signature = await walletClient.signTypedData({
@@ -99,29 +90,25 @@ export function useMarketPayment() {
 
       setStep("submitting");
 
-      const nextResult = await apiClient.post<MarketCallResponse>(
-        `/market/call/${listingId}`,
-        {
-          inputs,
-          payment: {
-            buyer: address,
-            amount,
-            validAfter: validAfter.toString(),
-            validBefore: validBefore.toString(),
-            nonce,
-            v: Number(parsed.v),
-            r: parsed.r,
-            s: parsed.s,
-          },
+      const nextResult = await apiClient.post<MarketCallResponse>(`/market/call/${listingId}`, {
+        inputs,
+        payment: {
+          buyer: address,
+          amount,
+          validAfter: validAfter.toString(),
+          validBefore: validBefore.toString(),
+          nonce,
+          v: Number(parsed.v),
+          r: parsed.r,
+          s: parsed.s,
         },
-      );
+      });
 
       setResult(nextResult);
       setStep("success");
       return nextResult;
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Payment flow failed";
+      const message = err instanceof Error ? err.message : "Payment flow failed";
       setError(message);
       setStep("idle");
       throw err;

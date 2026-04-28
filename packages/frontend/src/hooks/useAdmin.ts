@@ -16,9 +16,7 @@ export function useAdmin() {
       const data = await apiClient.get<ApiListing[]>("/admin/apis");
       setPendingApis(data.filter((api) => api.status === ("PENDING" as ApiStatus)));
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load pending APIs"
-      );
+      setError(err instanceof Error ? err.message : "Failed to load pending APIs");
     } finally {
       setLoading(false);
     }
@@ -31,7 +29,7 @@ export function useAdmin() {
   async function approve(apiId: string, reason?: string) {
     const data = await apiClient.post<{ onChainId: number; txHash: string }>(
       `/admin/apis/${apiId}/approve`,
-      { reason }
+      { reason },
     );
     await fetchPending();
     return data;

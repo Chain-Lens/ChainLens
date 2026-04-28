@@ -15,7 +15,11 @@ export type LockReason = "ttl" | "client" | "signal" | "error";
 
 export type SignTxDecision =
   | { type: "allow"; commit?: () => void }
-  | { type: "deny"; code: "unknown_target" | "limit_exceeded" | "denied" | "timeout" | "no_tty"; message: string };
+  | {
+      type: "deny";
+      code: "unknown_target" | "limit_exceeded" | "denied" | "timeout" | "no_tty";
+      message: string;
+    };
 
 /**
  * Policy gate invoked before signing. Returns allow/deny.
@@ -23,9 +27,7 @@ export type SignTxDecision =
  * (no gate); 0.0.3 injects decoder + limits + approval prompt.
  */
 export type SignTxPolicy = (tx: Record<string, unknown>) => Promise<SignTxDecision>;
-export type SignTypedDataPolicy = (
-  typedData: Record<string, unknown>,
-) => Promise<SignTxDecision>;
+export type SignTypedDataPolicy = (typedData: Record<string, unknown>) => Promise<SignTxDecision>;
 
 export interface DaemonOptions {
   privateKey: `0x${string}`;
@@ -168,7 +170,10 @@ export async function startDaemon(opts: DaemonOptions): Promise<Daemon> {
         return;
       default: {
         const unknown = req as { id: string; method: string };
-        send(socket, rpcError(unknown.id, "unknown_method", `method not supported: ${unknown.method}`));
+        send(
+          socket,
+          rpcError(unknown.id, "unknown_method", `method not supported: ${unknown.method}`),
+        );
       }
     }
   }
@@ -204,10 +209,7 @@ export async function startDaemon(opts: DaemonOptions): Promise<Daemon> {
     }
   }
 
-  async function handleSignTypedData(
-    socket: Socket,
-    req: SignTypedDataRequest,
-  ): Promise<void> {
+  async function handleSignTypedData(socket: Socket, req: SignTypedDataRequest): Promise<void> {
     const typedData = req.params?.typedData;
     if (!typedData || typeof typedData !== "object") {
       send(socket, rpcError(req.id, "invalid_params", "missing params.typedData"));
@@ -215,9 +217,7 @@ export async function startDaemon(opts: DaemonOptions): Promise<Daemon> {
     }
     let commit: (() => void) | undefined;
     if (opts.typedDataPolicy) {
-      const decision = await opts.typedDataPolicy(
-        typedData as Record<string, unknown>,
-      );
+      const decision = await opts.typedDataPolicy(typedData as Record<string, unknown>);
       if (decision.type === "deny") {
         opts.onEvent?.({ type: "denied", code: decision.code, message: decision.message });
         send(socket, rpcError(req.id, decision.code, decision.message));

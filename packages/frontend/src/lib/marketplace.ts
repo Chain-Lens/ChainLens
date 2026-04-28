@@ -1,8 +1,7 @@
 import type { ApiListingPublic } from "@chain-lens/shared";
 import { mockApis } from "@/lib/mock-data";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001/api";
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001/api";
 
 type MarketplaceFilters = {
   category?: string;
@@ -20,8 +19,7 @@ function filterMockApis(filters: MarketplaceFilters): ApiListingPublic[] {
     const query = filters.search.toLowerCase();
     filtered = filtered.filter(
       (api) =>
-        api.name.toLowerCase().includes(query) ||
-        api.description.toLowerCase().includes(query)
+        api.name.toLowerCase().includes(query) || api.description.toLowerCase().includes(query),
     );
   }
 

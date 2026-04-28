@@ -35,12 +35,8 @@ export default function ApiInfo({ api }: { api: ApiListingPublic }) {
 
       {api.exampleRequest != null && (
         <div className="mb-4">
-          <h3 className="mb-2 text-sm font-medium text-[var(--text2)]">
-            Example Request
-          </h3>
-          <pre
-            className="overflow-auto rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4 font-mono text-sm text-[var(--text)]"
-          >
+          <h3 className="mb-2 text-sm font-medium text-[var(--text2)]">Example Request</h3>
+          <pre className="overflow-auto rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4 font-mono text-sm text-[var(--text)]">
             {JSON.stringify(api.exampleRequest, null, 2)}
           </pre>
         </div>
@@ -48,12 +44,8 @@ export default function ApiInfo({ api }: { api: ApiListingPublic }) {
 
       {api.exampleResponse != null && (
         <div>
-          <h3 className="mb-2 text-sm font-medium text-[var(--text2)]">
-            Example Response
-          </h3>
-          <pre
-            className="overflow-auto rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4 font-mono text-sm text-[var(--text)]"
-          >
+          <h3 className="mb-2 text-sm font-medium text-[var(--text2)]">Example Response</h3>
+          <pre className="overflow-auto rounded-lg border border-[var(--border)] bg-[var(--bg)] p-4 font-mono text-sm text-[var(--text)]">
             {JSON.stringify(api.exampleResponse, null, 2)}
           </pre>
         </div>

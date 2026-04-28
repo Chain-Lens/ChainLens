@@ -14,9 +14,8 @@ export default function LandingWaitlist() {
             when we launch
           </h2>
           <p className={styles.sub}>
-            ChainLens mainnet is coming soon. Join the waitlist to be first in
-            line — whether you&apos;re building agents, offering APIs, or
-            watching the agent economy grow.
+            ChainLens mainnet is coming soon. Join the waitlist to be first in line — whether
+            you&apos;re building agents, offering APIs, or watching the agent economy grow.
           </p>
 
           <a
@@ -28,9 +27,7 @@ export default function LandingWaitlist() {
             📋 Apply for Mainnet Access
           </a>
 
-          <p className={styles.note}>
-            Takes ~1 minute · No spam · Cancel anytime
-          </p>
+          <p className={styles.note}>Takes ~1 minute · No spam · Cancel anytime</p>
         </FadeIn>
       </div>
     </section>

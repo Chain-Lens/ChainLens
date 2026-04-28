@@ -1,7 +1,6 @@
 import type { PaymentRequest } from "@chain-lens/shared";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001/api";
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001/api";
 
 export type RequestWithApi = PaymentRequest & {
   api?: { name: string; description: string };
@@ -23,7 +22,7 @@ async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
       body && typeof body === "object" && "error" in body
         ? ((body as { error?: { message?: string } }).error?.message ??
             `Request failed with status ${res.status}`)
-        : `Request failed with status ${res.status}`
+        : `Request failed with status ${res.status}`,
     );
   }
 

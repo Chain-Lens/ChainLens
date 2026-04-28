@@ -9,7 +9,9 @@
   justify-content: space-between;
   padding: 0 2rem;
   height: 60px;
-  transition: background 0.3s, border-color 0.3s;
+  transition:
+    background 0.3s,
+    border-color 0.3s;
   border-bottom: 1px solid transparent;
 }
 
@@ -29,7 +31,9 @@
   color: var(--green);
   letter-spacing: 0.04em;
 }
-.logo span { color: var(--text2); }
+.logo span {
+  color: var(--text2);
+}
 
 .links {
   display: flex;
@@ -42,7 +46,9 @@
   color: var(--text2);
   transition: color 0.2s;
 }
-.links a:hover { color: var(--text); }
+.links a:hover {
+  color: var(--text);
+}
 
 .cta {
   background: var(--accent) !important;
@@ -53,8 +59,12 @@
   font-size: 0.85rem;
   transition: background 0.2s !important;
 }
-.cta:hover { background: var(--accent-hover) !important; }
+.cta:hover {
+  background: var(--accent-hover) !important;
+}
 
 @media (max-width: 640px) {
-  .links a:not(.cta) { display: none; }
+  .links a:not(.cta) {
+    display: none;
+  }
 }

@@ -89,14 +89,9 @@ export async function inspectHandler(
   const url = `${deps.apiBaseUrl}/market/listings/${input.listing_id}`;
   const res = await deps.fetch(url);
   if (!res.ok) {
-    throw new Error(
-      `chain-lens.inspect: backend returned ${res.status} ${res.statusText}`,
-    );
+    throw new Error(`chain-lens.inspect: backend returned ${res.status} ${res.statusText}`);
   }
-  const body = (await res.json()) as Omit<
-    InspectResult,
-    "priceUsdc" | "securityRecentFailures"
-  >;
+  const body = (await res.json()) as Omit<InspectResult, "priceUsdc" | "securityRecentFailures">;
 
   return {
     ...body,
@@ -116,16 +111,14 @@ function summarizeSecurityFailures(
   const schemaRejects = breakdown.response_rejected_schema ?? 0;
   const injectionRejects = breakdown.response_rejected_injection ?? 0;
   const tooLargeRejects = breakdown.response_rejected_too_large ?? 0;
-  const unserializableRejects =
-    breakdown.response_rejected_unserializable ?? 0;
+  const unserializableRejects = breakdown.response_rejected_unserializable ?? 0;
 
   return {
     schemaRejects,
     injectionRejects,
     tooLargeRejects,
     unserializableRejects,
-    totalPolicyRejects:
-      schemaRejects + injectionRejects + tooLargeRejects + unserializableRejects,
+    totalPolicyRejects: schemaRejects + injectionRejects + tooLargeRejects + unserializableRejects,
     hasSchemaRejects: schemaRejects > 0,
   };
 }
@@ -140,8 +133,7 @@ export const inspectToolDefinition = {
     properties: {
       listing_id: {
         type: "string",
-        description:
-          "Decimal on-chain listingId — typically from chain-lens.discover results.",
+        description: "Decimal on-chain listingId — typically from chain-lens.discover results.",
       },
     },
   },

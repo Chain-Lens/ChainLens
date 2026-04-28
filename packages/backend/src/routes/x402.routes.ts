@@ -1,11 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { parseSignature, getAddress } from "viem";
 import prisma from "../config/prisma.js";
-import {
-  handlePaidListingCall,
-  parsePayment,
-  type PaymentAuth,
-} from "./market.routes.js";
+import { handlePaidListingCall, parsePayment, type PaymentAuth } from "./market.routes.js";
 import {
   marketAddress,
   readListing,
@@ -23,10 +19,7 @@ function decodeHeaderJson(raw: string): unknown {
   if (trimmed.startsWith("{")) return JSON.parse(trimmed);
 
   const normalized = trimmed.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = normalized.padEnd(
-    normalized.length + ((4 - (normalized.length % 4)) % 4),
-    "=",
-  );
+  const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=");
   return JSON.parse(Buffer.from(padded, "base64").toString("utf8"));
 }
 
@@ -117,8 +110,7 @@ async function paymentRequirements(listingId: bigint) {
 
   const metadata = await resolveMetadata(listing.metadataURI);
   const amount =
-    typeof metadata.pricing?.amount === "string" &&
-    /^\d+$/.test(metadata.pricing.amount)
+    typeof metadata.pricing?.amount === "string" && /^\d+$/.test(metadata.pricing.amount)
       ? metadata.pricing.amount
       : "0";
   const chainId = publicClient.chain?.id ?? 84532;

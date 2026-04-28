@@ -103,9 +103,7 @@ export async function discoverHandler(
 
   const res = await deps.fetch(url);
   if (!res.ok) {
-    throw new Error(
-      `chain-lens.discover: backend returned ${res.status} ${res.statusText}`,
-    );
+    throw new Error(`chain-lens.discover: backend returned ${res.status} ${res.statusText}`);
   }
   const page = (await res.json()) as Omit<DiscoverResult, "items"> & {
     items: Array<Omit<ListingItem, "priceUsdc">>;
@@ -154,8 +152,7 @@ export const discoverToolDefinition = {
       },
       max_price_usdc: {
         type: "number",
-        description:
-          "Ceiling on per-call price in USDC display units. e.g. 0.05 = 50000 atomic.",
+        description: "Ceiling on per-call price in USDC display units. e.g. 0.05 = 50000 atomic.",
       },
       limit: {
         type: "number",

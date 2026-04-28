@@ -10,11 +10,7 @@
  */
 
 import { useCallback, useState } from "react";
-import {
-  useWriteContract,
-  useWaitForTransactionReceipt,
-  usePublicClient,
-} from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, usePublicClient } from "wagmi";
 import { chainLensMarketConfig } from "@/config/contracts";
 
 export interface ListingMetadata {
@@ -41,13 +37,7 @@ export function encodeMetadataUri(meta: ListingMetadata): string {
 
 export function useRegisterV3() {
   const publicClient = usePublicClient();
-  const {
-    data: txHash,
-    writeContract,
-    isPending,
-    error: writeError,
-    reset,
-  } = useWriteContract();
+  const { data: txHash, writeContract, isPending, error: writeError, reset } = useWriteContract();
 
   const {
     isLoading: isConfirming,
@@ -70,9 +60,7 @@ export function useRegisterV3() {
         "0x" as `0x${string}`;
       // Simpler: filter by emitter contract + first indexed topic (listingId).
       const log = receipt.logs.find(
-        (l) =>
-          l.address.toLowerCase() ===
-          chainLensMarketConfig.address.toLowerCase(),
+        (l) => l.address.toLowerCase() === chainLensMarketConfig.address.toLowerCase(),
       );
       if (!log || !log.topics[1]) {
         throw new Error("ListingRegistered event not found in receipt");

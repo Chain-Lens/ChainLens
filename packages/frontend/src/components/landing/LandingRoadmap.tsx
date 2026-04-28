@@ -84,9 +84,8 @@ export default function LandingRoadmap() {
             to a full agent economy.
           </h2>
           <p className={sStyles.sub}>
-            ChainLens ships in stages — start with a working settlement loop,
-            layer in quality data, then activate $LENS utility and decentralize
-            governance. Locked through Consensus Miami.
+            ChainLens ships in stages — start with a working settlement loop, layer in quality data,
+            then activate $LENS utility and decentralize governance. Locked through Consensus Miami.
           </p>
         </FadeIn>
 
@@ -96,9 +95,7 @@ export default function LandingRoadmap() {
               <div className={`${styles.phase} ${styles[p.status]}`}>
                 <div className={styles.phaseHead}>
                   <span className={styles.phaseNum}>{p.num}</span>
-                  <span className={styles.phaseStatus}>
-                    {STATUS_LABEL[p.status]}
-                  </span>
+                  <span className={styles.phaseStatus}>{STATUS_LABEL[p.status]}</span>
                 </div>
                 <h3 className={styles.phaseTitle}>{p.title}</h3>
                 <ul className={styles.bullets}>

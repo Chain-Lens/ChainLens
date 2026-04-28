@@ -27,9 +27,7 @@ export type Signer = LocalAccount;
  * Returns undefined when neither is configured — handlers that need signing
  * will then surface a "not configured" error to the caller.
  */
-export async function resolveSigner(
-  config: McpConfig,
-): Promise<Signer | undefined> {
+export async function resolveSigner(config: McpConfig): Promise<Signer | undefined> {
   if (config.signSocketPath) {
     let client;
     try {

@@ -61,10 +61,7 @@ export function decodeTypedData(input: RawTypedData): DecodedTypedData {
   };
 }
 
-function unknown(
-  reason: string,
-  target: `0x${string}` | null = null,
-): DecodedTypedData {
+function unknown(reason: string, target: `0x${string}` | null = null): DecodedTypedData {
   return {
     kind: "unknown",
     target,

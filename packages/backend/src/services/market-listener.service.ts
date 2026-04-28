@@ -40,7 +40,13 @@ import { logger } from "../utils/logger.js";
 
 export interface MarketListenerDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  db: { apiListing: { upsert(a: any): Promise<unknown>; updateMany(a: any): Promise<unknown>; findFirst(a: any): Promise<{ onChainId: number } | null> } };
+  db: {
+    apiListing: {
+      upsert(a: any): Promise<unknown>;
+      updateMany(a: any): Promise<unknown>;
+      findFirst(a: any): Promise<{ onChainId: number } | null>;
+    };
+  };
   watchEvent(params: any): () => void; // eslint-disable-line @typescript-eslint/no-explicit-any
   getMarketAddress(): `0x${string}`;
   readListing_(id: bigint): Promise<OnChainListing>;
@@ -49,13 +55,13 @@ export interface MarketListenerDeps {
 }
 
 interface HandlerCtx {
-  db: MarketListenerDeps['db'];
-  resolveMeta: MarketListenerDeps['resolveMetadata_'];
+  db: MarketListenerDeps["db"];
+  resolveMeta: MarketListenerDeps["resolveMetadata_"];
 }
 
 interface CatchupCtx extends HandlerCtx {
-  nextListingId_: MarketListenerDeps['nextListingId_'];
-  readListing_: MarketListenerDeps['readListing_'];
+  nextListingId_: MarketListenerDeps["nextListingId_"];
+  readListing_: MarketListenerDeps["readListing_"];
 }
 
 interface ListenerState {
@@ -166,9 +172,7 @@ async function handleListingRegistered(
       endpoint: String(meta?.endpoint ?? ""),
       price: String(meta?.pricing?.amount ?? "0"),
       category:
-        Array.isArray(meta?.tags) && meta.tags.length > 0
-          ? String(meta.tags[0])
-          : "general",
+        Array.isArray(meta?.tags) && meta.tags.length > 0 ? String(meta.tags[0]) : "general",
       sellerAddress: args.owner.toLowerCase(),
       status: "PENDING",
     },
@@ -176,13 +180,9 @@ async function handleListingRegistered(
     // preserve admin status — we don't want a replay to un-approve a seller.
     update: {
       ...(meta?.name ? { name: String(meta.name).slice(0, 200) } : {}),
-      ...(meta?.description
-        ? { description: String(meta.description).slice(0, 2000) }
-        : {}),
+      ...(meta?.description ? { description: String(meta.description).slice(0, 2000) } : {}),
       ...(meta?.endpoint ? { endpoint: String(meta.endpoint) } : {}),
-      ...(meta?.pricing?.amount
-        ? { price: String(meta.pricing.amount) }
-        : {}),
+      ...(meta?.pricing?.amount ? { price: String(meta.pricing.amount) } : {}),
     },
   });
 
@@ -199,10 +199,7 @@ async function handleMetadataUpdated(
   try {
     meta = await ctx.resolveMeta(args.metadataURI);
   } catch (e) {
-    logger.warn(
-      { listingId: id, err: String(e) },
-      "market listener: metadata refresh failed",
-    );
+    logger.warn({ listingId: id, err: String(e) }, "market listener: metadata refresh failed");
     state.lastEventAt = new Date();
     return;
   }
@@ -211,9 +208,7 @@ async function handleMetadataUpdated(
     where: { contractVersion: "V3", onChainId: id },
     data: {
       ...(meta.name ? { name: String(meta.name).slice(0, 200) } : {}),
-      ...(meta.description
-        ? { description: String(meta.description).slice(0, 2000) }
-        : {}),
+      ...(meta.description ? { description: String(meta.description).slice(0, 2000) } : {}),
       ...(meta.endpoint ? { endpoint: String(meta.endpoint) } : {}),
       ...(meta.pricing?.amount ? { price: String(meta.pricing.amount) } : {}),
     },
@@ -254,19 +249,19 @@ async function catchupOnBoot(ctx: CatchupCtx): Promise<void> {
 
   if (onchainMax <= dbMaxId) return;
 
-  logger.warn(
-    { onchainMax, dbMaxId, gap: onchainMax - dbMaxId },
-    "market listener boot catchup",
-  );
+  logger.warn({ onchainMax, dbMaxId, gap: onchainMax - dbMaxId }, "market listener boot catchup");
   for (let i = dbMaxId + 1; i <= onchainMax; i++) {
     try {
       const l = await ctx.readListing_(BigInt(i));
-      await handleListingRegistered({
-        listingId: BigInt(i),
-        owner: l.owner,
-        payout: l.payout,
-        metadataURI: l.metadataURI,
-      }, ctx);
+      await handleListingRegistered(
+        {
+          listingId: BigInt(i),
+          owner: l.owner,
+          payout: l.payout,
+          metadataURI: l.metadataURI,
+        },
+        ctx,
+      );
     } catch (e) {
       state.errorCount += 1;
       logger.error(
@@ -293,7 +288,7 @@ export function startMarketListener(deps?: Partial<MarketListenerDeps>): {
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db: MarketListenerDeps['db'] = (deps?.db ?? prisma) as any;
+  const db: MarketListenerDeps["db"] = (deps?.db ?? prisma) as any;
   const ctx: CatchupCtx = {
     db,
     resolveMeta: deps?.resolveMetadata_ ?? resolveMetadata,
@@ -301,14 +296,26 @@ export function startMarketListener(deps?: Partial<MarketListenerDeps>): {
     readListing_: deps?.readListing_ ?? readListing,
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const watchEvent: MarketListenerDeps['watchEvent'] = deps?.watchEvent ?? ((p: any) => publicClient.watchContractEvent(p));
+  const watchEvent: MarketListenerDeps["watchEvent"] =
+    deps?.watchEvent ?? ((p: any) => publicClient.watchContractEvent(p));
   const address = (deps?.getMarketAddress ?? marketAddress)();
 
   const unwatchRegistered = watchEvent({
     address,
     abi: ChainLensMarketAbi,
     eventName: "ListingRegistered",
-    onLogs: async (logs: Array<Log & { args: { listingId: bigint; owner: `0x${string}`; payout: `0x${string}`; metadataURI: string } }>) => {
+    onLogs: async (
+      logs: Array<
+        Log & {
+          args: {
+            listingId: bigint;
+            owner: `0x${string}`;
+            payout: `0x${string}`;
+            metadataURI: string;
+          };
+        }
+      >,
+    ) => {
       for (const log of logs) {
         try {
           await handleListingRegistered(log.args, ctx);
@@ -323,10 +330,7 @@ export function startMarketListener(deps?: Partial<MarketListenerDeps>): {
     },
     onError: (err: Error) => {
       state.errorCount += 1;
-      logger.error(
-        { err: String(err) },
-        "ListingRegistered subscription errored",
-      );
+      logger.error({ err: String(err) }, "ListingRegistered subscription errored");
     },
   });
 
@@ -349,10 +353,7 @@ export function startMarketListener(deps?: Partial<MarketListenerDeps>): {
     },
     onError: (err: Error) => {
       state.errorCount += 1;
-      logger.error(
-        { err: String(err) },
-        "ListingMetadataUpdated subscription errored",
-      );
+      logger.error({ err: String(err) }, "ListingMetadataUpdated subscription errored");
     },
   });
 

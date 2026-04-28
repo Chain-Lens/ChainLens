@@ -1,545 +1,545 @@
 export default [
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "_gateway",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "_gateway",
+        type: "address",
+      },
     ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
+    stateMutability: "nonpayable",
+    type: "constructor",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "owner",
+        type: "address",
+      },
     ],
-    "name": "OwnableInvalidOwner",
-    "type": "error"
+    name: "OwnableInvalidOwner",
+    type: "error",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "account",
+        type: "address",
+      },
     ],
-    "name": "OwnableUnauthorizedAccount",
-    "type": "error"
+    name: "OwnableUnauthorizedAccount",
+    type: "error",
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "previousGateway",
-        "type": "address"
+        indexed: true,
+        internalType: "address",
+        name: "previousGateway",
+        type: "address",
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "newGateway",
-        "type": "address"
-      }
+        indexed: true,
+        internalType: "address",
+        name: "newGateway",
+        type: "address",
+      },
     ],
-    "name": "GatewayUpdated",
-    "type": "event"
+    name: "GatewayUpdated",
+    type: "event",
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "seller",
-        "type": "address"
+        indexed: true,
+        internalType: "address",
+        name: "seller",
+        type: "address",
       },
       {
-        "indexed": false,
-        "internalType": "bool",
-        "name": "success",
-        "type": "bool"
+        indexed: false,
+        internalType: "bool",
+        name: "success",
+        type: "bool",
       },
       {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
     ],
-    "name": "JobResultRecorded",
-    "type": "event"
+    name: "JobResultRecorded",
+    type: "event",
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "previousOwner",
-        "type": "address"
+        indexed: true,
+        internalType: "address",
+        name: "previousOwner",
+        type: "address",
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "newOwner",
-        "type": "address"
-      }
+        indexed: true,
+        internalType: "address",
+        name: "newOwner",
+        type: "address",
+      },
     ],
-    "name": "OwnershipTransferStarted",
-    "type": "event"
+    name: "OwnershipTransferStarted",
+    type: "event",
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "previousOwner",
-        "type": "address"
+        indexed: true,
+        internalType: "address",
+        name: "previousOwner",
+        type: "address",
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "newOwner",
-        "type": "address"
-      }
+        indexed: true,
+        internalType: "address",
+        name: "newOwner",
+        type: "address",
+      },
     ],
-    "name": "OwnershipTransferred",
-    "type": "event"
+    name: "OwnershipTransferred",
+    type: "event",
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "seller",
-        "type": "address"
-      }
+        indexed: true,
+        internalType: "address",
+        name: "seller",
+        type: "address",
+      },
     ],
-    "name": "SellerDeactivated",
-    "type": "event"
+    name: "SellerDeactivated",
+    type: "event",
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "seller",
-        "type": "address"
+        indexed: true,
+        internalType: "address",
+        name: "seller",
+        type: "address",
       },
       {
-        "indexed": false,
-        "internalType": "string",
-        "name": "name",
-        "type": "string"
+        indexed: false,
+        internalType: "string",
+        name: "name",
+        type: "string",
       },
       {
-        "indexed": false,
-        "internalType": "bytes32[]",
-        "name": "capabilities",
-        "type": "bytes32[]"
-      }
+        indexed: false,
+        internalType: "bytes32[]",
+        name: "capabilities",
+        type: "bytes32[]",
+      },
     ],
-    "name": "SellerRegistered",
-    "type": "event"
+    name: "SellerRegistered",
+    type: "event",
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "seller",
-        "type": "address"
+        indexed: true,
+        internalType: "address",
+        name: "seller",
+        type: "address",
       },
       {
-        "indexed": false,
-        "internalType": "string",
-        "name": "metadataURI",
-        "type": "string"
-      }
+        indexed: false,
+        internalType: "string",
+        name: "metadataURI",
+        type: "string",
+      },
     ],
-    "name": "SellerUpdated",
-    "type": "event"
+    name: "SellerUpdated",
+    type: "event",
   },
   {
-    "inputs": [],
-    "name": "REPUTATION_MAX_BPS",
-    "outputs": [
+    inputs: [],
+    name: "REPUTATION_MAX_BPS",
+    outputs: [
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [],
-    "name": "REPUTATION_NEUTRAL_BPS",
-    "outputs": [
+    inputs: [],
+    name: "REPUTATION_NEUTRAL_BPS",
+    outputs: [
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [],
-    "name": "acceptOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    inputs: [],
+    name: "acceptOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "seller",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "seller",
+        type: "address",
+      },
     ],
-    "name": "deactivate",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: "deactivate",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "inputs": [],
-    "name": "gateway",
-    "outputs": [
+    inputs: [],
+    name: "gateway",
+    outputs: [
       {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "seller",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "seller",
+        type: "address",
+      },
     ],
-    "name": "getReputation",
-    "outputs": [
+    name: "getReputation",
+    outputs: [
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "seller",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "seller",
+        type: "address",
+      },
     ],
-    "name": "getSellerInfo",
-    "outputs": [
+    name: "getSellerInfo",
+    outputs: [
       {
-        "components": [
+        components: [
           {
-            "internalType": "address",
-            "name": "sellerAddress",
-            "type": "address"
+            internalType: "address",
+            name: "sellerAddress",
+            type: "address",
           },
           {
-            "internalType": "string",
-            "name": "name",
-            "type": "string"
+            internalType: "string",
+            name: "name",
+            type: "string",
           },
           {
-            "internalType": "bytes32[]",
-            "name": "capabilities",
-            "type": "bytes32[]"
+            internalType: "bytes32[]",
+            name: "capabilities",
+            type: "bytes32[]",
           },
           {
-            "internalType": "string",
-            "name": "metadataURI",
-            "type": "string"
+            internalType: "string",
+            name: "metadataURI",
+            type: "string",
           },
           {
-            "internalType": "uint64",
-            "name": "registeredAt",
-            "type": "uint64"
+            internalType: "uint64",
+            name: "registeredAt",
+            type: "uint64",
           },
           {
-            "internalType": "bool",
-            "name": "active",
-            "type": "bool"
-          }
+            internalType: "bool",
+            name: "active",
+            type: "bool",
+          },
         ],
-        "internalType": "struct SellerRegistryTypes.Seller",
-        "name": "",
-        "type": "tuple"
-      }
+        internalType: "struct SellerRegistryTypes.Seller",
+        name: "",
+        type: "tuple",
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "capability",
-        "type": "bytes32"
-      }
+        internalType: "bytes32",
+        name: "capability",
+        type: "bytes32",
+      },
     ],
-    "name": "getSellersByCapability",
-    "outputs": [
+    name: "getSellersByCapability",
+    outputs: [
       {
-        "internalType": "address[]",
-        "name": "",
-        "type": "address[]"
-      }
+        internalType: "address[]",
+        name: "",
+        type: "address[]",
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "seller",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "seller",
+        type: "address",
+      },
     ],
-    "name": "isActive",
-    "outputs": [
+    name: "isActive",
+    outputs: [
       {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "seller",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "seller",
+        type: "address",
+      },
     ],
-    "name": "isRegistered",
-    "outputs": [
+    name: "isRegistered",
+    outputs: [
       {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
     ],
-    "name": "jobsCompleted",
-    "outputs": [
+    name: "jobsCompleted",
+    outputs: [
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
     ],
-    "name": "jobsFailed",
-    "outputs": [
+    name: "jobsFailed",
+    outputs: [
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [],
-    "name": "owner",
-    "outputs": [
+    inputs: [],
+    name: "owner",
+    outputs: [
       {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [],
-    "name": "pendingOwner",
-    "outputs": [
+    inputs: [],
+    name: "pendingOwner",
+    outputs: [
       {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "seller",
-        "type": "address"
+        internalType: "address",
+        name: "seller",
+        type: "address",
       },
       {
-        "internalType": "bool",
-        "name": "success",
-        "type": "bool"
+        internalType: "bool",
+        name: "success",
+        type: "bool",
       },
       {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
     ],
-    "name": "recordJobResult",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: "recordJobResult",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "seller",
-        "type": "address"
+        internalType: "address",
+        name: "seller",
+        type: "address",
       },
       {
-        "internalType": "string",
-        "name": "name",
-        "type": "string"
+        internalType: "string",
+        name: "name",
+        type: "string",
       },
       {
-        "internalType": "bytes32[]",
-        "name": "capabilities",
-        "type": "bytes32[]"
+        internalType: "bytes32[]",
+        name: "capabilities",
+        type: "bytes32[]",
       },
       {
-        "internalType": "string",
-        "name": "metadataURI",
-        "type": "string"
-      }
+        internalType: "string",
+        name: "metadataURI",
+        type: "string",
+      },
     ],
-    "name": "registerSeller",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: "registerSeller",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "inputs": [],
-    "name": "renounceOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    inputs: [],
+    name: "renounceOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "_gateway",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "_gateway",
+        type: "address",
+      },
     ],
-    "name": "setGateway",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: "setGateway",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
     ],
-    "name": "totalEarnings",
-    "outputs": [
+    name: "totalEarnings",
+    outputs: [
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: "view",
+    type: "function",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "newOwner",
-        "type": "address"
-      }
+        internalType: "address",
+        name: "newOwner",
+        type: "address",
+      },
     ],
-    "name": "transferOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: "transferOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "seller",
-        "type": "address"
+        internalType: "address",
+        name: "seller",
+        type: "address",
       },
       {
-        "internalType": "string",
-        "name": "metadataURI",
-        "type": "string"
-      }
+        internalType: "string",
+        name: "metadataURI",
+        type: "string",
+      },
     ],
-    "name": "updateMetadataURI",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
+    name: "updateMetadataURI",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
 ] as const;

@@ -1,10 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import {
-  MAX_FRAME_SIZE,
-  createFrameDecoder,
-  encodeFrame,
-} from "./protocol.js";
+import { MAX_FRAME_SIZE, createFrameDecoder, encodeFrame } from "./protocol.js";
 
 describe("protocol frame codec", () => {
   it("round-trips a simple object", () => {
@@ -21,7 +17,9 @@ describe("protocol frame codec", () => {
     const tx = { value: 1_234_567_890n, gas: 21_000n, nested: { amount: 42n } };
     const frame = encodeFrame({ id: "2", method: "sign-tx", params: { transaction: tx } });
     let decoded: unknown;
-    createFrameDecoder((m) => { decoded = m; }).push(frame);
+    createFrameDecoder((m) => {
+      decoded = m;
+    }).push(frame);
     assert.deepEqual(decoded, {
       id: "2",
       method: "sign-tx",

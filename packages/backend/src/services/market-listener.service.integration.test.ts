@@ -1,9 +1,6 @@
 import { test, describe, beforeEach } from "node:test";
 import * as assert from "node:assert/strict";
-import {
-  startMarketListener,
-  type MarketListenerDeps,
-} from "./market-listener.service.js";
+import { startMarketListener, type MarketListenerDeps } from "./market-listener.service.js";
 import type { ListingMetadata } from "./market-chain.service.js";
 
 // ──────────────────────────────────────────────────────────────────────
@@ -55,16 +52,24 @@ function buildFakeEnv(): FakeEnv {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function watchEvent(params: any): () => void {
     if (params.eventName === "ListingRegistered") registeredOnLogs = params.onLogs as LogsCallback;
-    if (params.eventName === "ListingMetadataUpdated") metadataOnLogs = params.onLogs as LogsCallback;
+    if (params.eventName === "ListingMetadataUpdated")
+      metadataOnLogs = params.onLogs as LogsCallback;
     return () => {};
   }
 
   async function resolveMetadata_(uri: string): Promise<ListingMetadata> {
     // Support inline JSON for convenience; otherwise return a stub.
     if (uri.startsWith("data:application/json,")) {
-      return JSON.parse(decodeURIComponent(uri.slice("data:application/json,".length))) as ListingMetadata;
+      return JSON.parse(
+        decodeURIComponent(uri.slice("data:application/json,".length)),
+      ) as ListingMetadata;
     }
-    return { name: `stub from ${uri}`, endpoint: "https://stub.example.com", pricing: { amount: "50" }, tags: ["test"] };
+    return {
+      name: `stub from ${uri}`,
+      endpoint: "https://stub.example.com",
+      pricing: { amount: "50" },
+      tags: ["test"],
+    };
   }
 
   async function readListing_(id: bigint) {
@@ -90,14 +95,24 @@ function buildFakeEnv(): FakeEnv {
     deps,
     upsertCalls,
     updateManyCalls,
-    setFindFirstResult: (r) => { findFirstResult = r; },
-    setNextListingId: (n) => { nextListingIdValue = n; },
+    setFindFirstResult: (r) => {
+      findFirstResult = r;
+    },
+    setNextListingId: (n) => {
+      nextListingIdValue = n;
+    },
     async fireRegistered(args) {
-      if (!registeredOnLogs) throw new Error("ListingRegistered handler not registered — startMarketListener not called?");
+      if (!registeredOnLogs)
+        throw new Error(
+          "ListingRegistered handler not registered — startMarketListener not called?",
+        );
       await registeredOnLogs([{ args }]);
     },
     async fireMetadata(args) {
-      if (!metadataOnLogs) throw new Error("ListingMetadataUpdated handler not registered — startMarketListener not called?");
+      if (!metadataOnLogs)
+        throw new Error(
+          "ListingMetadataUpdated handler not registered — startMarketListener not called?",
+        );
       await metadataOnLogs([{ args }]);
     },
   };
@@ -122,7 +137,8 @@ describe("market-listener integration", () => {
       listingId: 1n,
       owner: "0xOwner" as `0x${string}`,
       payout: "0xPayout" as `0x${string}`,
-      metadataURI: 'data:application/json,{"name":"Test API","endpoint":"https://ex.com","pricing":{"amount":"100"},"tags":["finance"]}',
+      metadataURI:
+        'data:application/json,{"name":"Test API","endpoint":"https://ex.com","pricing":{"amount":"100"},"tags":["finance"]}',
     });
 
     assert.equal(env.upsertCalls.length, 1);
@@ -143,7 +159,8 @@ describe("market-listener integration", () => {
 
     await env.fireMetadata({
       listingId: 2n,
-      metadataURI: 'data:application/json,{"name":"New Name","endpoint":"https://ex.com/v2","pricing":{"amount":"200"}}',
+      metadataURI:
+        'data:application/json,{"name":"New Name","endpoint":"https://ex.com/v2","pricing":{"amount":"200"}}',
     });
 
     assert.equal(env.updateManyCalls.length, 1);
@@ -165,7 +182,8 @@ describe("market-listener integration", () => {
       listingId: 3n,
       owner: "0xOwner" as `0x${string}`,
       payout: "0xPayout" as `0x${string}`,
-      metadataURI: 'data:application/json,{"name":"My API","endpoint":"https://ex.com","pricing":{"amount":"50"}}',
+      metadataURI:
+        'data:application/json,{"name":"My API","endpoint":"https://ex.com","pricing":{"amount":"50"}}',
     };
 
     await env.fireRegistered(log);
@@ -175,7 +193,10 @@ describe("market-listener integration", () => {
     for (const raw of env.upsertCalls) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const call = raw as any;
-      assert.ok(!("status" in call.update), "update block must never touch status (admin approval preserved)");
+      assert.ok(
+        !("status" in call.update),
+        "update block must never touch status (admin approval preserved)",
+      );
     }
     // First call creates with PENDING
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -184,7 +205,7 @@ describe("market-listener integration", () => {
 
   test("catchupOnBoot fills gap between DB max and on-chain max", async () => {
     env.setFindFirstResult({ onChainId: 3 }); // DB max = 3
-    env.setNextListingId(7n);                  // on-chain nextListingId = 7 → max id = 6
+    env.setNextListingId(7n); // on-chain nextListingId = 7 → max id = 6
 
     const { catchupDone } = startMarketListener(env.deps);
     await catchupDone;
@@ -200,7 +221,7 @@ describe("market-listener integration", () => {
 
   test("catchupOnBoot skips when DB is already at chain height", async () => {
     env.setFindFirstResult({ onChainId: 6 }); // DB max = 6
-    env.setNextListingId(7n);                  // on-chain max id = 6 → no gap
+    env.setNextListingId(7n); // on-chain max id = 6 → no gap
 
     const { catchupDone } = startMarketListener(env.deps);
     await catchupDone;

@@ -17,8 +17,14 @@ export default function SellerPage() {
   const { apis, loading, error, refetch } = useSellerApis(address, {
     authenticated: sellerAuth.isAuthenticated,
   });
-  const { pendingAmount, claim, isPending, isConfirming, isConfirmed, refetch: refetchClaim } =
-    useClaim(address);
+  const {
+    pendingAmount,
+    claim,
+    isPending,
+    isConfirming,
+    isConfirmed,
+    refetch: refetchClaim,
+  } = useClaim(address);
 
   useEffect(() => {
     if (isConfirmed) refetchClaim();
@@ -28,9 +34,7 @@ export default function SellerPage() {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h1 className="mb-4 text-3xl font-bold text-[var(--text)]">My APIs</h1>
-        <p className="text-[var(--text2)]">
-          Connect your wallet to view your registered APIs.
-        </p>
+        <p className="text-[var(--text2)]">Connect your wallet to view your registered APIs.</p>
       </div>
     );
   }
@@ -38,7 +42,7 @@ export default function SellerPage() {
   const summary = {
     total: apis.length,
     approved: apis.filter((a) => a.status === "APPROVED").length,
-    pending:  apis.filter((a) => a.status === "PENDING").length,
+    pending: apis.filter((a) => a.status === "PENDING").length,
     rejected: apis.filter((a) => a.status === "REJECTED").length,
     totalSales: apis.reduce((sum, a) => sum + a._count.payments, 0),
   };
@@ -75,19 +79,17 @@ export default function SellerPage() {
       {/* Claim earnings */}
       <div
         className={`card mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center ${
-          hasPending
-            ? "border-[rgba(63,185,80,0.4)] bg-[rgba(63,185,80,0.05)]"
-            : ""
+          hasPending ? "border-[rgba(63,185,80,0.4)] bg-[rgba(63,185,80,0.05)]" : ""
         }`}
       >
         <div>
           <p className="text-sm font-medium text-[var(--text2)]">Claimable Earnings</p>
-          <p className={`mt-1 text-2xl font-bold ${hasPending ? "text-[var(--green)]" : "text-[var(--text3)]"}`}>
+          <p
+            className={`mt-1 text-2xl font-bold ${hasPending ? "text-[var(--green)]" : "text-[var(--text3)]"}`}
+          >
             {formatUnits(pendingAmount, 6)} USDC
           </p>
-          {isConfirmed && (
-            <p className="mt-1 text-xs text-[var(--green)]">Successfully claimed!</p>
-          )}
+          {isConfirmed && <p className="mt-1 text-xs text-[var(--green)]">Successfully claimed!</p>}
         </div>
         <button
           onClick={claim}
@@ -100,10 +102,10 @@ export default function SellerPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-8">
-        <StatCard label="Total APIs"  value={summary.total} />
-        <StatCard label="Approved"    value={summary.approved}   color="var(--green)" />
-        <StatCard label="Pending"     value={summary.pending}    color="#e3b341" />
-        <StatCard label="Rejected"    value={summary.rejected}   color="var(--red)" />
+        <StatCard label="Total APIs" value={summary.total} />
+        <StatCard label="Approved" value={summary.approved} color="var(--green)" />
+        <StatCard label="Pending" value={summary.pending} color="#e3b341" />
+        <StatCard label="Rejected" value={summary.rejected} color="var(--red)" />
         <StatCard label="Total Sales" value={summary.totalSales} />
       </div>
 
@@ -113,9 +115,7 @@ export default function SellerPage() {
         </div>
       )}
 
-      {error && (
-        <div className="card py-8 text-center text-[var(--red)]">{error}</div>
-      )}
+      {error && <div className="card py-8 text-center text-[var(--red)]">{error}</div>}
 
       {!loading && !error && apis.length === 0 && (
         <div className="card text-center py-12">
@@ -186,9 +186,7 @@ function SellerAuthBanner({ auth }: { auth: SellerAuthState }) {
         <p className="mt-1 text-xs text-[var(--text2)]">
           Sign a message with this wallet to reveal your registered endpoint URLs and edit listings.
         </p>
-        {auth.error && (
-          <p className="mt-1 text-xs text-[var(--red)]">{auth.error}</p>
-        )}
+        {auth.error && <p className="mt-1 text-xs text-[var(--red)]">{auth.error}</p>}
       </div>
       <button
         onClick={auth.signIn}
@@ -370,11 +368,7 @@ function SellerEditForm({
         >
           Cancel
         </button>
-        <button
-          onClick={save}
-          disabled={saving}
-          className="btn-primary px-3 py-1 text-xs"
-        >
+        <button onClick={save} disabled={saving} className="btn-primary px-3 py-1 text-xs">
           {saving ? "Saving..." : "Save"}
         </button>
       </div>

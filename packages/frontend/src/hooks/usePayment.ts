@@ -36,8 +36,7 @@ const payAbi = [
   },
 ] as const;
 
-const ZERO_BYTES32 =
-  "0x0000000000000000000000000000000000000000000000000000000000000000" as const;
+const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000" as const;
 
 export type PaymentStep = "idle" | "approving" | "paying" | "confirmed";
 
@@ -64,8 +63,9 @@ export function usePayment() {
   const { isLoading: isApproveConfirming, isSuccess: isApproveConfirmed } =
     useWaitForTransactionReceipt({ hash: approveTxHash });
 
-  const { isLoading: isPayConfirming, isSuccess: isPayConfirmed } =
-    useWaitForTransactionReceipt({ hash: payTxHash });
+  const { isLoading: isPayConfirming, isSuccess: isPayConfirmed } = useWaitForTransactionReceipt({
+    hash: payTxHash,
+  });
 
   useEffect(() => {
     if (isApproveConfirmed && prepareData && step === "approving") {

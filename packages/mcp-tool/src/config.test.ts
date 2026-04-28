@@ -26,7 +26,10 @@ describe("loadMcpConfig", () => {
   });
 
   it("strips trailing slashes from CHAIN_LENS_API_URL", () => {
-    const cfg = loadMcpConfig({ ...requiredEnv, CHAIN_LENS_API_URL: "https://api.chain-lens.io/api///" });
+    const cfg = loadMcpConfig({
+      ...requiredEnv,
+      CHAIN_LENS_API_URL: "https://api.chain-lens.io/api///",
+    });
     assert.equal(cfg.apiBaseUrl, "https://api.chain-lens.io/api");
   });
 

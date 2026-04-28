@@ -2,12 +2,10 @@ export default function Loading() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6">
-        <h1 className="mb-1 text-3xl font-bold text-[var(--text)]">
-          Discover APIs
-        </h1>
+        <h1 className="mb-1 text-3xl font-bold text-[var(--text)]">Discover APIs</h1>
         <p className="text-sm text-[var(--text2)]">
-          Rankings refresh on each load via Thompson sampling — every approved
-          listing has a chance of appearing at the top.
+          Rankings refresh on each load via Thompson sampling — every approved listing has a chance
+          of appearing at the top.
         </p>
       </div>
 
@@ -22,11 +20,7 @@ export default function Loading() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="card flex flex-col gap-3 p-4"
-            aria-hidden="true"
-          >
+          <div key={i} className="card flex flex-col gap-3 p-4" aria-hidden="true">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="h-4 w-2/3 animate-pulse rounded bg-[var(--bg3)]" />

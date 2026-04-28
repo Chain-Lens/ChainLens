@@ -61,15 +61,17 @@ export default function PurchaseButton({ api, onPurchaseSuccess }: Props) {
         {isPreparing
           ? "Preparing..."
           : step === "approving" && (isWriting || isConfirming)
-            ? isWriting ? "Approve USDC in wallet..." : "Approving USDC..."
+            ? isWriting
+              ? "Approve USDC in wallet..."
+              : "Approving USDC..."
             : step === "paying" && (isWriting || isConfirming)
-              ? isWriting ? "Confirm payment in wallet..." : "Confirming payment..."
+              ? isWriting
+                ? "Confirm payment in wallet..."
+                : "Confirming payment..."
               : "Purchase API"}
       </button>
 
-      {prepareError && (
-        <p className="text-center text-sm text-[var(--red)]">{prepareError}</p>
-      )}
+      {prepareError && <p className="text-center text-sm text-[var(--red)]">{prepareError}</p>}
     </div>
   );
 }

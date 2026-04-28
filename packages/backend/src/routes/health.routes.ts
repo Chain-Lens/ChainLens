@@ -21,10 +21,7 @@
 import { Router } from "express";
 import { ChainLensMarketAbi } from "@chain-lens/shared";
 import { publicClient } from "../config/viem.js";
-import {
-  classifyHealth,
-  getMarketListenerState,
-} from "../services/market-listener.service.js";
+import { classifyHealth, getMarketListenerState } from "../services/market-listener.service.js";
 import { marketAddressOrNull } from "../services/market-chain.service.js";
 
 const router = Router();
@@ -63,10 +60,7 @@ router.get("/", async (_req, res) => {
       lastEventAt: state.lastEventAt?.toISOString() ?? null,
       lastSyncedListingId: state.lastSyncedListingId,
       onchainNextListingId: onchainNext,
-      lag:
-        onchainNext !== null
-          ? onchainNext - 1 - state.lastSyncedListingId
-          : null,
+      lag: onchainNext !== null ? onchainNext - 1 - state.lastSyncedListingId : null,
       startedAt: state.startedAt.toISOString(),
       errorCount: state.errorCount,
     },

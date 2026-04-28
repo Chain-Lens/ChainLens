@@ -15,7 +15,14 @@ export default function LandingHero() {
     <section className={styles.hero}>
       <div className={styles.glow} />
 
-      <Image src="/chainlens_coin_256.png" alt="ChainLens" width={64} height={64} className={styles.coin} priority />
+      <Image
+        src="/chainlens_coin_256.png"
+        alt="ChainLens"
+        width={64}
+        height={64}
+        className={styles.coin}
+        priority
+      />
 
       <div className={styles.badge}>
         <span className={styles.dot} />
@@ -29,18 +36,13 @@ export default function LandingHero() {
       </h1>
 
       <p className={styles.sub}>
-        Autonomous AI agents can now{" "}
-        <strong>discover, inspect, and pay for</strong> verified APIs with a
-        wallet-native flow. Browse live listings, check reliability signals,
-        then settle on Base only after the seller response succeeds.
+        Autonomous AI agents can now <strong>discover, inspect, and pay for</strong> verified APIs
+        with a wallet-native flow. Browse live listings, check reliability signals, then settle on
+        Base only after the seller response succeeds.
       </p>
 
       <div className={styles.actions}>
-        <Link
-          href="/discover"
-          prefetch
-          className={styles.btnPrimary}
-        >
+        <Link href="/discover" prefetch className={styles.btnPrimary}>
           Try Testnet
         </Link>
         <a
@@ -60,32 +62,28 @@ export default function LandingHero() {
           </TLine>
           <TLine />
           <TLine>
-            <T.kw>const</T.kw>{" "}
-            <T.val>listings</T.val>{" "}
-            <T.out>= await</T.out>{" "}
+            <T.kw>const</T.kw> <T.val>listings</T.val> <T.out>= await</T.out>{" "}
             <T.cmd>chainLens</T.cmd>
             <T.out>.</T.out>
             <T.ok>discover</T.ok>
-            <T.out>({"{"} q: </T.out><T.str>&quot;defillama&quot;</T.str><T.out> {"}"});</T.out>
+            <T.out>({"{"} q: </T.out>
+            <T.str>&quot;defillama&quot;</T.str>
+            <T.out> {"}"});</T.out>
           </TLine>
           <TLine>
-            <T.cmt>{"// → [{ listingId: \"3\", priceUsdc: \"0.050000 USDC\", ... }]"}</T.cmt>
+            <T.cmt>{'// → [{ listingId: "3", priceUsdc: "0.050000 USDC", ... }]'}</T.cmt>
           </TLine>
           <TLine />
           <TLine>
-            <T.kw>const</T.kw>{" "}
-            <T.val>detail</T.val>{" "}
-            <T.out>= await</T.out>{" "}
-            <T.cmd>chainLens</T.cmd>
+            <T.kw>const</T.kw> <T.val>detail</T.val> <T.out>= await</T.out> <T.cmd>chainLens</T.cmd>
             <T.out>.</T.out>
             <T.ok>inspect</T.ok>
-            <T.out>({"{"} listing_id: </T.out><T.str>&quot;3&quot;</T.str><T.out> {"}"});</T.out>
+            <T.out>({"{"} listing_id: </T.out>
+            <T.str>&quot;3&quot;</T.str>
+            <T.out> {"}"});</T.out>
           </TLine>
           <TLine>
-            <T.kw>const</T.kw>{" "}
-            <T.val>out</T.val>{" "}
-            <T.out>= await</T.out>{" "}
-            <T.cmd>chainLens</T.cmd>
+            <T.kw>const</T.kw> <T.val>out</T.val> <T.out>= await</T.out> <T.cmd>chainLens</T.cmd>
             <T.out>.</T.out>
             <T.ok>call</T.ok>
             <T.out>({"{"} listing_id: </T.out>
@@ -94,15 +92,17 @@ export default function LandingHero() {
             <T.str>&quot;50000&quot;</T.str>
             <T.out>, inputs: {"{"} protocol: </T.out>
             <T.str>&quot;uniswap&quot;</T.str>
-            <T.out> {"}"} {"}"});</T.out>
+            <T.out>
+              {" "}
+              {"}"} {"}"});
+            </T.out>
           </TLine>
           <TLine />
           <TLine>
             <T.cmt>{"// Gateway executes seller → settles on Base only on success"}</T.cmt>
           </TLine>
           <TLine>
-            <T.ok>✓ Response received · Safety checks passed · Market settled</T.ok>{" "}
-            <Cursor />
+            <T.ok>✓ Response received · Safety checks passed · Market settled</T.ok> <Cursor />
           </TLine>
         </TerminalWindow>
       </div>

@@ -12,9 +12,14 @@
   padding: 1.5rem;
   transition: border-color 0.2s;
 }
-.card:hover { border-color: var(--border2); }
+.card:hover {
+  border-color: var(--border2);
+}
 
-.icon { font-size: 1.4rem; margin-bottom: 0.8rem; }
+.icon {
+  font-size: 1.4rem;
+  margin-bottom: 0.8rem;
+}
 
 .cardTitle {
   font-weight: 600;

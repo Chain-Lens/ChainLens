@@ -3,10 +3,7 @@
 import { useState } from "react";
 import { useAccount } from "wagmi";
 import { parseUnits } from "viem";
-import {
-  useRegisterV3,
-  type ListingMetadata,
-} from "@/hooks/useRegisterV3";
+import { useRegisterV3, type ListingMetadata } from "@/hooks/useRegisterV3";
 import { apiClient } from "@/lib/api-client";
 
 type PreflightResult = {
@@ -116,7 +113,7 @@ function inferSchemaFromValue(value: unknown): JsonSchemaLike {
 function schemaPreviewSummary(schemaText: string) {
   try {
     const parsed = JSON.parse(schemaText) as JsonSchemaLike;
-    const type = Array.isArray(parsed.type) ? parsed.type.join(" | ") : parsed.type ?? "object";
+    const type = Array.isArray(parsed.type) ? parsed.type.join(" | ") : (parsed.type ?? "object");
     const required = parsed.required?.length ?? 0;
     const propertyCount = parsed.properties ? Object.keys(parsed.properties).length : 0;
     return { type, required, propertyCount };
@@ -127,16 +124,8 @@ function schemaPreviewSummary(schemaText: string) {
 
 export default function RegisterForm() {
   const { address, isConnected } = useAccount();
-  const {
-    register,
-    txHash,
-    isPending,
-    isConfirming,
-    isConfirmed,
-    listingId,
-    error,
-    reset,
-  } = useRegisterV3();
+  const { register, txHash, isPending, isConfirming, isConfirmed, listingId, error, reset } =
+    useRegisterV3();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -164,23 +153,13 @@ export default function RegisterForm() {
   if (isConfirmed && listingId !== null) {
     return (
       <div className="card text-center py-8 space-y-3">
-        <h3 className="text-xl font-semibold text-[var(--green)]">
-          Listing Registered on-chain ✓
-        </h3>
+        <h3 className="text-xl font-semibold text-[var(--green)]">Listing Registered on-chain ✓</h3>
         <p className="text-[var(--text2)]">
-          Listing <code className="text-[var(--cyan)]">#{listingId.toString()}</code>{" "}
-          is now discoverable by agents.
+          Listing <code className="text-[var(--cyan)]">#{listingId.toString()}</code> is now
+          discoverable by agents.
         </p>
-        {txHash && (
-          <p className="font-mono text-xs text-[var(--text3)] break-all">
-            tx: {txHash}
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={reset}
-          className="btn-secondary"
-        >
+        {txHash && <p className="font-mono text-xs text-[var(--text3)] break-all">tx: {txHash}</p>}
+        <button type="button" onClick={reset} className="btn-secondary">
           Register another
         </button>
       </div>
@@ -207,8 +186,7 @@ export default function RegisterForm() {
     }
 
     const atomic = parseUnits(priceInUsdc || "0", 6);
-    const payout =
-      (payoutOverride.trim() as `0x${string}`) || (address as `0x${string}`);
+    const payout = (payoutOverride.trim() as `0x${string}`) || (address as `0x${string}`);
 
     const metadata: ListingMetadata = {
       name: name.trim(),
@@ -221,7 +199,12 @@ export default function RegisterForm() {
       },
       output_schema: outputSchema,
       ...(tags.trim()
-        ? { tags: tags.split(",").map((t) => t.trim()).filter(Boolean) }
+        ? {
+            tags: tags
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean),
+          }
         : {}),
     };
 
@@ -254,9 +237,7 @@ export default function RegisterForm() {
       });
       setPreflightResult(result);
     } catch (err) {
-      setFormError(
-        err instanceof Error ? err.message : "Self-test request failed.",
-      );
+      setFormError(err instanceof Error ? err.message : "Self-test request failed.");
     } finally {
       setPreflightLoading(false);
     }
@@ -280,9 +261,7 @@ export default function RegisterForm() {
   return (
     <form onSubmit={handleSubmit} className="card space-y-6">
       <div className="rounded-xl border border-[var(--border)] bg-[linear-gradient(135deg,rgba(88,166,255,0.08),rgba(63,185,80,0.05))] p-4">
-        <p className="text-xs uppercase tracking-[0.2em] text-[var(--text3)]">
-          Seller Setup
-        </p>
+        <p className="text-xs uppercase tracking-[0.2em] text-[var(--text3)]">Seller Setup</p>
         <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">
           Register a paid API in two steps
         </h2>
@@ -304,18 +283,12 @@ export default function RegisterForm() {
 
       <section className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--bg3)] p-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.16em] text-[var(--text3)]">
-            Step 1
-          </p>
-          <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">
-            API basics
-          </h3>
+          <p className="text-xs uppercase tracking-[0.16em] text-[var(--text3)]">Step 1</p>
+          <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">API basics</h3>
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text2)]">
-            API Name
-          </label>
+          <label className="mb-1 block text-sm font-medium text-[var(--text2)]">API Name</label>
           <input
             type="text"
             value={name}
@@ -327,9 +300,7 @@ export default function RegisterForm() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text2)]">
-            Description
-          </label>
+          <label className="mb-1 block text-sm font-medium text-[var(--text2)]">Description</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -340,9 +311,7 @@ export default function RegisterForm() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-[var(--text2)]">
-            Endpoint URL
-          </label>
+          <label className="mb-1 block text-sm font-medium text-[var(--text2)]">Endpoint URL</label>
           <input
             type="url"
             value={endpoint}
@@ -425,18 +394,18 @@ export default function RegisterForm() {
 
       <section className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--bg3)] p-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.16em] text-[var(--text3)]">
-            Step 2
-          </p>
-          <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">
-            Response schema
-          </h3>
+          <p className="text-xs uppercase tracking-[0.16em] text-[var(--text3)]">Step 2</p>
+          <h3 className="mt-1 text-lg font-semibold text-[var(--text)]">Response schema</h3>
           <p className="mt-2 text-sm text-[var(--text2)]">
             Think of the schema as a response contract. If your browser shows
-            <code className="mx-1 rounded bg-[var(--bg)] px-1 py-0.5 text-xs">{"{\"price\":123.45,\"symbol\":\"TSLA\"}"}</code>
+            <code className="mx-1 rounded bg-[var(--bg)] px-1 py-0.5 text-xs">
+              {'{"price":123.45,"symbol":"TSLA"}'}
+            </code>
             then the schema should describe the field types, like
             <code className="mx-1 rounded bg-[var(--bg)] px-1 py-0.5 text-xs">
-              {"{\"type\":\"object\",\"required\":[\"price\",\"symbol\"],\"properties\":{\"price\":{\"type\":\"number\"},\"symbol\":{\"type\":\"string\"}}}"}
+              {
+                '{"type":"object","required":["price","symbol"],"properties":{"price":{"type":"number"},"symbol":{"type":"string"}}}'
+              }
             </code>
             , not the exact values.
           </p>
@@ -496,7 +465,8 @@ export default function RegisterForm() {
             required
           />
           <p className="mt-1 text-xs text-[var(--text3)]">
-            Tip: run a self-test first, then use the last response to draft this schema automatically.
+            Tip: run a self-test first, then use the last response to draft this schema
+            automatically.
           </p>
         </div>
       </section>
@@ -504,12 +474,10 @@ export default function RegisterForm() {
       <div className="rounded-xl border border-[var(--border)] bg-[var(--bg3)] p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-[var(--text)]">
-              Schema Self-Test
-            </p>
+            <p className="text-sm font-medium text-[var(--text)]">Schema Self-Test</p>
             <p className="text-xs text-[var(--text3)]">
-              Calls your endpoint through the backend preflight route and checks
-              injection scan + output schema before you register.
+              Calls your endpoint through the backend preflight route and checks injection scan +
+              output schema before you register.
             </p>
           </div>
           <button
@@ -550,9 +518,7 @@ export default function RegisterForm() {
             </div>
 
             {preflightResult.error && (
-              <p className="text-sm text-[var(--red)]">
-                {preflightResult.error}
-              </p>
+              <p className="text-sm text-[var(--red)]">{preflightResult.error}</p>
             )}
 
             <div className="rounded-xl border border-[rgba(63,185,80,0.28)] bg-[rgba(63,185,80,0.08)] p-4">
@@ -565,7 +531,8 @@ export default function RegisterForm() {
                     Turn this response into a schema draft
                   </p>
                   <p className="mt-1 text-xs text-[var(--text2)]">
-                    Use the last self-test response to overwrite the schema box above with a generated draft.
+                    Use the last self-test response to overwrite the schema box above with a
+                    generated draft.
                   </p>
                 </div>
                 <button
@@ -606,9 +573,7 @@ export default function RegisterForm() {
             : "Register on-chain"}
       </button>
 
-      <p className="text-center font-mono text-xs text-[var(--text3)]">
-        Seller: {address}
-      </p>
+      <p className="text-center font-mono text-xs text-[var(--text3)]">Seller: {address}</p>
     </form>
   );
 }

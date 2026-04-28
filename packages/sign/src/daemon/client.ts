@@ -63,10 +63,8 @@ export async function connectDaemon(socketPath: string): Promise<DaemonClient> {
   return {
     address: () => call<AddressResult>("address"),
     status: () => call<StatusResult>("status"),
-    signTransaction: (transaction) =>
-      call<SignTxResult>("sign-tx", { transaction }),
-    signTypedData: (typedData) =>
-      call<SignTypedDataResult>("sign-typed-data", { typedData }),
+    signTransaction: (transaction) => call<SignTxResult>("sign-tx", { transaction }),
+    signTypedData: (typedData) => call<SignTypedDataResult>("sign-typed-data", { typedData }),
     lock: async () => {
       await call<{ ok: true }>("lock");
     },

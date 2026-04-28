@@ -170,11 +170,7 @@ export async function getNextOnChainId(): Promise<number> {
   return (max._max.onChainId ?? 0) + 1;
 }
 
-export async function updateStatus(
-  id: string,
-  status: ApiStatus,
-  onChainId?: number
-) {
+export async function updateStatus(id: string, status: ApiStatus, onChainId?: number) {
   return prisma.apiListing.update({
     where: { id },
     data: { status, ...(onChainId !== undefined ? { onChainId } : {}) },
@@ -233,11 +229,7 @@ export interface SellerUpdateInput {
 // editable); this function trusts its caller on field set but still
 // enforces ownership. Writes an AdminAction row with the diff so audits
 // can trace seller-initiated changes on APPROVED listings.
-export async function updateByOwner(
-  id: string,
-  sellerAddress: string,
-  patch: SellerUpdateInput
-) {
+export async function updateByOwner(id: string, sellerAddress: string, patch: SellerUpdateInput) {
   const existing = await prisma.apiListing.findUnique({ where: { id } });
   if (!existing) throw new NotFoundError("API not found");
   if (existing.sellerAddress.toLowerCase() !== sellerAddress.toLowerCase()) {

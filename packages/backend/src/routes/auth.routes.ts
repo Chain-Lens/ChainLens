@@ -12,12 +12,15 @@ const router = Router();
 const nonces = new Map<string, number>();
 
 // Clean expired nonces every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [nonce, expiry] of nonces) {
-    if (expiry < now) nonces.delete(nonce);
-  }
-}, 5 * 60 * 1000);
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [nonce, expiry] of nonces) {
+      if (expiry < now) nonces.delete(nonce);
+    }
+  },
+  5 * 60 * 1000,
+);
 
 function generateNonce(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
@@ -78,7 +81,7 @@ router.post(
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
 
 // POST /auth/logout

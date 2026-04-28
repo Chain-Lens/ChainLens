@@ -9,9 +9,8 @@ const POINTS = [
     title: "Smart Contract (Market Layer)",
     desc: (
       <>
-        <code>ChainLensMarket</code> on Base handles listing state, gateway
-        settlement, and seller claims. Funds only move on successful
-        settlement.
+        <code>ChainLensMarket</code> on Base handles listing state, gateway settlement, and seller
+        claims. Funds only move on successful settlement.
       </>
     ),
   },
@@ -44,8 +43,8 @@ export default function LandingArchitecture() {
             One current flow.
           </h2>
           <p className={sStyles.sub}>
-            ChainLens separates concerns cleanly — on-chain security,
-            off-chain execution, and pre-purchase trust signals.
+            ChainLens separates concerns cleanly — on-chain security, off-chain execution, and
+            pre-purchase trust signals.
           </p>
         </FadeIn>
 
@@ -70,15 +69,12 @@ export default function LandingArchitecture() {
                 <T.cmt>{"// SPDX-License-Identifier: MIT"}</T.cmt>
               </TLine>
               <TLine>
-                <T.kw>pragma</T.kw>{" "}
-                <T.cmd>solidity</T.cmd>{" "}
-                <T.str>^0.8.28</T.str>
+                <T.kw>pragma</T.kw> <T.cmd>solidity</T.cmd> <T.str>^0.8.28</T.str>
                 <T.out>;</T.out>
               </TLine>
               <TLine />
               <TLine>
-                <T.kw>struct</T.kw>{" "}
-                <T.cyan>Listing</T.cyan>
+                <T.kw>struct</T.kw> <T.cyan>Listing</T.cyan>
                 <T.out>{" {"}</T.out>
               </TLine>
               <TLine indent={1}>
@@ -88,29 +84,28 @@ export default function LandingArchitecture() {
                 <T.cyan>address</T.cyan> <T.out>payout;</T.out>
               </TLine>
               <TLine indent={1}>
-                <T.cyan>string</T.cyan>{"  "} <T.out>metadataURI;</T.out>
+                <T.cyan>string</T.cyan>
+                {"  "} <T.out>metadataURI;</T.out>
               </TLine>
               <TLine indent={1}>
-                <T.cyan>bool</T.cyan>{"    "}<T.out>active;</T.out>
+                <T.cyan>bool</T.cyan>
+                {"    "}
+                <T.out>active;</T.out>
               </TLine>
               <TLine>
                 <T.out>{"}"}</T.out>
               </TLine>
               <TLine />
               <TLine>
-                <T.kw>function</T.kw>{" "}
-                <T.ok>settle</T.ok>
+                <T.kw>function</T.kw> <T.ok>settle</T.ok>
                 <T.out>(</T.out>
-                <T.cyan>uint256</T.cyan>{" "}
-                <T.val>listingId</T.val>
+                <T.cyan>uint256</T.cyan> <T.val>listingId</T.val>
                 <T.out>, </T.out>
-                <T.cyan>bytes32</T.cyan>{" "}
-                <T.val>jobRef</T.val>
+                <T.cyan>bytes32</T.cyan> <T.val>jobRef</T.val>
                 <T.out>)</T.out>
               </TLine>
               <TLine indent={1}>
-                <T.kw>external</T.kw>{" "}
-                <T.kw>onlyGateway</T.kw>
+                <T.kw>external</T.kw> <T.kw>onlyGateway</T.kw>
                 <T.out>{" {"}</T.out>
               </TLine>
               <TLine indent={2}>
@@ -121,8 +116,7 @@ export default function LandingArchitecture() {
               </TLine>
               <TLine />
               <TLine>
-                <T.kw>function</T.kw>{" "}
-                <T.ok>claim</T.ok>
+                <T.kw>function</T.kw> <T.ok>claim</T.ok>
                 <T.out>(</T.out>
                 <T.out>)</T.out>
               </TLine>

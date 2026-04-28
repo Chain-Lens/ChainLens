@@ -11,11 +11,11 @@
 
 ## 에이전트 준비물
 
-| 항목 | 설명 |
-|------|------|
+| 항목               | 설명                                                         |
+| ------------------ | ------------------------------------------------------------ |
 | 에이전트 전용 지갑 | 자산 보관 지갑과 **별도** 생성 권장. 소액 testnet ETH만 충전 |
-| 컨트랙트 주소 | `0x05A1954a82Fd976Fd1B010EE82a23aeE22A31913` |
-| 백엔드 URL | `https://monapi.pelicanlab.dev/api` |
+| 컨트랙트 주소      | `0x05A1954a82Fd976Fd1B010EE82a23aeE22A31913`                 |
+| 백엔드 URL         | `https://monapi.pelicanlab.dev/api`                          |
 
 > faucet: https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet
 
@@ -43,6 +43,7 @@ curl https://monapi.pelicanlab.dev/api/execute/{apiId}
 ```
 
 **응답 402 — Payment Required**
+
 ```json
 {
   "error": "Payment Required",
@@ -92,7 +93,7 @@ const txHash = await walletClient.writeContract({
   abi,
   functionName: "pay",
   args: [BigInt(onChainApiId), seller],
-  value: BigInt(amount),   // wei 단위
+  value: BigInt(amount), // wei 단위
 });
 ```
 
@@ -115,16 +116,20 @@ curl -X POST https://monapi.pelicanlab.dev/api/execute/{apiId} \
 ```
 
 **응답 200 — 성공**
+
 ```json
 {
   "requestId": "uuid",
   "status": "success",
-  "result": { /* seller API 응답 원본 */ },
+  "result": {
+    /* seller API 응답 원본 */
+  },
   "settlementTxHash": "0x정산트랜잭션"
 }
 ```
 
 **응답 200 — seller API 실패 (자동 환불됨)**
+
 ```json
 {
   "requestId": "uuid",
@@ -135,6 +140,7 @@ curl -X POST https://monapi.pelicanlab.dev/api/execute/{apiId} \
 ```
 
 **검증 항목 (백엔드)**
+
 - tx가 Base에 실제로 존재하고 성공했는지
 - `PaymentReceived` 이벤트의 `apiId`와 `seller`가 요청한 API와 일치하는지
 - 결제 금액이 API price 이상인지
@@ -200,7 +206,7 @@ async function callAPIMarket(apiId: string, agentPrivateKey: `0x${string}`, payl
 const result = await callAPIMarket(
   "api-uuid-here",
   "0xYOUR_AGENT_PRIVATE_KEY",
-  { query: "ETH price" }   // seller API에 전달할 파라미터 (선택)
+  { query: "ETH price" }, // seller API에 전달할 파라미터 (선택)
 );
 
 console.log(result.result);
@@ -222,6 +228,7 @@ curl "https://monapi.pelicanlab.dev/api/apis?search=price"
 ```
 
 **응답**
+
 ```json
 [
   {

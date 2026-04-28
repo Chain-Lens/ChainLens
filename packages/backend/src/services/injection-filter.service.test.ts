@@ -1,10 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import {
-  containsInjection,
-  scanResponse,
-  MAX_RESPONSE_BYTES,
-} from "./injection-filter.service.js";
+import { containsInjection, scanResponse, MAX_RESPONSE_BYTES } from "./injection-filter.service.js";
 
 describe("containsInjection", () => {
   it("flags OWASP LLM01 prompt-injection markers", () => {

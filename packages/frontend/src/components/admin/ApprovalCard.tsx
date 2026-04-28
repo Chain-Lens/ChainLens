@@ -74,12 +74,12 @@ export default function ApprovalCard({ api, onApprove, onReject, onRunTest }: Pr
               <h3 className="text-lg font-semibold text-[var(--text)]">{api.name}</h3>
               <StatusBadge status={api.status} />
             </div>
-            <p className="text-xs font-mono text-[var(--text3)]">
-              Seller: {api.sellerAddress}
-            </p>
+            <p className="text-xs font-mono text-[var(--text3)]">Seller: {api.sellerAddress}</p>
           </div>
           <div className="text-right text-sm">
-            <p className="font-medium text-[var(--green)]">{formatUnits(BigInt(api.price), 6)} USDC</p>
+            <p className="font-medium text-[var(--green)]">
+              {formatUnits(BigInt(api.price), 6)} USDC
+            </p>
             <p className="capitalize text-xs text-[var(--text2)]">{api.category}</p>
           </div>
         </div>
@@ -87,9 +87,7 @@ export default function ApprovalCard({ api, onApprove, onReject, onRunTest }: Pr
 
         <div className="mt-3 flex items-center gap-2">
           <span className="text-xs text-[var(--text2)]">Endpoint:</span>
-          <code
-            className="flex-1 truncate rounded border border-[var(--border2)] bg-[var(--bg3)] px-2 py-0.5 font-mono text-xs text-[var(--cyan)]"
-          >
+          <code className="flex-1 truncate rounded border border-[var(--border2)] bg-[var(--bg3)] px-2 py-0.5 font-mono text-xs text-[var(--cyan)]">
             {api.endpoint}
           </code>
         </div>
@@ -109,9 +107,7 @@ export default function ApprovalCard({ api, onApprove, onReject, onRunTest }: Pr
               {api.exampleRequest && (
                 <div>
                   <p className="mb-1 text-xs font-medium text-[var(--text2)]">Example Request</p>
-                  <pre
-                    className="max-h-40 overflow-auto rounded border border-[var(--border)] bg-[var(--bg)] p-2 font-mono text-xs text-[var(--text)]"
-                  >
+                  <pre className="max-h-40 overflow-auto rounded border border-[var(--border)] bg-[var(--bg)] p-2 font-mono text-xs text-[var(--text)]">
                     {JSON.stringify(api.exampleRequest as object, null, 2)}
                   </pre>
                 </div>
@@ -119,9 +115,7 @@ export default function ApprovalCard({ api, onApprove, onReject, onRunTest }: Pr
               {api.exampleResponse && (
                 <div>
                   <p className="mb-1 text-xs font-medium text-[var(--text2)]">Example Response</p>
-                  <pre
-                    className="max-h-40 overflow-auto rounded border border-[var(--border)] bg-[var(--bg)] p-2 font-mono text-xs text-[var(--text)]"
-                  >
+                  <pre className="max-h-40 overflow-auto rounded border border-[var(--border)] bg-[var(--bg)] p-2 font-mono text-xs text-[var(--text)]">
                     {JSON.stringify(api.exampleResponse as object, null, 2)}
                   </pre>
                 </div>
@@ -157,14 +151,10 @@ export default function ApprovalCard({ api, onApprove, onReject, onRunTest }: Pr
                 {testResult.status ?? "ERR"}
               </span>
               <span className="text-[var(--text3)]">{testResult.latencyMs}ms</span>
-              {testResult.error && (
-                <span className="text-[var(--red)]">{testResult.error}</span>
-              )}
+              {testResult.error && <span className="text-[var(--red)]">{testResult.error}</span>}
             </div>
             {testResult.body !== null && (
-              <pre
-                className="max-h-48 overflow-auto rounded border border-[var(--border)] bg-[var(--bg)] p-2 font-mono text-xs text-[var(--text)]"
-              >
+              <pre className="max-h-48 overflow-auto rounded border border-[var(--border)] bg-[var(--bg)] p-2 font-mono text-xs text-[var(--text)]">
                 {JSON.stringify(testResult.body, null, 2)}
               </pre>
             )}
@@ -188,23 +178,18 @@ export default function ApprovalCard({ api, onApprove, onReject, onRunTest }: Pr
           </div>
         )}
         <div className="flex gap-3">
-          <button
-            onClick={handleApprove}
-            disabled={actionLoading}
-            className="btn-primary flex-1"
-          >
+          <button onClick={handleApprove} disabled={actionLoading} className="btn-primary flex-1">
             {actionLoading ? "Processing..." : "Approve"}
           </button>
-          <button
-            onClick={handleReject}
-            disabled={actionLoading}
-            className="btn-danger flex-1"
-          >
+          <button onClick={handleReject} disabled={actionLoading} className="btn-danger flex-1">
             {showRejectInput ? "Confirm Reject" : "Reject"}
           </button>
           {showRejectInput && (
             <button
-              onClick={() => { setShowRejectInput(false); setRejectReason(""); }}
+              onClick={() => {
+                setShowRejectInput(false);
+                setRejectReason("");
+              }}
               className="px-3 py-2 text-sm text-[var(--text2)] transition-colors"
             >
               Cancel

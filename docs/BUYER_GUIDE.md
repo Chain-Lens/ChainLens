@@ -47,10 +47,10 @@ Open (or create) that file and add the `chain-lens` server:
       "env": {
         "CHAIN_LENS_API_URL": "https://chainlens.pelicanlab.dev/api",
         "CHAIN_ID": "84532",
-        "RPC_URL": "https://sepolia.base.org"
-      }
-    }
-  }
+        "RPC_URL": "https://sepolia.base.org",
+      },
+    },
+  },
 }
 ```
 
@@ -81,11 +81,11 @@ inside a session to see the connection and tool list.
 
 ### Field reference
 
-| Field | What to put |
-| --- | --- |
-| `CHAIN_LENS_API_URL` | Public MVP: `https://chainlens.pelicanlab.dev/api`. Use `http://localhost:3001/api` if you're running the backend locally. |
-| `CHAIN_ID` | `84532` (Base Sepolia). `8453` for Base Mainnet (when addresses are published). |
-| `RPC_URL` | Public Base Sepolia RPC is fine for light use. If the agent gets throttled, swap in an [Alchemy](https://alchemy.com) or [Infura](https://infura.io) URL. |
+| Field                | What to put                                                                                                                                               |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CHAIN_LENS_API_URL` | Public MVP: `https://chainlens.pelicanlab.dev/api`. Use `http://localhost:3001/api` if you're running the backend locally.                                |
+| `CHAIN_ID`           | `84532` (Base Sepolia). `8453` for Base Mainnet (when addresses are published).                                                                           |
+| `RPC_URL`            | Public Base Sepolia RPC is fine for light use. If the agent gets throttled, swap in an [Alchemy](https://alchemy.com) or [Infura](https://infura.io) URL. |
 
 After restart either client shows three read-only tools:
 
@@ -161,10 +161,10 @@ Then point the MCP server at the printed socket path with
         "CHAIN_LENS_API_URL": "https://chainlens.pelicanlab.dev/api",
         "CHAIN_ID": "84532",
         "RPC_URL": "https://sepolia.base.org",
-        "WALLET_PRIVATE_KEY": "0x<throwaway-testnet-key>"
-      }
-    }
-  }
+        "WALLET_PRIVATE_KEY": "0x<throwaway-testnet-key>",
+      },
+    },
+  },
 }
 ```
 

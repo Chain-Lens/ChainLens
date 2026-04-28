@@ -47,7 +47,7 @@ ChainLens v3 collapses to:
    x402 payment auth, calls the seller's raw REST API, settles
    on-chain only on success.
 3. **Seller: no code changes.** Any HTTP endpoint works. Register URL
-   + payout address, done.
+   - payout address, done.
 4. **Buyer/agent: standard x402 client** (the MCP tool grows an x402
    mode; WaaS/Privy/Dynamic plug in via a signer interface).
 5. **Trust model: centralised honest operator.** Like OpenRouter /
@@ -82,11 +82,11 @@ What this RFC **does not** build:
 
 ## 4. Trust model
 
-| Actor | Trust assumption | Enforcement |
-| --- | --- | --- |
-| Buyer | trusts Gateway to route honestly, call the claimed seller, not tamper | reputation, product survival |
-| Seller | trusts Gateway to settle successful calls and pay out accrued balance | on-chain claimable balance (pull), public settle events |
-| Gateway operator | trusted party | public logs, Merkle-commit audit trail (optional, §8) |
+| Actor            | Trust assumption                                                      | Enforcement                                             |
+| ---------------- | --------------------------------------------------------------------- | ------------------------------------------------------- |
+| Buyer            | trusts Gateway to route honestly, call the claimed seller, not tamper | reputation, product survival                            |
+| Seller           | trusts Gateway to settle successful calls and pay out accrued balance | on-chain claimable balance (pull), public settle events |
+| Gateway operator | trusted party                                                         | public logs, Merkle-commit audit trail (optional, §8)   |
 
 Explicitly **not trustless**. The contract's on-chain enforcement is
 scoped to:
@@ -125,12 +125,12 @@ Economic deterrence = ranking loss + CS refunds + audience walking away.
 
 Single contract, ~300 LoC. Roles and entrypoints:
 
-| Role | Functions |
-| --- | --- |
-| Anyone | `register(payout, metadataURI)`, `claim()` |
-| Listing owner | `updateMetadata`, `updatePayout`, `deactivate`, `reactivate` |
-| Whitelisted Gateway | `settle(listingId, jobRef, buyer, amount, EIP-3009 sig...)` |
-| Admin owner | `setGateway(addr, bool)`, `setTreasury`, `setRegistrationFeeToken`, `setRegistrationFee`, `setRegistrationBurnBps`, `setServiceFeeBps`, `setMaxListingsPerAccount`, and `deactivate` (force) |
+| Role                | Functions                                                                                                                                                                                    |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Anyone              | `register(payout, metadataURI)`, `claim()`                                                                                                                                                   |
+| Listing owner       | `updateMetadata`, `updatePayout`, `deactivate`, `reactivate`                                                                                                                                 |
+| Whitelisted Gateway | `settle(listingId, jobRef, buyer, amount, EIP-3009 sig...)`                                                                                                                                  |
+| Admin owner         | `setGateway(addr, bool)`, `setTreasury`, `setRegistrationFeeToken`, `setRegistrationFee`, `setRegistrationBurnBps`, `setServiceFeeBps`, `setMaxListingsPerAccount`, and `deactivate` (force) |
 
 Mutable knobs (all start at 0, owner-settable):
 
@@ -236,13 +236,13 @@ event Settled(
 
 ### 6.2 Failure paths (zero-USDC movement)
 
-| Failure | What Gateway does | USDC moved? |
-| --- | --- | --- |
-| Seller returns 4xx/5xx | drop auth, return 502 to buyer | no |
-| Seller times out | drop auth, return 504 | no |
-| Seller response fails schema hint | drop auth, return 502 | no |
-| Auth signature invalid / expired / replayed | return 400 at verify time | no |
-| Listing inactive between 402 and settle | auth discarded; 410 | no |
+| Failure                                     | What Gateway does              | USDC moved? |
+| ------------------------------------------- | ------------------------------ | ----------- |
+| Seller returns 4xx/5xx                      | drop auth, return 502 to buyer | no          |
+| Seller times out                            | drop auth, return 504          | no          |
+| Seller response fails schema hint           | drop auth, return 502          | no          |
+| Auth signature invalid / expired / replayed | return 400 at verify time      | no          |
+| Listing inactive between 402 and settle     | auth discarded; 410            | no          |
 
 The EIP-3009 auth is pre-submission — nothing moves until Gateway
 calls `settle`. Dropping the auth is the refund. `validBefore` (≈1h)
@@ -261,11 +261,11 @@ consumed" error on the loser.
 
 Two knobs, both start at 0, both owner-settable live:
 
-| Knob | Semantics | Recommended rollout |
-| --- | --- | --- |
-| `registrationFee` | Flat amount in `registrationFeeToken` on `register()`. Split `registrationBurnBps` → burn, rest → treasury. | Start at 0. Flip on at 5–10 USDC-equivalent once spam signals warrant. Consider `maxListingsPerAccount` as a gentler first line. |
-| `registrationFeeToken` | ERC-20 used for reg fees. Defaults to USDC. | Keep as USDC until/unless a project token launches on this chain. Settlement/seller payouts **always** use immutable USDC regardless. |
-| `serviceFeeBps` | Per-settlement %, from settled amount → treasury (in USDC). Capped at 30%. | Start at 0 (free during bootstrap). Move to 5–10% once transaction volume exists. |
+| Knob                   | Semantics                                                                                                   | Recommended rollout                                                                                                                   |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `registrationFee`      | Flat amount in `registrationFeeToken` on `register()`. Split `registrationBurnBps` → burn, rest → treasury. | Start at 0. Flip on at 5–10 USDC-equivalent once spam signals warrant. Consider `maxListingsPerAccount` as a gentler first line.      |
+| `registrationFeeToken` | ERC-20 used for reg fees. Defaults to USDC.                                                                 | Keep as USDC until/unless a project token launches on this chain. Settlement/seller payouts **always** use immutable USDC regardless. |
+| `serviceFeeBps`        | Per-settlement %, from settled amount → treasury (in USDC). Capped at 30%.                                  | Start at 0 (free during bootstrap). Move to 5–10% once transaction volume exists.                                                     |
 
 **Token strategy is a separate decision.** The contract's
 `registrationFeeToken` field exists so that _if_ a project token is ever
@@ -288,12 +288,12 @@ Since we run centralised, request/response pairs have to live
 somewhere for customer support, dispute handling, and billing
 reconciliation. Tiered retention:
 
-| Layer | Store | Retention | Purpose |
-| --- | --- | --- | --- |
-| Hot | Postgres | 7 days | live debugging, CS ticket handling |
-| Warm | S3 (compressed) | 30–90 days | dispute window, reconciliation |
-| Cold | S3 Glacier or purged | >90 days | long-term analytics (metadata + hashes only) |
-| Forever | Postgres (small) | ∞ | `{jobRef, listingId, amount, fee, successBool, hashes}` — for reputation aggregates |
+| Layer   | Store                | Retention  | Purpose                                                                             |
+| ------- | -------------------- | ---------- | ----------------------------------------------------------------------------------- |
+| Hot     | Postgres             | 7 days     | live debugging, CS ticket handling                                                  |
+| Warm    | S3 (compressed)      | 30–90 days | dispute window, reconciliation                                                      |
+| Cold    | S3 Glacier or purged | >90 days   | long-term analytics (metadata + hashes only)                                        |
+| Forever | Postgres (small)     | ∞          | `{jobRef, listingId, amount, fee, successBool, hashes}` — for reputation aggregates |
 
 **Optional: Merkle commit trail.** Each day/week, Gateway computes
 `root = merkleRoot(leaves)` over the day's `{jobRef, buyer, listing,

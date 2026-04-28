@@ -33,15 +33,14 @@ export function useClaim(address: `0x${string}` | undefined) {
 
   const { data: txHash, writeContract, isPending, error } = useWriteContract();
 
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
-    useWaitForTransactionReceipt({
-      hash: txHash,
-      query: {
-        enabled: !!txHash,
-        // refetch pending amount after confirmation
-        gcTime: 0,
-      },
-    });
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash,
+    query: {
+      enabled: !!txHash,
+      // refetch pending amount after confirmation
+      gcTime: 0,
+    },
+  });
 
   function claim() {
     writeContract({

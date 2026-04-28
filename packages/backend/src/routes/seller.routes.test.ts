@@ -59,11 +59,7 @@ function buildTestApp() {
     const rejected = Object.keys(req.body).filter((k) => !EDITABLE.has(k));
     if (rejected.length === 0) return next();
     next(
-      new AppError(
-        `Non-editable fields rejected: ${rejected.join(", ")}`,
-        400,
-        "invalid_field",
-      ),
+      new AppError(`Non-editable fields rejected: ${rejected.join(", ")}`, 400, "invalid_field"),
     );
   }
 

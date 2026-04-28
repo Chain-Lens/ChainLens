@@ -31,13 +31,13 @@ npm install -g @chain-lens/mcp-tool
 
 ## Tools exposed
 
-| Tool | Wallet? | Purpose |
-| --- | --- | --- |
-| `chain-lens.discover` | — | Search v3 listings (wraps `GET /api/market/listings`). |
-| `chain-lens.inspect` | — | Inspect one v3 listing in depth (wraps `GET /api/market/listings/:id`). |
-| `chain-lens.status` | — | Fetch stored evidence for an on-chain job (wraps `GET /api/evidence/:jobId`). |
-| `chain-lens.call` | required | Current paid v3 flow. Signs a USDC ReceiveWithAuthorization and calls the gateway x402 endpoint for one listing. |
-| `chain-lens.request` | required | Legacy paid v2 flow. Kept for backward compatibility where `ApiMarketEscrowV2` is still relevant. |
+| Tool                  | Wallet?  | Purpose                                                                                                          |
+| --------------------- | -------- | ---------------------------------------------------------------------------------------------------------------- |
+| `chain-lens.discover` | —        | Search v3 listings (wraps `GET /api/market/listings`).                                                           |
+| `chain-lens.inspect`  | —        | Inspect one v3 listing in depth (wraps `GET /api/market/listings/:id`).                                          |
+| `chain-lens.status`   | —        | Fetch stored evidence for an on-chain job (wraps `GET /api/evidence/:jobId`).                                    |
+| `chain-lens.call`     | required | Current paid v3 flow. Signs a USDC ReceiveWithAuthorization and calls the gateway x402 endpoint for one listing. |
+| `chain-lens.request`  | required | Legacy paid v2 flow. Kept for backward compatibility where `ApiMarketEscrowV2` is still relevant.                |
 
 An HTTP-only alternative exists at `GET /api/x402/:listingId` on the gateway.
 Use that path if you'd rather not install this MCP server — you'll still need
@@ -51,22 +51,22 @@ the recommended setup for everyday use.
 
 ### Required for every install
 
-| Variable | Example | Notes |
-| --- | --- | --- |
-| `CHAIN_LENS_API_URL` | `https://chainlens.pelicanlab.dev/api` | Backend base URL, trailing slash stripped. For local backend dev, set this explicitly to `http://localhost:3001/api`. |
-| `CHAIN_LENS_CHAIN_ID` | `84532` | Base Sepolia by default; `8453` for Base Mainnet. |
-| `CHAIN_LENS_RPC_URL` | `https://sepolia.base.org` | RPC endpoint used for on-chain reads and paid flows. Public Base Sepolia RPC works for light use; swap for an Alchemy/Infura URL if the agent gets throttled. |
+| Variable              | Example                                | Notes                                                                                                                                                         |
+| --------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CHAIN_LENS_API_URL`  | `https://chainlens.pelicanlab.dev/api` | Backend base URL, trailing slash stripped. For local backend dev, set this explicitly to `http://localhost:3001/api`.                                         |
+| `CHAIN_LENS_CHAIN_ID` | `84532`                                | Base Sepolia by default; `8453` for Base Mainnet.                                                                                                             |
+| `CHAIN_LENS_RPC_URL`  | `https://sepolia.base.org`             | RPC endpoint used for on-chain reads and paid flows. Public Base Sepolia RPC works for light use; swap for an Alchemy/Infura URL if the agent gets throttled. |
 
 If any required variable is missing, `chain-lens-mcp` now fails at startup with a clear error instead of silently falling back to localhost defaults.
 
 ### Optional
 
-| Variable | Default | Notes |
-| --- | --- | --- |
-| `CHAIN_LENS_POLL_INTERVAL_MS` | `2000` | How often legacy `chain-lens.request` polls evidence. Must be a positive integer. |
-| `CHAIN_LENS_POLL_TIMEOUT_MS` | `120000` | Timeout for legacy `chain-lens.request` evidence polling. Must be a positive integer. |
-| `CHAIN_LENS_SIGN_SOCKET` | *unset* | Unix socket of a running `chain-lens-sign unlock` daemon. Preferred signing path — adds spending limits + per-tx approval prompt. Mutually exclusive with `CHAIN_LENS_WALLET_PRIVATE_KEY`. |
-| `CHAIN_LENS_WALLET_PRIVATE_KEY` | *unset* | **Legacy, testnet-only, see warnings below.** Plaintext key; enables `chain-lens.request` without prompts. Mutually exclusive with `CHAIN_LENS_SIGN_SOCKET`. |
+| Variable                        | Default  | Notes                                                                                                                                                                                      |
+| ------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CHAIN_LENS_POLL_INTERVAL_MS`   | `2000`   | How often legacy `chain-lens.request` polls evidence. Must be a positive integer.                                                                                                          |
+| `CHAIN_LENS_POLL_TIMEOUT_MS`    | `120000` | Timeout for legacy `chain-lens.request` evidence polling. Must be a positive integer.                                                                                                      |
+| `CHAIN_LENS_SIGN_SOCKET`        | _unset_  | Unix socket of a running `chain-lens-sign unlock` daemon. Preferred signing path — adds spending limits + per-tx approval prompt. Mutually exclusive with `CHAIN_LENS_WALLET_PRIVATE_KEY`. |
+| `CHAIN_LENS_WALLET_PRIVATE_KEY` | _unset_  | **Legacy, testnet-only, see warnings below.** Plaintext key; enables `chain-lens.request` without prompts. Mutually exclusive with `CHAIN_LENS_SIGN_SOCKET`.                               |
 
 Deprecated aliases still work for now with a stderr warning:
 `CHAIN_ID` -> `CHAIN_LENS_CHAIN_ID`, `RPC_URL` -> `CHAIN_LENS_RPC_URL`,
@@ -86,10 +86,10 @@ Add an entry to `~/Library/Application Support/Claude/claude_desktop_config.json
       "env": {
         "CHAIN_LENS_API_URL": "https://chainlens.pelicanlab.dev/api",
         "CHAIN_LENS_CHAIN_ID": "84532",
-        "CHAIN_LENS_RPC_URL": "https://sepolia.base.org"
-      }
-    }
-  }
+        "CHAIN_LENS_RPC_URL": "https://sepolia.base.org",
+      },
+    },
+  },
 }
 ```
 
@@ -140,10 +140,10 @@ between the two:
       "env": {
         "CHAIN_LENS_API_URL": "https://chainlens.pelicanlab.dev/api",
         "CHAIN_LENS_CHAIN_ID": "84532",
-        "CHAIN_LENS_RPC_URL": "https://sepolia.base.org"
-      }
-    }
-  }
+        "CHAIN_LENS_RPC_URL": "https://sepolia.base.org",
+      },
+    },
+  },
 }
 ```
 
@@ -202,10 +202,10 @@ Then paste that socket path into the MCP config:
         "CHAIN_LENS_API_URL": "https://chainlens.pelicanlab.dev/api",
         "CHAIN_LENS_CHAIN_ID": "84532",
         "CHAIN_LENS_RPC_URL": "https://sepolia.base.org",
-        "CHAIN_LENS_SIGN_SOCKET": "/home/you/.chain-lens/sign.sock"
-      }
-    }
-  }
+        "CHAIN_LENS_SIGN_SOCKET": "/home/you/.chain-lens/sign.sock",
+      },
+    },
+  },
 }
 ```
 
@@ -257,10 +257,10 @@ Opt-in config (testnet only):
         "CHAIN_LENS_API_URL": "https://chainlens.pelicanlab.dev/api",
         "CHAIN_LENS_CHAIN_ID": "84532",
         "CHAIN_LENS_RPC_URL": "https://sepolia.base.org",
-        "CHAIN_LENS_WALLET_PRIVATE_KEY": "0x<testnet-throwaway>"
-      }
-    }
-  }
+        "CHAIN_LENS_WALLET_PRIVATE_KEY": "0x<testnet-throwaway>",
+      },
+    },
+  },
 }
 ```
 
@@ -297,21 +297,21 @@ the gateway response envelope directly.
 
 ## Troubleshooting
 
-| Symptom | Cause | Fix |
-| --- | --- | --- |
-| Running `npx -y @chain-lens/mcp-tool` in a terminal prints nothing and never exits. | This is a stdio MCP server. It is **waiting for an MCP client** to write protocol messages to its stdin. Running it by hand is not a valid use. | Ctrl+C. Register it with your MCP client (Claude Desktop config, or `claude mcp add` for Claude Code) — see the integration sections above. |
-| Tools don't appear in Claude Desktop / Claude Code after editing config. | Clients only read MCP config on startup. | Fully quit (Cmd+Q / exit the process) and relaunch. In Claude Code, `claude mcp list` should show the server; inside a session, `/mcp` shows live status. |
-| MCP server fails at startup with `Missing required CHAIN_LENS_API_URL` / `CHAIN_LENS_CHAIN_ID` / `CHAIN_LENS_RPC_URL`. | Required env is missing from the MCP client config, or the config edit was made in the wrong scope/file. | Add the missing variable to Claude Desktop config or re-run `claude mcp add ... -e ...`, then fully restart the MCP client. |
-| `No ApiMarketEscrowV2 deployed for chainId …` | `CHAIN_LENS_CHAIN_ID` is not a ChainLens-supported chain. | Use `84532` (Base Sepolia) or `8453` (Base Mainnet). |
-| `chain-lens.request` returns `status: "TIMEOUT"`. | Gateway didn't finalize within `CHAIN_LENS_POLL_TIMEOUT_MS` (default 120s) — usually a slow seller upstream. | The escrow is still live. Poll later with `chain-lens.status({ job_id })`; the gateway will complete or refund when it catches up. |
-| MCP server fails at startup with `Invalid CHAIN_LENS_POLL_INTERVAL_MS` or `Invalid CHAIN_LENS_POLL_TIMEOUT_MS`. | Polling override is zero, negative, or not numeric. | Use positive integer millisecond values, or remove the override to fall back to the default. |
-| Tx reverts with `insufficient allowance` / `insufficient balance`. | Wallet is missing USDC on the chosen chain, or a previous `approve` was revoked. | Top up from [faucet.circle.com](https://faucet.circle.com) (Base Sepolia). `chain-lens.request` re-approves automatically. |
-| `CHAIN_LENS_WALLET_PRIVATE_KEY is set` warning on stderr at startup. | **Expected.** The tool prints this every time so you notice if it ever ends up in an unintended config (e.g. a committed `.mcp.json`). | If you did intend it and you're on testnet, ignore. If not, remove the key from the config and restart the client. |
-| MCP server fails at startup with `CHAIN_LENS_SIGN_SOCKET is set, but no signing daemon is reachable`. | The socket path is stale, or `chain-lens-sign unlock` is not running. | Run `chain-lens-sign status`. If locked, start `chain-lens-sign unlock --ttl 2h`, copy the printed socket path into MCP env, and restart the MCP client. |
-| `chain-lens.call` hangs for 30s+ then errors with `timeout`. | Using the sign daemon and the approval prompt fired in Terminal A (the `chain-lens-sign unlock` window), but nobody typed `y` in time. | Keep the unlock terminal visible while you run paid tools. v3 calls prompt for `USDC ReceiveWithAuthorization`; respond within 30s. |
-| Signing denied with `[denied] unknown_target`. | Daemon only signs known ChainLens payment shapes: v3 `USDC ReceiveWithAuthorization` typed data plus legacy tx shapes such as `USDC.approve|transfer` and escrow calls. | Check `CHAIN_LENS_CHAIN_ID` (`84532` = Base Sepolia, `8453` = Base Mainnet). If the target is correct but unsupported, use the testnet `CHAIN_LENS_WALLET_PRIVATE_KEY` path temporarily. |
-| `sign-tx` denied with `[denied] limit_exceeded`. | Per-tx (5 USDC) or rolling 1-hour (50 USDC) ceiling hit. | Edit `~/.chain-lens/config.json` (decimal USDC strings under `limits.maxPerTx` / `limits.maxPerHour`), then Ctrl-C the unlock terminal and re-unlock. |
-| Startup error: `Both CHAIN_LENS_WALLET_PRIVATE_KEY and CHAIN_LENS_SIGN_SOCKET are set`. | Tool refuses to pick for you — the two signing paths are mutually exclusive. | Remove whichever one you didn't mean to keep from the MCP config. Migrating to the daemon? Drop `CHAIN_LENS_WALLET_PRIVATE_KEY`. |
+| Symptom                                                                                                                | Cause                                                                                                                                           | Fix                                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Running `npx -y @chain-lens/mcp-tool` in a terminal prints nothing and never exits.                                    | This is a stdio MCP server. It is **waiting for an MCP client** to write protocol messages to its stdin. Running it by hand is not a valid use. | Ctrl+C. Register it with your MCP client (Claude Desktop config, or `claude mcp add` for Claude Code) — see the integration sections above.               |
+| Tools don't appear in Claude Desktop / Claude Code after editing config.                                               | Clients only read MCP config on startup.                                                                                                        | Fully quit (Cmd+Q / exit the process) and relaunch. In Claude Code, `claude mcp list` should show the server; inside a session, `/mcp` shows live status. |
+| MCP server fails at startup with `Missing required CHAIN_LENS_API_URL` / `CHAIN_LENS_CHAIN_ID` / `CHAIN_LENS_RPC_URL`. | Required env is missing from the MCP client config, or the config edit was made in the wrong scope/file.                                        | Add the missing variable to Claude Desktop config or re-run `claude mcp add ... -e ...`, then fully restart the MCP client.                               |
+| `No ApiMarketEscrowV2 deployed for chainId …`                                                                          | `CHAIN_LENS_CHAIN_ID` is not a ChainLens-supported chain.                                                                                       | Use `84532` (Base Sepolia) or `8453` (Base Mainnet).                                                                                                      |
+| `chain-lens.request` returns `status: "TIMEOUT"`.                                                                      | Gateway didn't finalize within `CHAIN_LENS_POLL_TIMEOUT_MS` (default 120s) — usually a slow seller upstream.                                    | The escrow is still live. Poll later with `chain-lens.status({ job_id })`; the gateway will complete or refund when it catches up.                        |
+| MCP server fails at startup with `Invalid CHAIN_LENS_POLL_INTERVAL_MS` or `Invalid CHAIN_LENS_POLL_TIMEOUT_MS`.        | Polling override is zero, negative, or not numeric.                                                                                             | Use positive integer millisecond values, or remove the override to fall back to the default.                                                              |
+| Tx reverts with `insufficient allowance` / `insufficient balance`.                                                     | Wallet is missing USDC on the chosen chain, or a previous `approve` was revoked.                                                                | Top up from [faucet.circle.com](https://faucet.circle.com) (Base Sepolia). `chain-lens.request` re-approves automatically.                                |
+| `CHAIN_LENS_WALLET_PRIVATE_KEY is set` warning on stderr at startup.                                                   | **Expected.** The tool prints this every time so you notice if it ever ends up in an unintended config (e.g. a committed `.mcp.json`).          | If you did intend it and you're on testnet, ignore. If not, remove the key from the config and restart the client.                                        |
+| MCP server fails at startup with `CHAIN_LENS_SIGN_SOCKET is set, but no signing daemon is reachable`.                  | The socket path is stale, or `chain-lens-sign unlock` is not running.                                                                           | Run `chain-lens-sign status`. If locked, start `chain-lens-sign unlock --ttl 2h`, copy the printed socket path into MCP env, and restart the MCP client.  |
+| `chain-lens.call` hangs for 30s+ then errors with `timeout`.                                                           | Using the sign daemon and the approval prompt fired in Terminal A (the `chain-lens-sign unlock` window), but nobody typed `y` in time.          | Keep the unlock terminal visible while you run paid tools. v3 calls prompt for `USDC ReceiveWithAuthorization`; respond within 30s.                       |
+| Signing denied with `[denied] unknown_target`.                                                                         | Daemon only signs known ChainLens payment shapes: v3 `USDC ReceiveWithAuthorization` typed data plus legacy tx shapes such as `USDC.approve     | transfer` and escrow calls.                                                                                                                               | Check `CHAIN_LENS_CHAIN_ID` (`84532` = Base Sepolia, `8453` = Base Mainnet). If the target is correct but unsupported, use the testnet `CHAIN_LENS_WALLET_PRIVATE_KEY` path temporarily. |
+| `sign-tx` denied with `[denied] limit_exceeded`.                                                                       | Per-tx (5 USDC) or rolling 1-hour (50 USDC) ceiling hit.                                                                                        | Edit `~/.chain-lens/config.json` (decimal USDC strings under `limits.maxPerTx` / `limits.maxPerHour`), then Ctrl-C the unlock terminal and re-unlock.     |
+| Startup error: `Both CHAIN_LENS_WALLET_PRIVATE_KEY and CHAIN_LENS_SIGN_SOCKET are set`.                                | Tool refuses to pick for you — the two signing paths are mutually exclusive.                                                                    | Remove whichever one you didn't mean to keep from the MCP config. Migrating to the daemon? Drop `CHAIN_LENS_WALLET_PRIVATE_KEY`.                          |
 
 ## Development
 

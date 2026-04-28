@@ -18,15 +18,15 @@ npm install -g @chain-lens/sign
 
 ## Commands
 
-| Command                           | What it does                                                 |
-| --------------------------------- | ------------------------------------------------------------ |
-| `chain-lens-sign init`            | Generate a new wallet, encrypt with a password               |
-| `chain-lens-sign import`          | Import an existing private key (prompted, not echoed)        |
-| `chain-lens-sign address`         | Print addresses of all stored keystores                      |
-| `chain-lens-sign unlock [addr]`   | Decrypt keystore, run the signing daemon (foreground)        |
-| `chain-lens-sign status`          | Show unlocked address and TTL remaining                      |
-| `chain-lens-sign lock`            | Stop the running daemon (also Ctrl-C in the unlock shell)    |
-| `chain-lens-sign send-tx`         | Sign + broadcast a transaction via the daemon                |
+| Command                         | What it does                                              |
+| ------------------------------- | --------------------------------------------------------- |
+| `chain-lens-sign init`          | Generate a new wallet, encrypt with a password            |
+| `chain-lens-sign import`        | Import an existing private key (prompted, not echoed)     |
+| `chain-lens-sign address`       | Print addresses of all stored keystores                   |
+| `chain-lens-sign unlock [addr]` | Decrypt keystore, run the signing daemon (foreground)     |
+| `chain-lens-sign status`        | Show unlocked address and TTL remaining                   |
+| `chain-lens-sign lock`          | Stop the running daemon (also Ctrl-C in the unlock shell) |
+| `chain-lens-sign send-tx`       | Sign + broadcast a transaction via the daemon             |
 
 Run `chain-lens-sign --help` for flag reference.
 
@@ -35,7 +35,7 @@ Run `chain-lens-sign --help` for flag reference.
 > **Two terminals, non-negotiable.** `unlock` must run in a foreground
 > terminal that stays open — that terminal owns the password, the TTL
 > timer, **and** every approval prompt. Any other process (`send-tx`, the
-> MCP tool, Claude Code) is a *client* that talks to it over a unix socket.
+> MCP tool, Claude Code) is a _client_ that talks to it over a unix socket.
 
 ```bash
 # Terminal A — unlock daemon (must stay open and visible)
@@ -86,7 +86,7 @@ Override the defaults via `~/.chain-lens/config.json`:
 ```json
 {
   "limits": {
-    "maxPerTx":   "5.00",
+    "maxPerTx": "5.00",
     "maxPerHour": "50.00"
   },
   "approvalTimeoutSec": 30
@@ -155,10 +155,10 @@ full MCP config example.
       "env": {
         "CHAIN_LENS_API_URL": "https://chainlens.pelicanlab.dev/api",
         "CHAIN_ID": "84532",
-        "CHAIN_LENS_SIGN_SOCKET": "/home/you/.chain-lens/sign.sock"
-      }
-    }
-  }
+        "CHAIN_LENS_SIGN_SOCKET": "/home/you/.chain-lens/sign.sock",
+      },
+    },
+  },
 }
 ```
 

@@ -26,10 +26,7 @@ interface DiscoverResponse {
   totalBeforeFilter: number;
 }
 
-type DiscoverLoadErrorKind =
-  | "api_missing"
-  | "backend_unreachable"
-  | "backend_error";
+type DiscoverLoadErrorKind = "api_missing" | "backend_unreachable" | "backend_error";
 
 interface DiscoverLoadError {
   kind: DiscoverLoadErrorKind;
@@ -47,8 +44,7 @@ type DiscoverLoadResult =
 // Data fetching
 // ──────────────────────────────────────────────────────────────────────
 
-const BACKEND =
-  process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3001/api";
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3001/api";
 
 async function fetchListings(params: {
   q?: string;
@@ -56,8 +52,8 @@ async function fetchListings(params: {
   sort?: string;
 }): Promise<DiscoverLoadResult> {
   const qs = new URLSearchParams();
-  if (params.q)    qs.set("q",    params.q);
-  if (params.tag)  qs.set("tag",  params.tag);
+  if (params.q) qs.set("q", params.q);
+  if (params.tag) qs.set("tag", params.tag);
   if (params.sort) qs.set("sort", params.sort);
   qs.set("limit", "50");
 
@@ -74,8 +70,7 @@ async function fetchListings(params: {
       error: {
         kind: "backend_unreachable",
         title: "Backend connection failed",
-        message:
-          "The Discovery page could not connect to the configured backend.",
+        message: "The Discovery page could not connect to the configured backend.",
         detail: error instanceof Error ? error.message : String(error),
       },
     };
@@ -87,8 +82,7 @@ async function fetchListings(params: {
       error: {
         kind: "api_missing",
         title: "Discovery API is missing",
-        message:
-          "The backend is reachable, but /api/market/listings was not found.",
+        message: "The backend is reachable, but /api/market/listings was not found.",
         status: res.status,
       },
     };
@@ -101,8 +95,7 @@ async function fetchListings(params: {
       error: {
         kind: "backend_error",
         title: "Backend returned an error",
-        message:
-          "The Discovery API exists, but the backend failed while loading listings.",
+        message: "The Discovery API exists, but the backend failed while loading listings.",
         detail: detail.slice(0, 500),
         status: res.status,
       },
@@ -117,8 +110,7 @@ async function fetchListings(params: {
       error: {
         kind: "backend_error",
         title: "Backend returned invalid JSON",
-        message:
-          "The Discovery API responded, but the response could not be parsed.",
+        message: "The Discovery API responded, but the response could not be parsed.",
         detail: error instanceof Error ? error.message : String(error),
       },
     };
@@ -166,13 +158,9 @@ function ListingCard({ item }: { item: DiscoverItem }) {
       {/* Title + price */}
       <div className="pointer-events-none flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="truncate text-sm font-semibold text-[var(--text)]">
-            {name}
-          </h2>
+          <h2 className="truncate text-sm font-semibold text-[var(--text)]">{name}</h2>
           {m?.description && (
-            <p className="mt-0.5 line-clamp-2 text-xs text-[var(--text2)]">
-              {m.description}
-            </p>
+            <p className="mt-0.5 line-clamp-2 text-xs text-[var(--text2)]">{m.description}</p>
           )}
         </div>
         {price && (
@@ -198,9 +186,7 @@ function ListingCard({ item }: { item: DiscoverItem }) {
           </span>
         )}
         {item.stats.avgLatencyMs > 0 && (
-          <span className="text-xs text-[var(--text3)]">
-            {item.stats.avgLatencyMs} ms
-          </span>
+          <span className="text-xs text-[var(--text3)]">{item.stats.avgLatencyMs} ms</span>
         )}
         <span
           className="ml-auto text-xs text-[var(--text3)]"
@@ -226,9 +212,7 @@ function ListingCard({ item }: { item: DiscoverItem }) {
       )}
 
       {item.metadataError && (
-        <p className="pointer-events-none text-xs text-[#f85149]">
-          metadata unavailable
-        </p>
+        <p className="pointer-events-none text-xs text-[#f85149]">metadata unavailable</p>
       )}
 
       <div className="pointer-events-none mt-auto pt-2">
@@ -255,14 +239,10 @@ function DiscoveryErrorPanel({ error }: { error: DiscoverLoadError }) {
           {label}
         </span>
         {error.status && (
-          <span className="font-mono text-xs text-[var(--text3)]">
-            HTTP {error.status}
-          </span>
+          <span className="font-mono text-xs text-[var(--text3)]">HTTP {error.status}</span>
         )}
       </div>
-      <h2 className="text-base font-semibold text-[var(--text)]">
-        {error.title}
-      </h2>
+      <h2 className="text-base font-semibold text-[var(--text)]">{error.title}</h2>
       <p className="mt-1 text-sm text-[var(--text2)]">{error.message}</p>
       <dl className="mt-4 grid gap-2 text-left text-xs sm:grid-cols-[160px_1fr]">
         <dt className="text-[var(--text3)]">Backend URL</dt>
@@ -270,9 +250,7 @@ function DiscoveryErrorPanel({ error }: { error: DiscoverLoadError }) {
         {error.detail && (
           <>
             <dt className="text-[var(--text3)]">Detail</dt>
-            <dd className="break-words font-mono text-[var(--text2)]">
-              {error.detail}
-            </dd>
+            <dd className="break-words font-mono text-[var(--text2)]">{error.detail}</dd>
           </>
         )}
       </dl>
@@ -290,19 +268,17 @@ type PageProps = {
 
 export default async function DiscoverPage({ searchParams }: PageProps) {
   const sp = searchParams ? await searchParams : {};
-  const q    = typeof sp["q"]    === "string" ? sp["q"].trim()    : "";
-  const tag  = typeof sp["tag"]  === "string" ? sp["tag"].trim()  : "";
-  const sort = typeof sp["sort"] === "string" ? sp["sort"]        : "score";
+  const q = typeof sp["q"] === "string" ? sp["q"].trim() : "";
+  const tag = typeof sp["tag"] === "string" ? sp["tag"].trim() : "";
+  const sort = typeof sp["sort"] === "string" ? sp["sort"] : "score";
 
   const result = await fetchListings({
-    q:    q    || undefined,
-    tag:  tag  || undefined,
+    q: q || undefined,
+    tag: tag || undefined,
     sort: sort !== "score" ? sort : undefined,
   });
 
-  const data = result.ok
-    ? result.data
-    : { items: [], total: 0, totalBeforeFilter: 0 };
+  const data = result.ok ? result.data : { items: [], total: 0, totalBeforeFilter: 0 };
   const showReset = !!q || !!tag || sort !== "score";
   const emptyTitle = showReset
     ? "No listings match your search."
@@ -319,12 +295,10 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Page header */}
       <div className="mb-6">
-        <h1 className="mb-1 text-3xl font-bold text-[var(--text)]">
-          Discover APIs
-        </h1>
+        <h1 className="mb-1 text-3xl font-bold text-[var(--text)]">Discover APIs</h1>
         <p className="text-sm text-[var(--text2)]">
-          Rankings refresh on each load via Thompson sampling — every approved
-          listing has a chance of appearing at the top.
+          Rankings refresh on each load via Thompson sampling — every approved listing has a chance
+          of appearing at the top.
         </p>
       </div>
 
@@ -382,13 +356,9 @@ export default async function DiscoverPage({ searchParams }: PageProps) {
             </div>
           ) : (
             <div className="mt-8 rounded-lg border border-[var(--border)] bg-[var(--bg2)] px-6 py-14 text-center">
-              <p className="text-[var(--text2)]">
-                {emptyTitle}
-              </p>
+              <p className="text-[var(--text2)]">{emptyTitle}</p>
               {emptyDetail && (
-                <p className="mx-auto mt-2 max-w-xl text-sm text-[var(--text3)]">
-                  {emptyDetail}
-                </p>
+                <p className="mx-auto mt-2 max-w-xl text-sm text-[var(--text3)]">{emptyDetail}</p>
               )}
               {showReset && (
                 <Link

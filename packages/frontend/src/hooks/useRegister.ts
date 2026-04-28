@@ -21,15 +21,11 @@ export function useRegister() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiClient.post<{ id: string }>(
-        "/apis/register",
-        data
-      );
+      const res = await apiClient.post<{ id: string }>("/apis/register", data);
       setResult(res);
       return res;
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to register API";
+      const msg = err instanceof Error ? err.message : "Failed to register API";
       setError(msg);
       throw err;
     } finally {

@@ -19,13 +19,7 @@ export default function SellersTab({ enabled }: { enabled: boolean }) {
       <table className="w-full text-sm">
         <thead className="border-b border-[var(--border)] bg-[var(--bg3)]">
           <tr>
-            {[
-              "Seller",
-              "Registry status",
-              "Listings",
-              "Jobs (ok/fail)",
-              "Earnings",
-            ].map((h) => (
+            {["Seller", "Registry status", "Listings", "Jobs (ok/fail)", "Earnings"].map((h) => (
               <th
                 key={h}
                 className={`px-4 py-3 text-left font-medium text-[var(--text2)] ${
@@ -47,9 +41,7 @@ export default function SellersTab({ enabled }: { enabled: boolean }) {
                 <div className="font-medium text-[var(--text)]">
                   {s.name ?? <span className="text-[var(--text3)]">(unnamed)</span>}
                 </div>
-                <div className="font-mono text-xs text-[var(--text3)]">
-                  {shortAddr(s.address)}
-                </div>
+                <div className="font-mono text-xs text-[var(--text3)]">{shortAddr(s.address)}</div>
               </td>
               <td className="px-4 py-3">
                 {!s.registered ? (

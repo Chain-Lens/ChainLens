@@ -13,7 +13,9 @@
   border-radius: 8px;
   font-size: 0.95rem;
   font-weight: 600;
-  transition: background 0.2s, box-shadow 0.2s;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
 }
 .btn:hover {
   background: var(--accent-hover);

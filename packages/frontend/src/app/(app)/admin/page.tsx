@@ -41,15 +41,11 @@ export default function AdminPage() {
     return (
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
         <section className="card p-6">
-          <p className="text-xs uppercase tracking-[0.18em] text-[var(--text3)]">
-            Admin
-          </p>
-          <h1 className="mt-2 text-2xl font-bold text-[var(--text)]">
-            ChainLens Admin
-          </h1>
+          <p className="text-xs uppercase tracking-[0.18em] text-[var(--text3)]">Admin</p>
+          <h1 className="mt-2 text-2xl font-bold text-[var(--text)]">ChainLens Admin</h1>
           <p className="mt-2 text-sm text-[var(--text2)]">
-            Connect an authorized admin wallet and sign in to approve listings,
-            inspect sellers, and manage operational queues.
+            Connect an authorized admin wallet and sign in to approve listings, inspect sellers, and
+            manage operational queues.
           </p>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -69,9 +65,7 @@ export default function AdminPage() {
               Wallet connection is required before SIWE admin login.
             </p>
           )}
-          {auth.error && (
-            <p className="mt-3 text-sm text-[var(--red)]">{auth.error}</p>
-          )}
+          {auth.error && <p className="mt-3 text-sm text-[var(--red)]">{auth.error}</p>}
         </section>
       </main>
     );
@@ -81,22 +75,14 @@ export default function AdminPage() {
     <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-[var(--text3)]">
-            Admin
-          </p>
-          <h1 className="mt-2 text-3xl font-bold text-[var(--text)]">
-            Operations Console
-          </h1>
+          <p className="text-xs uppercase tracking-[0.18em] text-[var(--text3)]">Admin</p>
+          <h1 className="mt-2 text-3xl font-bold text-[var(--text)]">Operations Console</h1>
           <p className="mt-2 max-w-2xl text-sm text-[var(--text2)]">
-            Review pending APIs, monitor seller health, and handle operational
-            exceptions from one place.
+            Review pending APIs, monitor seller health, and handle operational exceptions from one
+            place.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={auth.signOut}
-          className="btn-secondary px-4 py-2 text-sm"
-        >
+        <button type="button" onClick={auth.signOut} className="btn-secondary px-4 py-2 text-sm">
           Sign out
         </button>
       </div>
@@ -150,11 +136,7 @@ export default function AdminPage() {
       )}
 
       {activeTab === "apis" && (
-        <AllApisTab
-          loading={allApis.loading}
-          error={allApis.error}
-          apis={allApis.apis}
-        />
+        <AllApisTab loading={allApis.loading} error={allApis.error} apis={allApis.apis} />
       )}
       {activeTab === "sellers" && <SellersTab enabled={activeTab === "sellers"} />}
     </main>
@@ -267,9 +249,7 @@ function AllApisTab({
           ))}
         </tbody>
       </table>
-      {apis.length === 0 && (
-        <p className="py-8 text-center text-[var(--text2)]">No APIs found.</p>
-      )}
+      {apis.length === 0 && <p className="py-8 text-center text-[var(--text2)]">No APIs found.</p>}
     </div>
   );
 }

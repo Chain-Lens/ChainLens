@@ -29,12 +29,19 @@
 }
 
 @keyframes wobble {
-  0%, 100% { transform: rotate(-9deg); }
-  50%      { transform: rotate(9deg);  }
+  0%,
+  100% {
+    transform: rotate(-9deg);
+  }
+  50% {
+    transform: rotate(9deg);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .coin { animation: none; }
+  .coin {
+    animation: none;
+  }
 }
 
 .badge {
@@ -61,8 +68,15 @@
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.4; transform: scale(0.75); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.75);
+  }
 }
 
 .h1 {
@@ -74,7 +88,9 @@
   margin-bottom: 1.5rem;
 }
 
-.hl { color: var(--green); }
+.hl {
+  color: var(--green);
+}
 
 .sub {
   font-size: clamp(1rem, 2.5vw, 1.15rem);
@@ -99,7 +115,9 @@
   border-radius: 8px;
   font-size: 0.95rem;
   font-weight: 600;
-  transition: background 0.2s, box-shadow 0.2s;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
 }
 .btnPrimary:hover {
   background: var(--accent-hover);
@@ -114,7 +132,9 @@
   font-size: 0.95rem;
   font-weight: 500;
   border: 1px solid var(--border2);
-  transition: border-color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
 }
 .btnSecondary:hover {
   border-color: var(--text2);
@@ -135,7 +155,9 @@
   justify-content: center;
 }
 
-.stat { text-align: center; }
+.stat {
+  text-align: center;
+}
 
 .statNum {
   font-size: 1.8rem;

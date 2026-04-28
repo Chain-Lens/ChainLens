@@ -26,10 +26,7 @@ export interface SellerApi {
 // When `authenticated` flips true, we re-fetch from the owner-scoped
 // endpoint so `endpoint` becomes visible. Going false (sign-out) drops
 // back to the public endpoint so the page still renders.
-export function useSellerApis(
-  address: string | undefined,
-  options?: { authenticated?: boolean },
-) {
+export function useSellerApis(address: string | undefined, options?: { authenticated?: boolean }) {
   const authenticated = !!options?.authenticated;
   const [apis, setApis] = useState<SellerApi[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,9 +45,7 @@ export function useSellerApis(
     apiClient
       .get<SellerApi[]>(`/seller/listings`)
       .then(setApis)
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Failed to load APIs"),
-      )
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load APIs"))
       .finally(() => setLoading(false));
   }, [address, authenticated, tick]);
 

@@ -7,7 +7,12 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { env, adminAddresses } from "../config/env.js";
-import { requireAdmin, requireSeller } from "./auth.js";
+import {
+  requireAdmin,
+  requireSeller,
+  type AuthenticatedRequest,
+  type SellerAuthenticatedRequest,
+} from "./auth.js";
 import { errorHandler } from "./error-handler.js";
 import { validate } from "./validate.js";
 import { BadRequestError } from "../utils/errors.js";
@@ -29,11 +34,11 @@ function buildTestApp() {
   app.use(express.json());
   app.use(cookieParser());
 
-  app.get("/admin-only", requireAdmin, (req, res) => {
+  app.get("/admin-only", requireAdmin, (req: AuthenticatedRequest, res) => {
     res.json({ address: req.adminAddress });
   });
 
-  app.get("/seller-only", requireSeller, (req, res) => {
+  app.get("/seller-only", requireSeller, (req: SellerAuthenticatedRequest, res) => {
     res.json({ address: req.sellerAddress });
   });
 

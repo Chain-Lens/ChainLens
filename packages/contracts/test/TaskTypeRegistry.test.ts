@@ -32,9 +32,7 @@ describe("TaskTypeRegistry", function () {
   describe("Deployment", function () {
     it("sets deployer as owner", async function () {
       const { registry, owner } = await loadFixture(deployFixture);
-      expect(getAddress(await registry.read.owner())).to.equal(
-        getAddress(owner.account.address),
-      );
+      expect(getAddress(await registry.read.owner())).to.equal(getAddress(owner.account.address));
     });
 
     it("starts with empty task type list", async function () {
@@ -53,7 +51,11 @@ describe("TaskTypeRegistry", function () {
     it("stores config with enabled=true and registeredAt>0", async function () {
       const { registry } = await loadFixture(deployFixture);
       await registry.write.registerTaskType([
-        TT_A, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+        TT_A,
+        TT_A_NAME,
+        TT_A_SCHEMA,
+        TT_A_MAX_TIME,
+        TT_A_MIN_BUDGET,
       ]);
       const cfg = await registry.read.getConfig([TT_A]);
       expect(cfg.name).to.equal(TT_A_NAME);
@@ -67,10 +69,18 @@ describe("TaskTypeRegistry", function () {
     it("appends to allTaskTypes and increments count", async function () {
       const { registry } = await loadFixture(deployFixture);
       await registry.write.registerTaskType([
-        TT_A, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+        TT_A,
+        TT_A_NAME,
+        TT_A_SCHEMA,
+        TT_A_MAX_TIME,
+        TT_A_MIN_BUDGET,
       ]);
       await registry.write.registerTaskType([
-        TT_B, "defillama_tvl", "ipfs://B", 20n, USDC(2n) / 100n,
+        TT_B,
+        "defillama_tvl",
+        "ipfs://B",
+        20n,
+        USDC(2n) / 100n,
       ]);
       expect(await registry.read.taskTypeCount()).to.equal(2n);
       expect(await registry.read.getAllTaskTypes()).to.deep.equal([TT_A, TT_B]);
@@ -79,19 +89,27 @@ describe("TaskTypeRegistry", function () {
     it("emits TaskTypeRegistered and TaskTypeEnabledChanged(true)", async function () {
       const { registry, publicClient } = await loadFixture(deployFixture);
       await registry.write.registerTaskType([
-        TT_A, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+        TT_A,
+        TT_A_NAME,
+        TT_A_SCHEMA,
+        TT_A_MAX_TIME,
+        TT_A_MIN_BUDGET,
       ]);
       const regLogs = await publicClient.getContractEvents({
-        abi: registry.abi, address: registry.address,
-        eventName: "TaskTypeRegistered", fromBlock: 0n,
+        abi: registry.abi,
+        address: registry.address,
+        eventName: "TaskTypeRegistered",
+        fromBlock: 0n,
       });
       expect(regLogs).to.have.lengthOf(1);
       expect(regLogs[0].args.taskType).to.equal(TT_A);
       expect(regLogs[0].args.name).to.equal(TT_A_NAME);
 
       const enLogs = await publicClient.getContractEvents({
-        abi: registry.abi, address: registry.address,
-        eventName: "TaskTypeEnabledChanged", fromBlock: 0n,
+        abi: registry.abi,
+        address: registry.address,
+        eventName: "TaskTypeEnabledChanged",
+        fromBlock: 0n,
       });
       expect(enLogs).to.have.lengthOf(1);
       expect(enLogs[0].args.enabled).to.be.true;
@@ -101,7 +119,11 @@ describe("TaskTypeRegistry", function () {
       const { registry } = await loadFixture(deployFixture);
       await expect(
         registry.write.registerTaskType([
-          ZERO_ID, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+          ZERO_ID,
+          TT_A_NAME,
+          TT_A_SCHEMA,
+          TT_A_MAX_TIME,
+          TT_A_MIN_BUDGET,
         ]),
       ).to.be.rejectedWith(/empty task type id/);
     });
@@ -109,11 +131,19 @@ describe("TaskTypeRegistry", function () {
     it("reverts on duplicate", async function () {
       const { registry } = await loadFixture(deployFixture);
       await registry.write.registerTaskType([
-        TT_A, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+        TT_A,
+        TT_A_NAME,
+        TT_A_SCHEMA,
+        TT_A_MAX_TIME,
+        TT_A_MIN_BUDGET,
       ]);
       await expect(
         registry.write.registerTaskType([
-          TT_A, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+          TT_A,
+          TT_A_NAME,
+          TT_A_SCHEMA,
+          TT_A_MAX_TIME,
+          TT_A_MIN_BUDGET,
         ]),
       ).to.be.rejectedWith(/already registered/);
     });
@@ -121,44 +151,34 @@ describe("TaskTypeRegistry", function () {
     it("reverts on empty name", async function () {
       const { registry } = await loadFixture(deployFixture);
       await expect(
-        registry.write.registerTaskType([
-          TT_A, "", TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
-        ]),
+        registry.write.registerTaskType([TT_A, "", TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET]),
       ).to.be.rejectedWith(/empty name/);
     });
 
     it("reverts on maxResponseTime = 0", async function () {
       const { registry } = await loadFixture(deployFixture);
       await expect(
-        registry.write.registerTaskType([
-          TT_A, TT_A_NAME, TT_A_SCHEMA, 0n, TT_A_MIN_BUDGET,
-        ]),
+        registry.write.registerTaskType([TT_A, TT_A_NAME, TT_A_SCHEMA, 0n, TT_A_MIN_BUDGET]),
       ).to.be.rejectedWith(/invalid response time/);
     });
 
     it("reverts on maxResponseTime > 600", async function () {
       const { registry } = await loadFixture(deployFixture);
       await expect(
-        registry.write.registerTaskType([
-          TT_A, TT_A_NAME, TT_A_SCHEMA, 601n, TT_A_MIN_BUDGET,
-        ]),
+        registry.write.registerTaskType([TT_A, TT_A_NAME, TT_A_SCHEMA, 601n, TT_A_MIN_BUDGET]),
       ).to.be.rejectedWith(/invalid response time/);
     });
 
     it("accepts maxResponseTime = 600 (boundary)", async function () {
       const { registry } = await loadFixture(deployFixture);
-      await registry.write.registerTaskType([
-        TT_A, TT_A_NAME, TT_A_SCHEMA, 600n, TT_A_MIN_BUDGET,
-      ]);
+      await registry.write.registerTaskType([TT_A, TT_A_NAME, TT_A_SCHEMA, 600n, TT_A_MIN_BUDGET]);
       const cfg = await registry.read.getConfig([TT_A]);
       expect(cfg.maxResponseTime).to.equal(600n);
     });
 
     it("accepts empty schemaURI (schema set later)", async function () {
       const { registry } = await loadFixture(deployFixture);
-      await registry.write.registerTaskType([
-        TT_A, TT_A_NAME, "", TT_A_MAX_TIME, TT_A_MIN_BUDGET,
-      ]);
+      await registry.write.registerTaskType([TT_A, TT_A_NAME, "", TT_A_MAX_TIME, TT_A_MIN_BUDGET]);
       const cfg = await registry.read.getConfig([TT_A]);
       expect(cfg.schemaURI).to.equal("");
     });
@@ -168,7 +188,11 @@ describe("TaskTypeRegistry", function () {
       const asOther = await as(registry, other);
       await expect(
         asOther.write.registerTaskType([
-          TT_A, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+          TT_A,
+          TT_A_NAME,
+          TT_A_SCHEMA,
+          TT_A_MAX_TIME,
+          TT_A_MIN_BUDGET,
         ]),
       ).to.be.rejectedWith(/OwnableUnauthorizedAccount/);
     });
@@ -178,13 +202,15 @@ describe("TaskTypeRegistry", function () {
     it("updates fields and keeps name + enabled + registeredAt", async function () {
       const { registry } = await loadFixture(deployFixture);
       await registry.write.registerTaskType([
-        TT_A, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+        TT_A,
+        TT_A_NAME,
+        TT_A_SCHEMA,
+        TT_A_MAX_TIME,
+        TT_A_MIN_BUDGET,
       ]);
       const before = await registry.read.getConfig([TT_A]);
 
-      await registry.write.updateConfig([
-        TT_A, "ipfs://new", 120n, USDC(1n),
-      ]);
+      await registry.write.updateConfig([TT_A, "ipfs://new", 120n, USDC(1n)]);
       const after = await registry.read.getConfig([TT_A]);
 
       expect(after.name).to.equal(TT_A_NAME);
@@ -198,12 +224,18 @@ describe("TaskTypeRegistry", function () {
     it("emits TaskTypeUpdated", async function () {
       const { registry, publicClient } = await loadFixture(deployFixture);
       await registry.write.registerTaskType([
-        TT_A, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+        TT_A,
+        TT_A_NAME,
+        TT_A_SCHEMA,
+        TT_A_MAX_TIME,
+        TT_A_MIN_BUDGET,
       ]);
       await registry.write.updateConfig([TT_A, "ipfs://x", 120n, USDC(1n)]);
       const logs = await publicClient.getContractEvents({
-        abi: registry.abi, address: registry.address,
-        eventName: "TaskTypeUpdated", fromBlock: 0n,
+        abi: registry.abi,
+        address: registry.address,
+        eventName: "TaskTypeUpdated",
+        fromBlock: 0n,
       });
       expect(logs).to.have.lengthOf(1);
       expect(logs[0].args.taskType).to.equal(TT_A);
@@ -219,7 +251,11 @@ describe("TaskTypeRegistry", function () {
     it("reverts on invalid maxResponseTime", async function () {
       const { registry } = await loadFixture(deployFixture);
       await registry.write.registerTaskType([
-        TT_A, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+        TT_A,
+        TT_A_NAME,
+        TT_A_SCHEMA,
+        TT_A_MAX_TIME,
+        TT_A_MIN_BUDGET,
       ]);
       await expect(
         registry.write.updateConfig([TT_A, "ipfs://x", 0n, USDC(1n)]),
@@ -232,7 +268,11 @@ describe("TaskTypeRegistry", function () {
     it("reverts OwnableUnauthorizedAccount for non-owner", async function () {
       const { registry, other } = await loadFixture(deployFixture);
       await registry.write.registerTaskType([
-        TT_A, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+        TT_A,
+        TT_A_NAME,
+        TT_A_SCHEMA,
+        TT_A_MAX_TIME,
+        TT_A_MIN_BUDGET,
       ]);
       const asOther = await as(registry, other);
       await expect(
@@ -245,7 +285,11 @@ describe("TaskTypeRegistry", function () {
     it("disables then re-enables with events", async function () {
       const { registry, publicClient } = await loadFixture(deployFixture);
       await registry.write.registerTaskType([
-        TT_A, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+        TT_A,
+        TT_A_NAME,
+        TT_A_SCHEMA,
+        TT_A_MAX_TIME,
+        TT_A_MIN_BUDGET,
       ]);
 
       await registry.write.setEnabled([TT_A, false]);
@@ -255,8 +299,10 @@ describe("TaskTypeRegistry", function () {
       expect(await registry.read.isEnabled([TT_A])).to.be.true;
 
       const logs = await publicClient.getContractEvents({
-        abi: registry.abi, address: registry.address,
-        eventName: "TaskTypeEnabledChanged", fromBlock: 0n,
+        abi: registry.abi,
+        address: registry.address,
+        eventName: "TaskTypeEnabledChanged",
+        fromBlock: 0n,
       });
       // register(true) + disable(false) + enable(true) = 3
       expect(logs).to.have.lengthOf(3);
@@ -265,32 +311,40 @@ describe("TaskTypeRegistry", function () {
     it("no-op + no event when value unchanged", async function () {
       const { registry, publicClient } = await loadFixture(deployFixture);
       await registry.write.registerTaskType([
-        TT_A, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+        TT_A,
+        TT_A_NAME,
+        TT_A_SCHEMA,
+        TT_A_MAX_TIME,
+        TT_A_MIN_BUDGET,
       ]);
       await registry.write.setEnabled([TT_A, true]); // already true
       const logs = await publicClient.getContractEvents({
-        abi: registry.abi, address: registry.address,
-        eventName: "TaskTypeEnabledChanged", fromBlock: 0n,
+        abi: registry.abi,
+        address: registry.address,
+        eventName: "TaskTypeEnabledChanged",
+        fromBlock: 0n,
       });
       expect(logs).to.have.lengthOf(1); // only from register
     });
 
     it("reverts when task type not registered", async function () {
       const { registry } = await loadFixture(deployFixture);
-      await expect(
-        registry.write.setEnabled([TT_UNKNOWN, false]),
-      ).to.be.rejectedWith(/not found/);
+      await expect(registry.write.setEnabled([TT_UNKNOWN, false])).to.be.rejectedWith(/not found/);
     });
 
     it("reverts OwnableUnauthorizedAccount for non-owner", async function () {
       const { registry, other } = await loadFixture(deployFixture);
       await registry.write.registerTaskType([
-        TT_A, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+        TT_A,
+        TT_A_NAME,
+        TT_A_SCHEMA,
+        TT_A_MAX_TIME,
+        TT_A_MIN_BUDGET,
       ]);
       const asOther = await as(registry, other);
-      await expect(
-        asOther.write.setEnabled([TT_A, false]),
-      ).to.be.rejectedWith(/OwnableUnauthorizedAccount/);
+      await expect(asOther.write.setEnabled([TT_A, false])).to.be.rejectedWith(
+        /OwnableUnauthorizedAccount/,
+      );
     });
   });
 
@@ -303,7 +357,11 @@ describe("TaskTypeRegistry", function () {
     it("isEnabled respects disabled flag", async function () {
       const { registry } = await loadFixture(deployFixture);
       await registry.write.registerTaskType([
-        TT_A, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+        TT_A,
+        TT_A_NAME,
+        TT_A_SCHEMA,
+        TT_A_MAX_TIME,
+        TT_A_MIN_BUDGET,
       ]);
       await registry.write.setEnabled([TT_A, false]);
       expect(await registry.read.isEnabled([TT_A])).to.be.false;
@@ -311,9 +369,7 @@ describe("TaskTypeRegistry", function () {
 
     it("getConfig reverts for unregistered id", async function () {
       const { registry } = await loadFixture(deployFixture);
-      await expect(
-        registry.read.getConfig([TT_UNKNOWN]),
-      ).to.be.rejectedWith(/not found/);
+      await expect(registry.read.getConfig([TT_UNKNOWN])).to.be.rejectedWith(/not found/);
     });
   });
 
@@ -321,9 +377,7 @@ describe("TaskTypeRegistry", function () {
     it("transferOwnership sets pendingOwner but not owner", async function () {
       const { registry, owner, other } = await loadFixture(deployFixture);
       await registry.write.transferOwnership([other.account.address]);
-      expect(getAddress(await registry.read.owner())).to.equal(
-        getAddress(owner.account.address),
-      );
+      expect(getAddress(await registry.read.owner())).to.equal(getAddress(owner.account.address));
       expect(getAddress(await registry.read.pendingOwner())).to.equal(
         getAddress(other.account.address),
       );
@@ -334,9 +388,7 @@ describe("TaskTypeRegistry", function () {
       await registry.write.transferOwnership([other.account.address]);
       const asOther = await as(registry, other);
       await asOther.write.acceptOwnership();
-      expect(getAddress(await registry.read.owner())).to.equal(
-        getAddress(other.account.address),
-      );
+      expect(getAddress(await registry.read.owner())).to.equal(getAddress(other.account.address));
       expect(await registry.read.pendingOwner()).to.equal(zeroAddress);
     });
 
@@ -344,9 +396,9 @@ describe("TaskTypeRegistry", function () {
       const { registry, other, stranger } = await loadFixture(deployFixture);
       await registry.write.transferOwnership([other.account.address]);
       const asStranger = await as(registry, stranger);
-      await expect(
-        asStranger.write.acceptOwnership(),
-      ).to.be.rejectedWith(/OwnableUnauthorizedAccount/);
+      await expect(asStranger.write.acceptOwnership()).to.be.rejectedWith(
+        /OwnableUnauthorizedAccount/,
+      );
     });
 
     it("new owner can register, old owner cannot, after acceptance", async function () {
@@ -356,14 +408,22 @@ describe("TaskTypeRegistry", function () {
       await asOther.write.acceptOwnership();
 
       await asOther.write.registerTaskType([
-        TT_A, TT_A_NAME, TT_A_SCHEMA, TT_A_MAX_TIME, TT_A_MIN_BUDGET,
+        TT_A,
+        TT_A_NAME,
+        TT_A_SCHEMA,
+        TT_A_MAX_TIME,
+        TT_A_MIN_BUDGET,
       ]);
       expect(await registry.read.isEnabled([TT_A])).to.be.true;
 
       const asOldOwner = await as(registry, owner);
       await expect(
         asOldOwner.write.registerTaskType([
-          TT_B, "defillama_tvl", "ipfs://B", 20n, USDC(2n) / 100n,
+          TT_B,
+          "defillama_tvl",
+          "ipfs://B",
+          20n,
+          USDC(2n) / 100n,
         ]),
       ).to.be.rejectedWith(/OwnableUnauthorizedAccount/);
     });

@@ -31,16 +31,12 @@ export function useReputation(sellerAddress: `0x${string}` | undefined) {
       setLoading(true);
       setError(null);
       try {
-        const data = await apiClient.get<SellerReputation>(
-          `/reputation/${sellerAddress}`,
-        );
+        const data = await apiClient.get<SellerReputation>(`/reputation/${sellerAddress}`);
         if (!cancelled) setReputation(data);
       } catch (e) {
         if (!cancelled) {
           setReputation(null);
-          setError(
-            e instanceof Error ? e.message : "Failed to load reputation",
-          );
+          setError(e instanceof Error ? e.message : "Failed to load reputation");
         }
       } finally {
         if (!cancelled) setLoading(false);

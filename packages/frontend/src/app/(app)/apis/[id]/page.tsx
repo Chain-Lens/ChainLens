@@ -21,12 +21,9 @@ export default function ApiDetailPage() {
       }
 
       try {
-        const apis = await apiClient.get<
-          Array<{ id: string; onChainId: number | null }>
-        >("/seller/listings");
-        const match = apis.find(
-          (api) => api.id === id && typeof api.onChainId === "number",
-        );
+        const apis =
+          await apiClient.get<Array<{ id: string; onChainId: number | null }>>("/seller/listings");
+        const match = apis.find((api) => api.id === id && typeof api.onChainId === "number");
         if (match) {
           router.replace(`/discover/${match.onChainId}`);
           return;

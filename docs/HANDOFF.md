@@ -28,17 +28,20 @@ hundreds of Opus turns.
 ## Current state (2026-04-23)
 
 ### On-chain
+
 - **`ChainLensMarket`** at [`0x45bB56fDB0E6bb14d178E417b67Ed7B3323ffFf7`](https://sepolia.basescan.org/address/0x45bB56fDB0E6bb14d178E417b67Ed7B3323ffFf7) on Base Sepolia (chain 84532).
 - Whitelisted gateways: `0x622F1399…5b8A` (user-designated), `0xD21d…Db580` (backend `PRIVATE_KEY`).
 - All fees default to 0. `registrationFeeToken` defaults to USDC.
 
 ### Repo
+
 - Branch: `main`.
 - Tests: **backend 109/109**, **mcp-tool 45/45**. Both green.
 - `docs/RFC-v3.md`: architecture decision of record.
 - `docs/BACKLOG.md`: current work queue + "Search engine roadmap (agent-first)" section (captured strategic discussion).
 
 ### Operational must-dos when pulling on a new machine
+
 1. `pnpm install` at repo root.
 2. `pnpm -r build` (shared compiles first — MCP/backend/frontend depend on its dist).
 3. `cd packages/backend && pnpm db:push` — **required after this branch** because Phase 2c migrated `ApiListing` to `@@unique([contractVersion, onChainId])` and added `contractVersion` column. Non-destructive on existing data.
@@ -49,32 +52,35 @@ hundreds of Opus turns.
 
 ## Commit trajectory (newest → oldest, v3 only)
 
-| # | Commit | Summary |
-|--|--|--|
-| 7 | `feat(backend): admin-only GET /admin/call-logs for listing triage` | Raw CallLog triage endpoint (admin-only, buyer visible) |
-| 6 | `feat(backend): market listener + admin approval gate + /health liveness (Phase 2c)` | `ListingRegistered` → DB PENDING; approval filter on `/listings`, `/:id`, `/call`; `/health` liveness classifier |
-| 5 | `feat(backend): chain-lens.inspect MCP tool + recent error breakdown (Phase 2b-v2)` | 7-day error bucket in `/listings/:id`; new `chain-lens.inspect` MCP tool |
-| 4 | `feat: weighted-random ranking + rich discover (Phase 2b-v1)` | Laplace smoothing + weighted random shuffle; `chain-lens.discover` rewritten for v3 endpoint |
-| 3 | `feat(backend): call logging + per-listing stats for v3 ranking (Phase 2a)` | `CallLog` model, `logCall`/`getListingStats`, stats in listings response |
-| 2 | `feat: v3 x402 marketplace — ChainLensMarket + Gateway proxy + MCP call tool` (Phase 1) | Single-contract deploy, `/api/market/*` routes, `chain-lens.call` tool, frontend register form |
-| 1 | `feat(seller): SIWE auth + authenticated listing edit (v0.1.1 #5, #6)` | Pre-session seller dashboard work (not mine — was user's uncommitted WIP) |
+| #   | Commit                                                                                  | Summary                                                                                                          |
+| --- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 7   | `feat(backend): admin-only GET /admin/call-logs for listing triage`                     | Raw CallLog triage endpoint (admin-only, buyer visible)                                                          |
+| 6   | `feat(backend): market listener + admin approval gate + /health liveness (Phase 2c)`    | `ListingRegistered` → DB PENDING; approval filter on `/listings`, `/:id`, `/call`; `/health` liveness classifier |
+| 5   | `feat(backend): chain-lens.inspect MCP tool + recent error breakdown (Phase 2b-v2)`     | 7-day error bucket in `/listings/:id`; new `chain-lens.inspect` MCP tool                                         |
+| 4   | `feat: weighted-random ranking + rich discover (Phase 2b-v1)`                           | Laplace smoothing + weighted random shuffle; `chain-lens.discover` rewritten for v3 endpoint                     |
+| 3   | `feat(backend): call logging + per-listing stats for v3 ranking (Phase 2a)`             | `CallLog` model, `logCall`/`getListingStats`, stats in listings response                                         |
+| 2   | `feat: v3 x402 marketplace — ChainLensMarket + Gateway proxy + MCP call tool` (Phase 1) | Single-contract deploy, `/api/market/*` routes, `chain-lens.call` tool, frontend register form                   |
+| 1   | `feat(seller): SIWE auth + authenticated listing edit (v0.1.1 #5, #6)`                  | Pre-session seller dashboard work (not mine — was user's uncommitted WIP)                                        |
 
 ---
 
 ## Architecture map (where stuff lives)
 
 ### Contract (`packages/contracts`)
+
 - `contracts/ChainLensMarket.sol` — single v3 contract (~300 L)
 - `contracts/ApiMarketEscrowV2.sol` etc. — v2 legacy, frozen, left deployed
 - `ignition/modules/ChainLensMarket.ts` — deploy module
 - `ignition/deployments/chain-lens-market-20260422/` — deploy record
 
 ### Shared (`packages/shared`)
+
 - ABIs in `src/abi/` — `ChainLensMarketAbi` is the live one
 - `src/constants/contracts.ts` — `CHAIN_LENS_MARKET_ADDRESSES[84532]` points at deploy
 - **Must rebuild (`pnpm build`) if you touch schema — downstream packages import from `dist/`**
 
 ### Backend (`packages/backend`)
+
 - `prisma/schema.prisma` — models. `ApiListing` has `contractVersion` ("V3" or null-for-v2); `CallLog` tracks v3 calls.
 - `src/services/market-chain.service.ts` — on-chain read helpers (`marketAddress`, `readListing`, `nextListingId`, `resolveMetadata`). Shared by routes + listener + health.
 - `src/services/market-listener.service.ts` — event listener, boot catch-up, pure `classifyHealth()` for `/health`.
@@ -86,6 +92,7 @@ hundreds of Opus turns.
 - `src/index.ts` — boots v1 + v2 + v3 (market) listeners.
 
 ### MCP (`packages/mcp-tool`)
+
 - `src/tools/discover.ts` — v3 search (ranked + filters).
 - `src/tools/inspect.ts` — single-listing detail + error breakdown.
 - `src/tools/call.ts` — x402 call via Gateway.
@@ -95,6 +102,7 @@ hundreds of Opus turns.
 - `src/server.ts` — MCP server wiring; conditional tool registration.
 
 ### Frontend (`packages/frontend`)
+
 - `src/config/contracts.ts` — `chainLensMarketConfig`, `escrowConfig`.
 - `src/hooks/useRegisterV3.ts` — on-chain `register()` via wagmi, metadata → `data:application/json,...`.
 - `src/hooks/useClaim.ts` — points at ChainLensMarket.claimable/claim().
@@ -150,12 +158,14 @@ See `docs/BACKLOG.md` §"Search engine roadmap (agent-first)" for the full strat
 ## Conventions (non-negotiable)
 
 ### Commit style
+
 - Subjects: `type(scope): short summary` (matches existing log: `feat(backend):`, `fix(backend):`, `docs(backlog):`, etc.).
 - Bodies: what changed, WHY, tests state, follow-ups. No emoji.
 - Co-author trailer: `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>` (or adapt to Sonnet identity).
 - Heredoc for multi-line messages.
 
 ### Workflow
+
 - **Plan before code**: for anything >~50 L, show the plan first, get ack, then implement. User dislikes surprises mid-commit.
 - **Small commits**: topical. Don't mix unrelated changes.
 - **IDE stale cache**: diagnostics appear constantly between edits — **always trust `npx tsc --noEmit` exit code, not hints**. The hints you see are typically stale between parallel Edits.
@@ -163,11 +173,13 @@ See `docs/BACKLOG.md` §"Search engine roadmap (agent-first)" for the full strat
 - **Korean responses** by default. Code + commit messages stay in English.
 
 ### Testing discipline
+
 - Pure logic → unit test with `node:test`. See `call-log.service.test.ts` / `market-listener.service.test.ts` for pattern.
 - Prisma-heavy functions: skip unit, rely on higher-level integration. User has integration tests on their side.
 - **Never commit with tsc errors**. Never use `--no-verify`. Never bypass hooks.
 
 ### v2 = 방치 (leave alone)
+
 - v2 routes, services, contracts are live but frozen. Don't refactor them unless specifically asked.
 - v2 code paths use `contractVersion: null` in `ApiListing`. v3 writes `"V3"`.
 
@@ -180,6 +192,7 @@ See `docs/BACKLOG.md` §"Search engine roadmap (agent-first)" for the full strat
 Rationale: last commit shipped the approval gate via event listener — which is the single point where a silent bug means new listings never reach the admin UI. Current coverage is pure `classifyHealth` only; handler wiring is untested. Low effort, high safety return.
 
 Concrete scope:
+
 - New file `packages/backend/src/services/market-listener.service.integration.test.ts` (separate from existing `.test.ts`)
 - Fake Prisma: minimal `{callLog, apiListing}` implementing `upsert`, `updateMany`, `findFirst`, `findMany`
 - Fake `publicClient.watchContractEvent`: returns a controllable unwatch + exposes the registered `onLogs` callback

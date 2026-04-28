@@ -13,11 +13,7 @@ import { decodeTx } from "./tx-decoder.js";
 import { decodeTypedData } from "./typed-data-decoder.js";
 import type { LimitEnforcer } from "./limit-enforcer.js";
 import { atomicToUsdc } from "../config.js";
-import type {
-  DecodedSpend,
-  PromptContext,
-  PromptResult,
-} from "./approval-prompt.js";
+import type { DecodedSpend, PromptContext, PromptResult } from "./approval-prompt.js";
 
 export interface PolicyOptions {
   limits: LimitEnforcer;
@@ -82,11 +78,7 @@ async function checkLimitsAndPrompt(
   });
   if (!result.approved) {
     const code =
-      result.reason === "timeout"
-        ? "timeout"
-        : result.reason === "no-tty"
-          ? "no_tty"
-          : "denied";
+      result.reason === "timeout" ? "timeout" : result.reason === "no-tty" ? "no_tty" : "denied";
     const verb = result.reason === "timeout" ? "did not respond" : "denied";
     return deny(code, `user ${verb} approval`);
   }

@@ -30,9 +30,7 @@ export default function ReputationPage() {
   if (error || !reputation) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-8">
-        <p className="text-[var(--red)]">
-          {error ?? "Seller not registered"}
-        </p>
+        <p className="text-[var(--red)]">{error ?? "Seller not registered"}</p>
       </div>
     );
   }
@@ -47,10 +45,10 @@ export default function ReputationPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div>
-        <h1 className="mb-1 text-2xl font-bold text-[var(--text)]">{reputation.name || "Unnamed Seller"}</h1>
-        <p className="font-mono text-xs text-[var(--text3)]">
-          {reputation.address}
-        </p>
+        <h1 className="mb-1 text-2xl font-bold text-[var(--text)]">
+          {reputation.name || "Unnamed Seller"}
+        </h1>
+        <p className="font-mono text-xs text-[var(--text3)]">{reputation.address}</p>
         <div className="mt-2 flex items-center gap-2 text-sm">
           <span
             className={`rounded-full px-2 py-0.5 text-xs ${
@@ -62,8 +60,7 @@ export default function ReputationPage() {
             {reputation.active ? "Active" : "Inactive"}
           </span>
           <span className="text-[var(--text2)]">
-            Registered{" "}
-            {new Date(Number(reputation.registeredAt) * 1000).toLocaleDateString()}
+            Registered {new Date(Number(reputation.registeredAt) * 1000).toLocaleDateString()}
           </span>
         </div>
       </div>
@@ -80,22 +77,14 @@ export default function ReputationPage() {
       </div>
 
       <div className="card space-y-3">
-        <h2 className="text-lg font-semibold text-[var(--text)]">
-          Earnings
-        </h2>
-        <div className="font-mono text-3xl text-[var(--text)]">
-          {earningsUsdc} USDC
-        </div>
+        <h2 className="text-lg font-semibold text-[var(--text)]">Earnings</h2>
+        <div className="font-mono text-3xl text-[var(--text)]">{earningsUsdc} USDC</div>
       </div>
 
       <div className="card space-y-3">
-        <h2 className="text-lg font-semibold text-[var(--text)]">
-          Capabilities
-        </h2>
+        <h2 className="text-lg font-semibold text-[var(--text)]">Capabilities</h2>
         {reputation.capabilities.length === 0 ? (
-          <p className="text-sm text-[var(--text2)]">
-            No capabilities registered on-chain.
-          </p>
+          <p className="text-sm text-[var(--text2)]">No capabilities registered on-chain.</p>
         ) : (
           <ul className="space-y-1 font-mono text-xs text-[var(--text)]">
             {reputation.capabilities.map((c) => (
@@ -109,9 +98,7 @@ export default function ReputationPage() {
 
       {reputation.metadataURI && (
         <div className="card space-y-2">
-          <h2 className="text-lg font-semibold text-[var(--text)]">
-            Metadata
-          </h2>
+          <h2 className="text-lg font-semibold text-[var(--text)]">Metadata</h2>
           <a
             href={resolveUri(reputation.metadataURI)}
             target="_blank"
@@ -126,28 +113,12 @@ export default function ReputationPage() {
   );
 }
 
-function Stat({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-}) {
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="card">
-      <div className="mb-1 text-xs text-[var(--text2)]">
-        {label}
-      </div>
-      <div className="text-xl font-semibold text-[var(--text)]">
-        {value}
-      </div>
-      {hint && (
-        <div className="mt-1 text-xs text-[var(--text3)]">
-          {hint}
-        </div>
-      )}
+      <div className="mb-1 text-xs text-[var(--text2)]">{label}</div>
+      <div className="text-xl font-semibold text-[var(--text)]">{value}</div>
+      {hint && <div className="mt-1 text-xs text-[var(--text3)]">{hint}</div>}
     </div>
   );
 }

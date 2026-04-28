@@ -1,16 +1,13 @@
 import { expect } from "chai";
 import hre from "hardhat";
-import {
-  loadFixture,
-} from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
 import { getAddress, parseUnits } from "viem";
 
 const PAYMENT_AMOUNT = parseUnits("1", 6);
 
 describe("ApiMarketEscrow", function () {
   async function deployFixture() {
-    const [owner, gateway, buyer, seller, other] =
-      await hre.viem.getWalletClients();
+    const [owner, gateway, buyer, seller, other] = await hre.viem.getWalletClients();
 
     const usdc = await hre.viem.deployContract("MockUSDC");
     const escrow = await hre.viem.deployContract("ApiMarketEscrow", [
@@ -26,26 +23,18 @@ describe("ApiMarketEscrow", function () {
     });
     await usdcAsBuyer.write.approve([escrow.address, PAYMENT_AMOUNT]);
 
-    const escrowAsBuyer = await hre.viem.getContractAt(
-      "ApiMarketEscrow",
-      escrow.address,
-      { client: { wallet: buyer } }
-    );
-    const escrowAsGateway = await hre.viem.getContractAt(
-      "ApiMarketEscrow",
-      escrow.address,
-      { client: { wallet: gateway } }
-    );
-    const escrowAsSeller = await hre.viem.getContractAt(
-      "ApiMarketEscrow",
-      escrow.address,
-      { client: { wallet: seller } }
-    );
-    const escrowAsOther = await hre.viem.getContractAt(
-      "ApiMarketEscrow",
-      escrow.address,
-      { client: { wallet: other } }
-    );
+    const escrowAsBuyer = await hre.viem.getContractAt("ApiMarketEscrow", escrow.address, {
+      client: { wallet: buyer },
+    });
+    const escrowAsGateway = await hre.viem.getContractAt("ApiMarketEscrow", escrow.address, {
+      client: { wallet: gateway },
+    });
+    const escrowAsSeller = await hre.viem.getContractAt("ApiMarketEscrow", escrow.address, {
+      client: { wallet: seller },
+    });
+    const escrowAsOther = await hre.viem.getContractAt("ApiMarketEscrow", escrow.address, {
+      client: { wallet: other },
+    });
 
     return {
       escrow,
@@ -65,11 +54,7 @@ describe("ApiMarketEscrow", function () {
   async function createPayment() {
     const fixture = await deployFixture();
     await fixture.escrow.write.approveApi([1n]);
-    await fixture.escrowAsBuyer.write.pay([
-      1n,
-      fixture.seller.account.address,
-      PAYMENT_AMOUNT,
-    ]);
+    await fixture.escrowAsBuyer.write.pay([1n, fixture.seller.account.address, PAYMENT_AMOUNT]);
     return fixture;
   }
 
@@ -77,15 +62,9 @@ describe("ApiMarketEscrow", function () {
     it("sets owner, gateway, usdc, and nextPaymentId", async function () {
       const { escrow, owner, gateway, usdc } = await loadFixture(deployFixture);
 
-      expect(getAddress(await escrow.read.owner())).to.equal(
-        getAddress(owner.account.address)
-      );
-      expect(getAddress(await escrow.read.gateway())).to.equal(
-        getAddress(gateway.account.address)
-      );
-      expect(getAddress(await escrow.read.usdc())).to.equal(
-        getAddress(usdc.address)
-      );
+      expect(getAddress(await escrow.read.owner())).to.equal(getAddress(owner.account.address));
+      expect(getAddress(await escrow.read.gateway())).to.equal(getAddress(gateway.account.address));
+      expect(getAddress(await escrow.read.usdc())).to.equal(getAddress(usdc.address));
       expect(await escrow.read.nextPaymentId()).to.equal(0n);
     });
   });
@@ -104,12 +83,8 @@ describe("ApiMarketEscrow", function () {
     it("restricts approval changes to owner", async function () {
       const { escrowAsOther } = await loadFixture(deployFixture);
 
-      await expect(escrowAsOther.write.approveApi([1n])).to.be.rejectedWith(
-        "Only owner"
-      );
-      await expect(escrowAsOther.write.revokeApi([1n])).to.be.rejectedWith(
-        "Only owner"
-      );
+      await expect(escrowAsOther.write.approveApi([1n])).to.be.rejectedWith("Only owner");
+      await expect(escrowAsOther.write.revokeApi([1n])).to.be.rejectedWith("Only owner");
     });
   });
 
@@ -132,7 +107,7 @@ describe("ApiMarketEscrow", function () {
       const { escrowAsBuyer, seller } = await loadFixture(deployFixture);
 
       await expect(
-        escrowAsBuyer.write.pay([99n, seller.account.address, PAYMENT_AMOUNT])
+        escrowAsBuyer.write.pay([99n, seller.account.address, PAYMENT_AMOUNT]),
       ).to.be.rejectedWith("API not approved");
     });
   });
@@ -146,7 +121,7 @@ describe("ApiMarketEscrow", function () {
       const payment = await escrow.read.getPayment([0n]);
       expect(payment.completed).to.equal(true);
       expect(await escrow.read.pendingWithdrawals([seller.account.address])).to.equal(
-        PAYMENT_AMOUNT
+        PAYMENT_AMOUNT,
       );
     });
 
@@ -167,9 +142,7 @@ describe("ApiMarketEscrow", function () {
     it("restricts complete to gateway", async function () {
       const { escrowAsOther } = await loadFixture(createPayment);
 
-      await expect(escrowAsOther.write.complete([0n])).to.be.rejectedWith(
-        "Only gateway"
-      );
+      await expect(escrowAsOther.write.complete([0n])).to.be.rejectedWith("Only gateway");
     });
   });
 
@@ -189,18 +162,14 @@ describe("ApiMarketEscrow", function () {
       const { escrowAsGateway } = await loadFixture(createPayment);
 
       await escrowAsGateway.write.refund([0n]);
-      await expect(escrowAsGateway.write.refund([0n])).to.be.rejectedWith(
-        "Already refunded"
-      );
+      await expect(escrowAsGateway.write.refund([0n])).to.be.rejectedWith("Already refunded");
     });
 
     it("does not allow refund after complete", async function () {
       const { escrowAsGateway } = await loadFixture(createPayment);
 
       await escrowAsGateway.write.complete([0n]);
-      await expect(escrowAsGateway.write.refund([0n])).to.be.rejectedWith(
-        "Already completed"
-      );
+      await expect(escrowAsGateway.write.refund([0n])).to.be.rejectedWith("Already completed");
     });
   });
 
@@ -209,14 +178,10 @@ describe("ApiMarketEscrow", function () {
       const { escrow, other } = await loadFixture(deployFixture);
 
       await escrow.write.setGateway([other.account.address]);
-      expect(getAddress(await escrow.read.gateway())).to.equal(
-        getAddress(other.account.address)
-      );
+      expect(getAddress(await escrow.read.gateway())).to.equal(getAddress(other.account.address));
 
       await escrow.write.transferOwnership([other.account.address]);
-      expect(getAddress(await escrow.read.owner())).to.equal(
-        getAddress(other.account.address)
-      );
+      expect(getAddress(await escrow.read.owner())).to.equal(getAddress(other.account.address));
     });
   });
 });

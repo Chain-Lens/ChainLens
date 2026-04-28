@@ -20,38 +20,25 @@ function IconTelegram() {
 export default function LandingFooter() {
   return (
     <footer className={styles.footer}>
-      <span className={styles.logo} style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+      <span
+        className={styles.logo}
+        style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+      >
         <Image src="/chainlens_coin_256.png" alt="ChainLens" width={18} height={18} />
         ChainLens
       </span>
 
       <div className={styles.links}>
-        <a
-          href="https://x.com/ihojae212644"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <a href="https://x.com/ihojae212644" target="_blank" rel="noopener noreferrer">
           <IconX /> @ihojae212644
         </a>
-        <a
-          href="https://t.me/ghwo336"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <a href="https://t.me/ghwo336" target="_blank" rel="noopener noreferrer">
           <IconTelegram /> @ghwo336
         </a>
-        <a
-          href="https://chainlens.pelicanlab.dev"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <a href="https://chainlens.pelicanlab.dev" target="_blank" rel="noopener noreferrer">
           ⚡ Testnet
         </a>
-        <a
-          href="https://forms.gle/EtCpnWtRcMeM7UtC7"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <a href="https://forms.gle/EtCpnWtRcMeM7UtC7" target="_blank" rel="noopener noreferrer">
           Waitlist
         </a>
       </div>

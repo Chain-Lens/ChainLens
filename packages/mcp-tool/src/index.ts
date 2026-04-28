@@ -105,7 +105,11 @@ async function main() {
   // from the tool list.
   let requestDeps: RequestDeps | undefined;
   if (signer && !isZero(escrowAddress)) {
-    const walletClient = createWalletClient({ chain, transport: http(config.rpcUrl), account: signer });
+    const walletClient = createWalletClient({
+      chain,
+      transport: http(config.rpcUrl),
+      account: signer,
+    });
     requestDeps = {
       apiBaseUrl: config.apiBaseUrl,
       fetch: globalThis.fetch.bind(globalThis),
@@ -116,12 +120,11 @@ async function main() {
       escrowAbi: ApiMarketEscrowV2Abi as Abi,
       usdcAddress: usdcAddress as `0x${string}`,
       usdcEip712Name: process.env.USDC_EIP712_NAME || DEFAULT_USDC_EIP712_NAME,
-      usdcEip712Version:
-        process.env.USDC_EIP712_VERSION || DEFAULT_USDC_EIP712_VERSION,
+      usdcEip712Version: process.env.USDC_EIP712_VERSION || DEFAULT_USDC_EIP712_VERSION,
       keccak256: (s: string) => keccak256(stringToBytes(s)),
       taskTypeId: bytes32FromName,
       inputsHash: canonicalInputsHash,
-      randomNonce: () => (`0x${randomBytes(32).toString("hex")}`) as `0x${string}`,
+      randomNonce: () => `0x${randomBytes(32).toString("hex")}` as `0x${string}`,
       pollIntervalMs: config.pollIntervalMs,
       pollTimeoutMs: config.pollTimeoutMs,
     };
@@ -139,8 +142,7 @@ async function main() {
       usdcAddress: usdcAddress as `0x${string}`,
       chainId: config.chainId,
       usdcEip712Name: process.env.USDC_EIP712_NAME || DEFAULT_USDC_EIP712_NAME,
-      usdcEip712Version:
-        process.env.USDC_EIP712_VERSION || DEFAULT_USDC_EIP712_VERSION,
+      usdcEip712Version: process.env.USDC_EIP712_VERSION || DEFAULT_USDC_EIP712_VERSION,
     };
   }
 

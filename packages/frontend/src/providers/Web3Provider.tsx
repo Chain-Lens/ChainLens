@@ -12,18 +12,19 @@ export default function Web3Provider({ children }: { children: React.ReactNode }
   const [queryClient] = useState(() => new QueryClient());
   const { theme } = useTheme();
 
-  const rainbowKitTheme = theme === "dark"
-    ? darkTheme({
-        accentColor: "#238636",
-        accentColorForeground: "white",
-        borderRadius: "medium",
-        overlayBlur: "small",
-      })
-    : lightTheme({
-        accentColor: "#2563eb",
-        accentColorForeground: "white",
-        borderRadius: "medium",
-      });
+  const rainbowKitTheme =
+    theme === "dark"
+      ? darkTheme({
+          accentColor: "#238636",
+          accentColorForeground: "white",
+          borderRadius: "medium",
+          overlayBlur: "small",
+        })
+      : lightTheme({
+          accentColor: "#2563eb",
+          accentColorForeground: "white",
+          borderRadius: "medium",
+        });
 
   return (
     <WagmiProvider config={wagmiConfig}>

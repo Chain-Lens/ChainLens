@@ -62,8 +62,7 @@ export default function LandingFeatures() {
             agent-native future
           </h2>
           <p className={sStyles.sub}>
-            Every design decision optimizes for autonomous agents as first-class
-            economic actors.
+            Every design decision optimizes for autonomous agents as first-class economic actors.
           </p>
         </FadeIn>
 

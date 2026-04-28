@@ -3,18 +3,13 @@ import "@/styles/globals.css";
 
 export const metadata: Metadata = {
   title: "ChainLens - Agent API Marketplace",
-  description:
-    "Discover, buy, and use verified APIs with on-chain payments on Base",
+  description: "Discover, buy, and use verified APIs with on-chain payments on Base",
   icons: {
     icon: "/favicon.png",
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       {/* Prevent flash of wrong theme before React hydrates */}

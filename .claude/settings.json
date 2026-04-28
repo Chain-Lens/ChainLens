@@ -15,8 +15,6 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(npx prisma *)"
     ],
-    "additionalDirectories": [
-      "/opt/homebrew/etc/nginx"
-    ]
+    "additionalDirectories": ["/opt/homebrew/etc/nginx"]
   }
 }

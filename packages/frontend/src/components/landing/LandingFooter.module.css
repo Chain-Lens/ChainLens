@@ -31,7 +31,9 @@
   gap: 0.4rem;
   transition: color 0.2s;
 }
-.links a:hover { color: var(--text); }
+.links a:hover {
+  color: var(--text);
+}
 
 .copy {
   font-size: 0.78rem;

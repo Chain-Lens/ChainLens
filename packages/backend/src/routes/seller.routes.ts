@@ -1,10 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import * as apiService from "../services/api.service.js";
-import {
-  requireSeller,
-  type SellerAuthenticatedRequest,
-} from "../middleware/auth.js";
+import { requireSeller, type SellerAuthenticatedRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { AppError, BadRequestError } from "../utils/errors.js";
 import { assertSafeOutboundUrl } from "../utils/network.js";
@@ -25,17 +22,9 @@ const EDITABLE_KEYS = new Set([
 // client sees when they try to PATCH a locked field like `price`.
 function rejectNonEditableKeys(req: Request, _res: Response, next: NextFunction) {
   if (!req.body || typeof req.body !== "object") return next();
-  const rejected = Object.keys(req.body).filter(
-    (k) => !EDITABLE_KEYS.has(k),
-  );
+  const rejected = Object.keys(req.body).filter((k) => !EDITABLE_KEYS.has(k));
   if (rejected.length === 0) return next();
-  next(
-    new AppError(
-      `Non-editable fields rejected: ${rejected.join(", ")}`,
-      400,
-      "invalid_field",
-    ),
-  );
+  next(new AppError(`Non-editable fields rejected: ${rejected.join(", ")}`, 400, "invalid_field"));
 }
 
 const router = Router();
@@ -57,8 +46,12 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const startedAt = Date.now();
-      const { endpoint, method = "GET", payload = {}, output_schema } =
-        req.body as z.infer<typeof preflightSchema>;
+      const {
+        endpoint,
+        method = "GET",
+        payload = {},
+        output_schema,
+      } = req.body as z.infer<typeof preflightSchema>;
       const safeUrl = await assertSafeOutboundUrl(endpoint);
 
       const fetchOptions: RequestInit = {
@@ -105,12 +98,8 @@ router.post(
         });
         schemaValid = schemaCheck.applicable ? schemaCheck.valid : null;
         if (schemaCheck.applicable && !schemaCheck.valid) {
-          warnings.push(
-            `schema_validation_failed: ${schemaCheck.reason ?? "unknown"}`,
-          );
-          error =
-            error ??
-            `schema_validation_failed: ${schemaCheck.reason ?? "unknown"}`;
+          warnings.push(`schema_validation_failed: ${schemaCheck.reason ?? "unknown"}`);
+          error = error ?? `schema_validation_failed: ${schemaCheck.reason ?? "unknown"}`;
         }
       } catch (err) {
         error = err instanceof Error ? err.message : "Request failed";
@@ -186,11 +175,7 @@ router.patch(
         await assertSafeOutboundUrl(patch.endpoint);
       }
 
-      const updated = await apiService.updateByOwner(
-        id,
-        req.sellerAddress!,
-        patch,
-      );
+      const updated = await apiService.updateByOwner(id, req.sellerAddress!, patch);
 
       if (updated.changed) {
         logger.info(
@@ -212,10 +197,7 @@ router.delete(
   "/listings/:id",
   async (req: SellerAuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const result = await apiService.deleteApi(
-        req.params["id"] as string,
-        req.sellerAddress!,
-      );
+      const result = await apiService.deleteApi(req.params["id"] as string, req.sellerAddress!);
       res.json(result);
     } catch (err) {
       next(err);

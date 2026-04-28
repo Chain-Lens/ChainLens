@@ -163,7 +163,9 @@ export function aggregateErrors(
 /** Box-Muller transform: standard normal from two U(0,1) samples. */
 function normalRandom(rng: () => number): number {
   let u: number;
-  do { u = rng(); } while (u === 0);
+  do {
+    u = rng();
+  } while (u === 0);
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng());
 }
 
@@ -194,11 +196,7 @@ function sampleGamma(shape: number, rng: () => number): number {
  * Sample from Beta(alpha, beta) via ratio of two independent Gamma samples.
  * Exported for unit testing; production callers should use scoreListing.
  */
-export function sampleBeta(
-  alpha: number,
-  beta: number,
-  rng: () => number = Math.random,
-): number {
+export function sampleBeta(alpha: number, beta: number, rng: () => number = Math.random): number {
   const x = sampleGamma(alpha, rng);
   const y = sampleGamma(beta, rng);
   return x / (x + y);
@@ -217,10 +215,7 @@ export function sampleBeta(
  * Optional rng for unit tests; defaults to Math.random in production.
  * Signature is backward-compatible with all callers.
  */
-export function scoreListing(
-  stats: ListingStats,
-  rng: () => number = Math.random,
-): number {
+export function scoreListing(stats: ListingStats, rng: () => number = Math.random): number {
   const alpha = 1 + stats.successes;
   const beta = 1 + (stats.totalCalls - stats.successes);
   return sampleBeta(alpha, beta, rng);
@@ -262,9 +257,7 @@ export interface CallLogPage {
   offset: number;
 }
 
-export async function listCallLogs(
-  filter: CallLogFilter,
-): Promise<CallLogPage> {
+export async function listCallLogs(filter: CallLogFilter): Promise<CallLogPage> {
   const limit = Math.min(Math.max(filter.limit ?? 50, 1), 500);
   const offset = Math.max(filter.offset ?? 0, 0);
   const where = {
@@ -307,9 +300,7 @@ export function aggregateRows(rows: RawRow[], windowDays: number): ListingStats 
   const successes = successRows.length;
   const successRate = successes / rows.length;
   const avgLatencyMs = successes
-    ? Math.round(
-        successRows.reduce((sum, r) => sum + r.latencyMs, 0) / successes,
-      )
+    ? Math.round(successRows.reduce((sum, r) => sum + r.latencyMs, 0) / successes)
     : 0;
   const lastCalledAt = rows.reduce(
     (max, r) => (r.createdAt > max ? r.createdAt : max),
@@ -383,8 +374,7 @@ export function groupByListingDay(rows: RollupRow[]): DayRollup[] {
   }
   return [...map.values()].map(({ entry, latencySum }) => ({
     ...entry,
-    avgLatencyMs:
-      entry.successes > 0 ? Math.round(latencySum / entry.successes) : 0,
+    avgLatencyMs: entry.successes > 0 ? Math.round(latencySum / entry.successes) : 0,
   }));
 }
 

@@ -1,0 +1,24 @@
+node_modules
+.pnpm-store
+dist
+build
+.next
+.turbo
+coverage
+*.lock
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Generated / artifacts
+packages/contracts/artifacts
+packages/contracts/cache
+packages/contracts/typechain-types
+packages/contracts/ignition/deployments
+
+# Prisma generated
+packages/backend/prisma/generated
+
+# Logs / temp
+*.log
+.DS_Store

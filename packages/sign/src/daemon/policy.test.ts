@@ -194,9 +194,7 @@ describe("daemon policy gate", () => {
     });
     try {
       const client = await connectDaemon(env.socketPath);
-      await client
-        .signTransaction(mkApproveTx(2_000_000n))
-        .catch(() => undefined);
+      await client.signTransaction(mkApproveTx(2_000_000n)).catch(() => undefined);
       assert.equal(env.limits.windowSum(), 0n);
       client.close();
     } finally {
@@ -208,9 +206,7 @@ describe("daemon policy gate", () => {
     const env = await mkTestDaemon({ prompt: async () => ({ approved: true }) });
     try {
       const client = await connectDaemon(env.socketPath);
-      const signed = await client.signTypedData(
-        mkReceiveWithAuthorization(3_000_000n),
-      );
+      const signed = await client.signTypedData(mkReceiveWithAuthorization(3_000_000n));
       assert.match(signed.signature, /^0x[0-9a-fA-F]{130}$/);
       assert.equal(env.limits.windowSum(), 3_000_000n);
       client.close();

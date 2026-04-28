@@ -96,8 +96,7 @@ function weightedShuffle<T>(
 router.get("/listings", async (req, res, next) => {
   try {
     // ───── parse query ──────────────────────────────────────────────
-    const q =
-      typeof req.query["q"] === "string" ? req.query["q"].toLowerCase().trim() : undefined;
+    const q = typeof req.query["q"] === "string" ? req.query["q"].toLowerCase().trim() : undefined;
     const tag =
       typeof req.query["tag"] === "string" ? req.query["tag"].toLowerCase().trim() : undefined;
     const minSuccessRate =
@@ -109,11 +108,10 @@ router.get("/listings", async (req, res, next) => {
         ? Number(req.query["max_price_usdc"])
         : undefined;
     const seed = typeof req.query["seed"] === "string" ? req.query["seed"] : undefined;
-    const rawLimit =
-      typeof req.query["limit"] === "string" ? Number(req.query["limit"]) : 20;
-    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 100) : 20;
-    const sortRaw =
-      typeof req.query["sort"] === "string" ? req.query["sort"] : "score";
+    const rawLimit = typeof req.query["limit"] === "string" ? Number(req.query["limit"]) : 20;
+    const limit =
+      Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), 100) : 20;
+    const sortRaw = typeof req.query["sort"] === "string" ? req.query["sort"] : "score";
     const sort: "score" | "score_strict" | "latest" =
       sortRaw === "latest" || sortRaw === "score_strict" ? sortRaw : "score";
 
@@ -164,24 +162,19 @@ router.get("/listings", async (req, res, next) => {
         })
         .then(
           (rows) =>
-            new Set(
-              rows
-                .map((r) => r.onChainId)
-                .filter((x): x is number => typeof x === "number"),
-            ),
+            new Set(rows.map((r) => r.onChainId).filter((x): x is number => typeof x === "number")),
         ),
     ]);
 
     let items = raw.map((r) => {
-      const stats =
-        statsMap.get(r.listingIdNum) ?? {
-          successRate: 0,
-          avgLatencyMs: 0,
-          totalCalls: 0,
-          successes: 0,
-          lastCalledAt: null,
-          windowDays: 30,
-        };
+      const stats = statsMap.get(r.listingIdNum) ?? {
+        successRate: 0,
+        avgLatencyMs: 0,
+        totalCalls: 0,
+        successes: 0,
+        lastCalledAt: null,
+        windowDays: 30,
+      };
       return {
         listingId: r.listingId,
         owner: r.owner,
@@ -241,9 +234,7 @@ router.get("/listings", async (req, res, next) => {
     // - score_strict: deterministic score desc. Debug + admin use.
     // - latest: listingId desc. No ranking pressure, just recency.
     if (sort === "latest") {
-      items.sort((a, b) =>
-        Number(BigInt(b.listingId) - BigInt(a.listingId)),
-      );
+      items.sort((a, b) => Number(BigInt(b.listingId) - BigInt(a.listingId)));
     } else if (sort === "score_strict") {
       items.sort((a, b) => b.score - a.score);
     } else {
@@ -260,7 +251,7 @@ router.get("/listings", async (req, res, next) => {
 
     res.json({
       items: limited,
-      total: items.length,            // post-filter
+      total: items.length, // post-filter
       totalBeforeFilter: beforeFilterCount,
       limit,
       sort,
@@ -435,7 +426,12 @@ async function safeJson(r: Response): Promise<unknown> {
   }
 }
 
-function wrapExternal(body: unknown, sourceHost: string, listingId: string, jobRef: string): {
+function wrapExternal(
+  body: unknown,
+  sourceHost: string,
+  listingId: string,
+  jobRef: string,
+): {
   data: unknown;
   envelope: string;
 } {
@@ -647,9 +643,7 @@ export async function handlePaidListingCall({
 
     // 4. Call seller
     const jobRef = keccak256(
-      stringToBytes(
-        `${listingIdStr}|${payment.buyer}|${payment.nonce}|${payment.amount}`,
-      ),
+      stringToBytes(`${listingIdStr}|${payment.buyer}|${payment.nonce}|${payment.amount}`),
     );
     outcome.jobRef = jobRef;
 
@@ -684,8 +678,7 @@ export async function handlePaidListingCall({
 
     if (!sellerResult.ok) {
       // Auth not submitted → USDC never moves. This IS the refund.
-      outcome.errorReason =
-        sellerResult.status >= 500 ? "seller_5xx" : "seller_4xx";
+      outcome.errorReason = sellerResult.status >= 500 ? "seller_5xx" : "seller_4xx";
       res.status(502).json({
         error: "seller returned non-2xx",
         sellerStatus: sellerResult.status,
@@ -704,12 +697,7 @@ export async function handlePaidListingCall({
           return "unknown";
         }
       })();
-      const wrappedRejected = wrapExternal(
-        sellerResult.body,
-        host,
-        listingIdStr,
-        jobRef,
-      );
+      const wrappedRejected = wrapExternal(sellerResult.body, host, listingIdStr, jobRef);
       res.status(422).json({
         error: "seller response rejected",
         rejectionReason: scan.reason ?? "response_rejected",
@@ -737,12 +725,7 @@ export async function handlePaidListingCall({
           return "unknown";
         }
       })();
-      const wrappedRejected = wrapExternal(
-        sellerResult.body,
-        host,
-        listingIdStr,
-        jobRef,
-      );
+      const wrappedRejected = wrapExternal(sellerResult.body, host, listingIdStr, jobRef);
       res.status(422).json({
         error: "seller response rejected",
         rejectionReason,
@@ -875,9 +858,7 @@ export async function handlePaidListingCall({
       jobRef: outcome.jobRef,
       settleTxHash: outcome.settleTxHash,
       errorReason: outcome.errorReason,
-    }).catch((e) =>
-      logger.warn({ err: String(e) }, "call log insert failed"),
-    );
+    }).catch((e) => logger.warn({ err: String(e) }, "call log insert failed"));
   }
 }
 

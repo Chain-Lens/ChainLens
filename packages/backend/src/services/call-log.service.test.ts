@@ -98,7 +98,10 @@ function samples(alpha: number, beta_: number, n: number, seed: number): number[
 describe("sampleBeta", () => {
   test("all samples are in [0, 1]", () => {
     const xs = samples(3, 5, 300, 1);
-    assert.ok(xs.every((x) => x >= 0 && x <= 1), "out-of-range sample found");
+    assert.ok(
+      xs.every((x) => x >= 0 && x <= 1),
+      "out-of-range sample found",
+    );
   });
 
   test("Beta(1,1) = Uniform(0,1): mean ≈ 0.5", () => {
@@ -107,7 +110,12 @@ describe("sampleBeta", () => {
   });
 
   test("mean ≈ α/(α+β) for several parameter sets", () => {
-    const cases: [number, number][] = [[2, 5], [10, 3], [50, 50], [0.5, 1.5]];
+    const cases: [number, number][] = [
+      [2, 5],
+      [10, 3],
+      [50, 50],
+      [0.5, 1.5],
+    ];
     for (const [a, b] of cases) {
       const m = avg(samples(a, b, 500, 3));
       const expected = a / (a + b);
@@ -128,7 +136,14 @@ describe("scoreListing — Thompson sampling", () => {
   // scoreListing accepts an optional rng so tests are deterministic.
   function score(successes: number, totalCalls: number, seed: number): number {
     return scoreListing(
-      { successRate: 0, avgLatencyMs: 0, totalCalls, successes, lastCalledAt: null, windowDays: 30 },
+      {
+        successRate: 0,
+        avgLatencyMs: 0,
+        totalCalls,
+        successes,
+        lastCalledAt: null,
+        windowDays: 30,
+      },
       mlb(seed),
     );
   }
@@ -146,14 +161,14 @@ describe("scoreListing — Thompson sampling", () => {
   test("higher success rate → higher expected score", () => {
     // Beta(91, 11) mean ≈ 0.89 vs Beta(11, 91) mean ≈ 0.11
     const highMean = scoreMean(90, 100, 200, 20);
-    const lowMean  = scoreMean(10, 100, 200, 220);
+    const lowMean = scoreMean(10, 100, 200, 220);
     assert.ok(highMean > lowMean, `high ${highMean.toFixed(3)} > low ${lowMean.toFixed(3)}`);
   });
 
   test("one failure on a 100-call listing barely moves expected score", () => {
     // Beta(101,1) mean=101/102 ≈ 0.990 vs Beta(100,2) mean=100/102 ≈ 0.980
-    const perfect     = scoreMean(100, 100, 300, 40);
-    const oneFailure  = scoreMean(99,  100, 300, 340);
+    const perfect = scoreMean(100, 100, 300, 40);
+    const oneFailure = scoreMean(99, 100, 300, 340);
     assert.ok(perfect > oneFailure);
     // delta < 2 % of the perfect mean — posterior absorbs one failure
     assert.ok(
@@ -165,7 +180,7 @@ describe("scoreListing — Thompson sampling", () => {
   test("established 80/100 listing outranks 1/1 rookie in expectation", () => {
     // Beta(81,21) mean ≈ 0.794 vs Beta(2,1) mean ≈ 0.667
     const established = scoreMean(80, 100, 300, 60);
-    const rookie      = scoreMean(1,  1,   300, 360);
+    const rookie = scoreMean(1, 1, 300, 360);
     assert.ok(
       established > rookie,
       `established ${established.toFixed(3)} > rookie ${rookie.toFixed(3)}`,
@@ -200,11 +215,7 @@ describe("aggregateErrors", () => {
 
   test("null errorReason falls into 'unknown' bucket", () => {
     const r = aggregateErrors(
-      [
-        { errorReason: null },
-        { errorReason: null },
-        { errorReason: "seller_4xx" },
-      ],
+      [{ errorReason: null }, { errorReason: null }, { errorReason: "seller_4xx" }],
       7,
     );
     assert.equal(r.breakdown["unknown"], 2);
@@ -224,28 +235,56 @@ describe("groupByListingDay", () => {
 
   test("groups by (listingId, UTC day)", () => {
     const rows = [
-      { listingId: 1, createdAt: new Date("2026-01-10T08:00:00Z"), success: true,  latencyMs: 100, errorReason: null },
-      { listingId: 1, createdAt: new Date("2026-01-10T20:00:00Z"), success: false, latencyMs: 500, errorReason: "seller_5xx" },
-      { listingId: 1, createdAt: new Date("2026-01-11T05:00:00Z"), success: true,  latencyMs: 200, errorReason: null },
-      { listingId: 2, createdAt: new Date("2026-01-10T12:00:00Z"), success: true,  latencyMs: 300, errorReason: null },
+      {
+        listingId: 1,
+        createdAt: new Date("2026-01-10T08:00:00Z"),
+        success: true,
+        latencyMs: 100,
+        errorReason: null,
+      },
+      {
+        listingId: 1,
+        createdAt: new Date("2026-01-10T20:00:00Z"),
+        success: false,
+        latencyMs: 500,
+        errorReason: "seller_5xx",
+      },
+      {
+        listingId: 1,
+        createdAt: new Date("2026-01-11T05:00:00Z"),
+        success: true,
+        latencyMs: 200,
+        errorReason: null,
+      },
+      {
+        listingId: 2,
+        createdAt: new Date("2026-01-10T12:00:00Z"),
+        success: true,
+        latencyMs: 300,
+        errorReason: null,
+      },
     ];
     const result = groupByListingDay(rows);
     assert.equal(result.length, 3); // listing1/day10, listing1/day11, listing2/day10
 
-    const l1d10 = result.find(r => r.listingId === 1 && r.date.toISOString().startsWith("2026-01-10"))!;
+    const l1d10 = result.find(
+      (r) => r.listingId === 1 && r.date.toISOString().startsWith("2026-01-10"),
+    )!;
     assert.ok(l1d10, "listing1 day10 entry should exist");
     assert.equal(l1d10.totalCalls, 2);
     assert.equal(l1d10.successes, 1);
     assert.equal(l1d10.avgLatencyMs, 100); // only the success row
     assert.deepEqual(l1d10.errorBreakdown, { seller_5xx: 1 });
 
-    const l1d11 = result.find(r => r.listingId === 1 && r.date.toISOString().startsWith("2026-01-11"))!;
+    const l1d11 = result.find(
+      (r) => r.listingId === 1 && r.date.toISOString().startsWith("2026-01-11"),
+    )!;
     assert.equal(l1d11.totalCalls, 1);
     assert.equal(l1d11.successes, 1);
     assert.equal(l1d11.avgLatencyMs, 200);
     assert.deepEqual(l1d11.errorBreakdown, {});
 
-    const l2d10 = result.find(r => r.listingId === 2)!;
+    const l2d10 = result.find((r) => r.listingId === 2)!;
     assert.equal(l2d10.totalCalls, 1);
     assert.equal(l2d10.successes, 1);
     assert.equal(l2d10.avgLatencyMs, 300);
@@ -253,8 +292,20 @@ describe("groupByListingDay", () => {
 
   test("avgLatencyMs is 0 when all calls failed", () => {
     const rows = [
-      { listingId: 5, createdAt: new Date("2026-03-01T10:00:00Z"), success: false, latencyMs: 9999, errorReason: "seller_timeout" },
-      { listingId: 5, createdAt: new Date("2026-03-01T11:00:00Z"), success: false, latencyMs: 8000, errorReason: "seller_timeout" },
+      {
+        listingId: 5,
+        createdAt: new Date("2026-03-01T10:00:00Z"),
+        success: false,
+        latencyMs: 9999,
+        errorReason: "seller_timeout",
+      },
+      {
+        listingId: 5,
+        createdAt: new Date("2026-03-01T11:00:00Z"),
+        success: false,
+        latencyMs: 8000,
+        errorReason: "seller_timeout",
+      },
     ];
     const [r] = groupByListingDay(rows);
     assert.equal(r.avgLatencyMs, 0);
@@ -265,7 +316,13 @@ describe("groupByListingDay", () => {
 
   test("null errorReason falls into 'unknown' bucket", () => {
     const rows = [
-      { listingId: 3, createdAt: new Date("2026-02-15T00:00:00Z"), success: false, latencyMs: 1000, errorReason: null },
+      {
+        listingId: 3,
+        createdAt: new Date("2026-02-15T00:00:00Z"),
+        success: false,
+        latencyMs: 1000,
+        errorReason: null,
+      },
     ];
     const [r] = groupByListingDay(rows);
     assert.deepEqual(r.errorBreakdown, { unknown: 1 });
@@ -273,12 +330,24 @@ describe("groupByListingDay", () => {
 
   test("midnight UTC boundary: two rows on either side of midnight split into separate days", () => {
     const rows = [
-      { listingId: 1, createdAt: new Date("2026-05-01T23:59:59Z"), success: true, latencyMs: 50, errorReason: null },
-      { listingId: 1, createdAt: new Date("2026-05-02T00:00:01Z"), success: true, latencyMs: 60, errorReason: null },
+      {
+        listingId: 1,
+        createdAt: new Date("2026-05-01T23:59:59Z"),
+        success: true,
+        latencyMs: 50,
+        errorReason: null,
+      },
+      {
+        listingId: 1,
+        createdAt: new Date("2026-05-02T00:00:01Z"),
+        success: true,
+        latencyMs: 60,
+        errorReason: null,
+      },
     ];
     const result = groupByListingDay(rows);
     assert.equal(result.length, 2);
-    assert.ok(result.some(r => r.date.toISOString().startsWith("2026-05-01")));
-    assert.ok(result.some(r => r.date.toISOString().startsWith("2026-05-02")));
+    assert.ok(result.some((r) => r.date.toISOString().startsWith("2026-05-01")));
+    assert.ok(result.some((r) => r.date.toISOString().startsWith("2026-05-02")));
   });
 });

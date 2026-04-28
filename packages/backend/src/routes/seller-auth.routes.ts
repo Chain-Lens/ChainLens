@@ -12,12 +12,15 @@ const router = Router();
 // sharing single-use nonces.
 const nonces = new Map<string, number>();
 
-setInterval(() => {
-  const now = Date.now();
-  for (const [nonce, expiry] of nonces) {
-    if (expiry < now) nonces.delete(nonce);
-  }
-}, 5 * 60 * 1000);
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [nonce, expiry] of nonces) {
+      if (expiry < now) nonces.delete(nonce);
+    }
+  },
+  5 * 60 * 1000,
+);
 
 function generateNonce(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
@@ -57,11 +60,7 @@ router.post(
 
       const address = fields.address.toLowerCase();
 
-      const token = jwt.sign(
-        { address, role: "seller" },
-        env.JWT_SECRET,
-        { expiresIn: "24h" },
-      );
+      const token = jwt.sign({ address, role: "seller" }, env.JWT_SECRET, { expiresIn: "24h" });
 
       res.cookie("seller_token", token, {
         httpOnly: true,
@@ -74,7 +73,7 @@ router.post(
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
 
 router.post("/logout", (_req: Request, res: Response) => {
