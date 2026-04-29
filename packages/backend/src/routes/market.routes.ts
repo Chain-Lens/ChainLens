@@ -24,7 +24,6 @@ import {
   usdcAddress,
   resolveMetadata,
   readListing,
-  nextListingId,
   type ListingMetadata,
   type OnChainListing,
 } from "../services/market-chain.service.js";
@@ -89,9 +88,22 @@ function weightedShuffle<T>(
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// GET /api/market/listings — scan all on-chain listings
+// GET /api/market/listings — read from indexed ApiListing mirror
 // ──────────────────────────────────────────────────────────────────────
-// Phase 1 naive scan. Swap to event-indexed cache once listing count grows.
+// Source of truth is `market-listener.service.ts`, which subscribes to
+// ListingRegistered / ListingMetadataUpdated and mirrors V3 listings into
+// the ApiListing table. We pre-filter at SQL level (status, q, tag, latest)
+// and post-filter for stats- and price-derived predicates. The legacy
+// per-request RPC scan was O(N) eth_calls per page load and dominated
+// latency once listing counts grew past a handful.
+//
+// Trade-offs vs the legacy on-chain scan:
+//   • `active` is not mirrored — the listener intentionally skips
+//     ListingDeactivated/Reactivated. /call/:id remains the integrity
+//     boundary (returns 410 for inactive). A briefly-deactivated listing
+//     can show up here until the seller updates metadata.
+//   • `tag` filter matches `category` (= meta.tags[0] at ingest). Tags
+//     beyond the first aren't stored as a discrete column today.
 
 router.get("/listings", async (req, res, next) => {
   try {
@@ -115,105 +127,67 @@ router.get("/listings", async (req, res, next) => {
     const sort: "score" | "score_strict" | "latest" =
       sortRaw === "latest" || sortRaw === "score_strict" ? sortRaw : "score";
 
-    // ───── collect on-chain state ──────────────────────────────────
-    const n = await nextListingId();
-    type RawItem = {
-      listingIdNum: number;
-      listingId: string;
-      owner: string;
-      payout: string;
-      active: boolean;
-      metadata: ListingMetadata | null;
-      metadataError?: string;
-    };
-    const raw: RawItem[] = [];
-    for (let i = 0n; i < n; i++) {
-      const l = await readListing(i);
-      let meta: ListingMetadata | null = null;
-      let err: string | undefined;
-      try {
-        meta = await resolveMetadata(l.metadataURI);
-      } catch (e) {
-        err = e instanceof Error ? e.message : String(e);
-      }
-      raw.push({
-        listingIdNum: Number(i),
-        listingId: i.toString(),
-        owner: getAddress(l.owner),
-        payout: getAddress(l.payout),
-        active: l.active,
-        metadata: meta,
-        ...(err ? { metadataError: err } : {}),
-      });
-    }
-
-    // ───── enrich with stats + score + approval ───────────────────
-    const ids = raw.map((r) => r.listingIdNum);
-    const [statsMap, approvedIds] = await Promise.all([
-      getListingsStats(ids),
-      prisma.apiListing
-        .findMany({
-          where: {
-            contractVersion: "V3",
-            onChainId: { in: ids },
-            status: "APPROVED",
-          },
-          select: { onChainId: true },
-        })
-        .then(
-          (rows) =>
-            new Set(rows.map((r) => r.onChainId).filter((x): x is number => typeof x === "number")),
-        ),
-    ]);
-
-    let items = raw.map((r) => {
-      const stats = statsMap.get(r.listingIdNum) ?? {
-        successRate: 0,
-        avgLatencyMs: 0,
-        totalCalls: 0,
-        successes: 0,
-        lastCalledAt: null,
-        windowDays: 30,
-      };
-      return {
-        listingId: r.listingId,
-        owner: r.owner,
-        payout: r.payout,
-        active: r.active,
-        metadata: r.metadata,
-        ...(r.metadataError ? { metadataError: r.metadataError } : {}),
-        stats,
-        score: scoreListing(stats),
-      };
+    // ───── DB pre-filter ────────────────────────────────────────────
+    const beforeFilterCount = await prisma.apiListing.count({
+      where: { contractVersion: "V3" },
     });
 
-    const beforeFilterCount = items.length;
+    const rows = await prisma.apiListing.findMany({
+      where: {
+        contractVersion: "V3",
+        status: "APPROVED",
+        ...(q
+          ? {
+              OR: [
+                { name: { contains: q, mode: "insensitive" as const } },
+                { description: { contains: q, mode: "insensitive" as const } },
+              ],
+            }
+          : {}),
+        ...(tag ? { category: { equals: tag, mode: "insensitive" as const } } : {}),
+      },
+      ...(sort === "latest" ? { orderBy: { onChainId: "desc" as const } } : {}),
+    });
 
-    // ───── apply filters ───────────────────────────────────────────
+    // ───── enrich with stats + score ────────────────────────────────
+    const ids = rows
+      .map((r) => r.onChainId)
+      .filter((x): x is number => typeof x === "number");
+    const statsMap = await getListingsStats(ids);
+
+    let items = rows
+      .filter((r): r is typeof r & { onChainId: number } => typeof r.onChainId === "number")
+      .map((r) => {
+        const stats = statsMap.get(r.onChainId) ?? {
+          successRate: 0,
+          avgLatencyMs: 0,
+          totalCalls: 0,
+          successes: 0,
+          lastCalledAt: null,
+          windowDays: 30,
+        };
+        // Reconstruct the metadata shape the frontend (ListingCard) expects
+        // from the flat columns the listener stores. Fields beyond these
+        // (method, schemas, examples) aren't displayed on cards, so omitting
+        // them keeps the response small without breaking the UI contract.
+        const metadata: ListingMetadata = {
+          name: r.name,
+          description: r.description,
+          endpoint: r.endpoint,
+          ...(r.price ? { pricing: { amount: r.price } } : {}),
+          tags: r.category && r.category !== "general" ? [r.category] : [],
+        };
+        return {
+          listingId: String(r.onChainId),
+          owner: r.sellerAddress,
+          metadata,
+          stats,
+          score: scoreListing(stats),
+        };
+      });
+
+    // ───── post-filter (predicates that need stats / parsed price) ──
     items = items.filter((it) => {
-      // Default hides inactive listings. Admin/debug paths can request raw
-      // view later via a dedicated /admin route; the public search should
-      // never serve inactive.
-      if (!it.active) return false;
-
-      // Admin approval gate — listings show up in search only after the
-      // admin approves. Pending / rejected / revoked stay hidden. A brand-
-      // new listing that the listener hasn't ingested yet is also hidden
-      // until the PENDING row exists (usually within one block).
-      const idNum = Number(it.listingId);
-      if (!approvedIds.has(idNum)) return false;
-
-      if (q) {
-        const name = String(it.metadata?.name ?? "").toLowerCase();
-        const desc = String(it.metadata?.description ?? "").toLowerCase();
-        if (!name.includes(q) && !desc.includes(q)) return false;
-      }
-      if (tag) {
-        const tags = Array.isArray(it.metadata?.tags)
-          ? (it.metadata?.tags as unknown[]).map((t) => String(t).toLowerCase())
-          : [];
-        if (!tags.includes(tag)) return false;
-      }
       if (minSuccessRate !== undefined && Number.isFinite(minSuccessRate)) {
         if (it.stats.successRate < minSuccessRate) return false;
       }
