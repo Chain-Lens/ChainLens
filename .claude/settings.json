@@ -13,8 +13,12 @@
       "Bash(sudo dscacheutil *)",
       "Bash(sudo killall *)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(npx prisma *)"
+      "Bash(npx prisma *)",
+      "Bash(nc -zv localhost 5432)",
+      "Bash(nc -zv db 5432)"
     ],
-    "additionalDirectories": ["/opt/homebrew/etc/nginx"]
+    "additionalDirectories": [
+      "/opt/homebrew/etc/nginx"
+    ]
   }
 }
