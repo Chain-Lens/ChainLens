@@ -1,7 +1,8 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { parseSignature, getAddress } from "viem";
 import prisma from "../config/prisma.js";
-import { handlePaidListingCall, parsePayment, type PaymentAuth } from "./market.routes.js";
+import { listingCallService, sendCallResult } from "./market.routes.js";
+import { parsePayment, type PaymentAuth } from "../utils/payment.js";
 import {
   marketAddress,
   readListing,
@@ -189,14 +190,17 @@ router.get("/:listingId", async (req: Request, res: Response, next: NextFunction
     return;
   }
 
-  await handlePaidListingCall({
-    listingIdStr,
-    inputs: queryInputs(req),
-    payment,
-    res,
-    next,
-    startedAt,
-  });
+  try {
+    const result = await listingCallService.execute({
+      listingIdStr,
+      inputs: queryInputs(req),
+      payment,
+      startedAt,
+    });
+    sendCallResult(res, listingIdStr, result);
+  } catch (err) {
+    next(err);
+  }
 });
 
 export default router;
