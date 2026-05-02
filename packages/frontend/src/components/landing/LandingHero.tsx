@@ -55,6 +55,19 @@ export default function LandingHero() {
         </a>
       </div>
 
+      <div className={styles.directoryCta}>
+        <span>Provider team?</span>
+        <a
+          href="https://github.com/pelican-lab/awesome-onchain-data-providers"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Add your API to the open GitHub directory
+        </a>
+        <span>or</span>
+        <a href="/register">register a paid listing</a>
+      </div>
+
       <div className={styles.termWrap}>
         <TerminalWindow title="agent.js — ChainLens quickstart">
           <TLine>

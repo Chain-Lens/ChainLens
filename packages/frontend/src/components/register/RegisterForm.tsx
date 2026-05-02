@@ -6,6 +6,13 @@ import { parseUnits } from "viem";
 import { useRegisterV3, type ListingMetadata } from "@/hooks/useRegisterV3";
 import { apiClient } from "@/lib/api-client";
 
+export type RegisterFormPrefill = {
+  providerSlug?: string;
+  name?: string;
+  description?: string;
+  tags?: string;
+};
+
 type PreflightResult = {
   status: number | null;
   body: unknown;
@@ -122,17 +129,17 @@ function schemaPreviewSummary(schemaText: string) {
   }
 }
 
-export default function RegisterForm() {
+export default function RegisterForm({ prefill }: { prefill?: RegisterFormPrefill }) {
   const { address, isConnected } = useAccount();
   const { register, txHash, isPending, isConfirming, isConfirmed, listingId, error, reset } =
     useRegisterV3();
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [name, setName] = useState(prefill?.name ?? "");
+  const [description, setDescription] = useState(prefill?.description ?? "");
   const [endpoint, setEndpoint] = useState("");
   const [method, setMethod] = useState<"GET" | "POST">("GET");
   const [priceInUsdc, setPriceInUsdc] = useState("");
-  const [tags, setTags] = useState("");
+  const [tags, setTags] = useState(prefill?.tags ?? "");
   const [payoutOverride, setPayoutOverride] = useState("");
   const [outputSchemaText, setOutputSchemaText] = useState(
     formatSchema(SCHEMA_TEMPLATES[0].schema),
@@ -260,6 +267,20 @@ export default function RegisterForm() {
 
   return (
     <form onSubmit={handleSubmit} className="card space-y-6">
+      {prefill?.providerSlug && (
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--bg3)] p-4 text-sm text-[var(--text2)] leading-relaxed">
+          <p className="mb-1 font-medium text-[var(--text)]">
+            Prefilled from the open provider directory
+          </p>
+          <p>
+            Provider slug{" "}
+            <code className="mx-1 text-[var(--accent)]">{prefill.providerSlug}</code>
+            was passed in the URL. Review the details below, then add your
+            executable endpoint, price, output schema, and payout address.
+          </p>
+        </div>
+      )}
+
       <div className="rounded-xl border border-[var(--border)] bg-[linear-gradient(135deg,rgba(88,166,255,0.08),rgba(63,185,80,0.05))] p-4">
         <p className="text-xs uppercase tracking-[0.2em] text-[var(--text3)]">Seller Setup</p>
         <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">
