@@ -196,6 +196,7 @@ model CallLog {
   jobRef        String
   settleTxHash  String?
   errorReason   String?
+  warningCount  Int?
   createdAt     DateTime @default(now())
 
   @@index([listingId, createdAt])

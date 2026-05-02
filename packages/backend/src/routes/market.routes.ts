@@ -185,6 +185,12 @@ export function sendCallResult(
         provided: result.provided,
       });
       return;
+    case "payment_preflight_failed":
+      res.status(412).json({
+        error: "payment authorization failed preflight",
+        detail: result.detail,
+      });
+      return;
     case "seller_call_failed":
       res.status(502).json({
         error: "seller call failed",
@@ -201,23 +207,13 @@ export function sendCallResult(
         sellerBody: result.body,
       });
       return;
-    case "response_rejected": {
-      const wrapped = wrapExternal(result.body, result.host, listingIdStr, result.jobRef);
+    case "response_rejected":
       res.status(422).json({
-        error: "seller response rejected",
+        error: "seller response cannot be relayed",
         rejectionReason: result.rejectionReason,
-        delivery: "rejected_untrusted",
-        safety: {
-          trusted: false,
-          scanned: true,
-          schemaValid: result.schemaValid,
-          warnings: [result.rejectionReason],
-        },
-        envelope: wrapped.envelope,
-        untrusted_data: wrapped.data,
+        host: result.host,
       });
       return;
-    }
     case "settle_failed":
       res.status(500).json({
         error: "settlement submission failed",
@@ -238,8 +234,9 @@ export function sendCallResult(
         safety: {
           trusted: false,
           scanned: true,
-          schemaValid: result.ok.schemaApplicable ? true : null,
-          warnings: [],
+          schemaValid: result.ok.schemaValid,
+          warnings: result.ok.warnings,
+          clean: result.ok.warnings.length === 0,
         },
         untrusted_data: wrapped.data,
         envelope: wrapped.envelope,

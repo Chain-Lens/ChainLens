@@ -1,8 +1,17 @@
 /**
  * Orchestrates the paid x402 listing call:
  *   approval gate → on-chain listing read → metadata resolve →
- *   price floor check → seller HTTP call → response scan →
- *   schema validation → settlement → response shaping + call log
+ *   price floor check → settlement preflight (eth_call) →
+ *   seller HTTP call → response scan + schema validation →
+ *   settlement → response shaping + call log
+ *
+ * The preflight step runs before the seller is contacted so that a bad
+ * authorization (expired, insufficient balance, used nonce) never causes
+ * the seller to do free compute. See docs/RELAY_AND_SETTLEMENT_POLICY.md.
+ *
+ * Scan and schema failures are soft: they add to warnings[] and relay
+ * continues. Only physically unrelayable responses (unserializable, too
+ * large) return response_rejected.
  *
  * Returns a discriminated `CallResult` so the route can map each
  * outcome to an HTTP status without the service knowing about Express,
@@ -30,6 +39,7 @@ import {
   serializeError,
   errorCauseMessage,
 } from "../utils/error-mapping.js";
+import { SettlementPreflightError } from "./settlement.service.js";
 
 // ─── deps ─────────────────────────────────────────────────────────────
 
@@ -64,14 +74,8 @@ export type CallResult =
       method: "GET" | "POST";
     }
   | { kind: "seller_non_2xx"; status: number; body: unknown }
-  | {
-      kind: "response_rejected";
-      rejectionReason: string;
-      schemaValid: boolean | null;
-      body: unknown;
-      host: string;
-      jobRef: `0x${string}`;
-    }
+  | { kind: "response_rejected"; rejectionReason: string; host: string }
+  | { kind: "payment_preflight_failed"; detail: string }
   | {
       kind: "settle_failed";
       recoveredSigner: string | null;
@@ -85,7 +89,8 @@ export interface OkResult {
   jobRef: `0x${string}`;
   settleTxHash: `0x${string}`;
   delivery: "relayed_unmodified";
-  schemaApplicable: boolean;
+  schemaValid: boolean | null;
+  warnings: string[];
   body: unknown;
   host: string;
 }
@@ -192,6 +197,24 @@ export class ListingCallService {
     );
     outcome.jobRef = jobRef;
 
+    try {
+      await this.deps.settlement.simulateSettlement({ listingId, jobRef, payment });
+    } catch (e) {
+      outcome.errorReason = "payment_preflight_failed";
+      this.deps.logger.warn(
+        {
+          listingId: listingIdStr,
+          buyer: payment.buyer,
+          detail: e instanceof SettlementPreflightError ? e.message : String(e),
+        },
+        "settlement preflight rejected — seller not contacted",
+      );
+      return {
+        kind: "payment_preflight_failed",
+        detail: e instanceof Error ? e.message : String(e),
+      };
+    }
+
     let sellerResult: { ok: boolean; status: number; body: unknown };
     try {
       sellerResult = await this.deps.sellerClient.call(meta.endpoint, method, inputs);
@@ -224,31 +247,25 @@ export class ListingCallService {
       return { kind: "seller_non_2xx", status: sellerResult.status, body: sellerResult.body };
     }
 
+    const warnings: string[] = [];
+
     const scan = scanResponse(sellerResult.body);
     if (!scan.clean) {
-      outcome.errorReason = rejectionReasonToErrorReason(scan.reason);
-      return {
-        kind: "response_rejected",
-        rejectionReason: scan.reason ?? "response_rejected",
-        schemaValid: null,
-        body: sellerResult.body,
-        host: safeHostFromUrl(meta.endpoint),
-        jobRef,
-      };
+      const reason = scan.reason ?? "scan_failed";
+      if (reason === "response_unserializable" || reason === "response_too_large") {
+        outcome.errorReason = rejectionReasonToErrorReason(reason);
+        return {
+          kind: "response_rejected",
+          rejectionReason: reason,
+          host: safeHostFromUrl(meta.endpoint),
+        };
+      }
+      warnings.push(reason);
     }
 
     const schemaCheck = validateResponseShape(sellerResult.body, meta);
     if (schemaCheck.applicable && !schemaCheck.valid) {
-      const rejectionReason = `schema_validation_failed: ${schemaCheck.reason ?? "unknown"}`;
-      outcome.errorReason = rejectionReasonToErrorReason(rejectionReason);
-      return {
-        kind: "response_rejected",
-        rejectionReason,
-        schemaValid: false,
-        body: sellerResult.body,
-        host: safeHostFromUrl(meta.endpoint),
-        jobRef,
-      };
+      warnings.push(`schema_validation_failed: ${schemaCheck.reason ?? "unknown"}`);
     }
 
     let txHash: `0x${string}`;
@@ -280,6 +297,7 @@ export class ListingCallService {
 
     outcome.success = true;
     outcome.errorReason = null;
+    outcome.warningCount = warnings.length;
 
     return {
       kind: "ok",
@@ -288,7 +306,8 @@ export class ListingCallService {
         jobRef,
         settleTxHash: txHash,
         delivery: "relayed_unmodified",
-        schemaApplicable: schemaCheck.applicable,
+        schemaValid: schemaCheck.applicable ? schemaCheck.valid : null,
+        warnings,
         body: sellerResult.body,
         host: safeHostFromUrl(meta.endpoint),
       },
@@ -312,6 +331,7 @@ export class ListingCallService {
         jobRef: outcome.jobRef,
         settleTxHash: outcome.settleTxHash,
         errorReason: outcome.errorReason,
+        warningCount: outcome.warningCount,
       })
       .catch((e) => this.deps.logger.warn({ err: String(e) }, "call log insert failed"));
   }
@@ -325,6 +345,7 @@ interface Outcome {
   sellerStatus: number | null;
   settleTxHash: `0x${string}` | null;
   jobRef: `0x${string}`;
+  warningCount: number | null;
 }
 
 function newOutcome(): Outcome {
@@ -334,6 +355,7 @@ function newOutcome(): Outcome {
     sellerStatus: null,
     settleTxHash: null,
     jobRef: "0x",
+    warningCount: null,
   };
 }
 

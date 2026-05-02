@@ -19,6 +19,7 @@ export interface CallLogInput {
   jobRef: string;
   settleTxHash?: string | null;
   errorReason?: string | null;
+  warningCount?: number | null;
 }
 
 export interface ListingStats {
@@ -56,6 +57,7 @@ export async function logCall(input: CallLogInput): Promise<void> {
       jobRef: input.jobRef,
       settleTxHash: input.settleTxHash ?? null,
       errorReason: input.errorReason ?? null,
+      warningCount: input.warningCount ?? null,
     },
   });
 }
