@@ -24,6 +24,7 @@ function makeRepo(approval: "APPROVED" | "PENDING" | null = "APPROVED"): Listing
     countV3: async () => 0,
     findApproved: async () => [],
     findApprovalStatus: async () => approval,
+    findDirectoryTrust: async () => null,
   };
 }
 

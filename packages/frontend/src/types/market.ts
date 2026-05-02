@@ -21,6 +21,15 @@ export interface ListingStats {
   windowDays: number;
 }
 
+export interface DirectoryTrustSignal {
+  providerSlug: string;
+  verified: boolean;
+  sourceRepoUrl: string | null;
+  sourcePrUrl: string | null;
+  reviewedAt: string | null;
+  lastSyncedAt: string | null;
+}
+
 export interface ListingDetail {
   listingId: string;
   owner: string;
@@ -31,6 +40,7 @@ export interface ListingDetail {
   metadataError?: string;
   stats: ListingStats;
   score: number;
+  directory?: DirectoryTrustSignal;
   recentErrors?: {
     windowDays: number;
     totalFailures: number;

@@ -31,6 +31,8 @@ npm install -g @chain-lens/mcp-tool
 
 ## Tools exposed
 
+### Buyer tools
+
 | Tool                  | Wallet?  | Purpose                                                                                                          |
 | --------------------- | -------- | ---------------------------------------------------------------------------------------------------------------- |
 | `chain-lens.discover` | —        | Search v3 listings (wraps `GET /api/market/listings`).                                                           |
@@ -38,6 +40,38 @@ npm install -g @chain-lens/mcp-tool
 | `chain-lens.status`   | —        | Fetch stored evidence for an on-chain job (wraps `GET /api/evidence/:jobId`).                                    |
 | `chain-lens.call`     | required | Current paid v3 flow. Signs a USDC ReceiveWithAuthorization and calls the gateway x402 endpoint for one listing. |
 | `chain-lens.request`  | required | Legacy paid v2 flow. Kept for backward compatibility where `ApiMarketEscrowV2` is still relevant.                |
+
+### Seller Onboarding Tools (Phase A — wallet-free)
+
+These tools help provider teams prepare, validate, and preflight paid listing
+metadata **without** a wallet, GitHub token, or on-chain registration. They are
+always listed by the MCP server regardless of wallet configuration.
+
+| Tool                               | Wallet? | Purpose                                                                                                                         |
+| ---------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `seller.prepare_provider_entry`    | —       | Create a `providers/<slug>.json` draft from structured inputs. Returns warnings and missing fields. Does not write the file.    |
+| `seller.import_directory_provider` | —       | Import a merged directory entry from ChainLens draft API or raw GitHub JSON and turn it into a paid listing prefill.           |
+| `seller.preflight_endpoint`        | —       | Run a seller endpoint through ChainLens backend preflight (SSRF-safe). Returns HTTP status, latency, body sample, schema check. |
+| `seller.draft_output_schema`       | —       | Generate a JSON Schema draft from a sample API response. Supports `loose`, `balanced`, and `strict` modes.                     |
+| `seller.prepare_paid_listing`      | —       | Merge directory metadata with endpoint/price/schema inputs. Returns a readiness checklist and a `/register?provider=<slug>` URL.|
+
+> **Phase A guarantee:** These tools never open GitHub PRs, write provider
+> JSON files, claim drafts with wallet auth, upload metadata, or call
+> `ChainLensMarket.register`. No wallet or signing env vars are required.
+
+#### Example prompts
+
+```
+Import provider metadata for "alchemy" and prepare a ChainLens listing draft.
+```
+
+```
+Preflight https://api.example.com/price with a POST payload and draft an output schema.
+```
+
+```
+Prepare a paid listing for my endpoint at 0.02 USDC per call, but do not register it.
+```
 
 An HTTP-only alternative exists at `GET /api/x402/:listingId` on the gateway.
 Use that path if you'd rather not install this MCP server — you'll still need

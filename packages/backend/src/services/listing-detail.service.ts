@@ -6,7 +6,11 @@
  */
 
 import { getAddress } from "viem";
-import type { ListingsRepository, ApprovalStatus } from "../repositories/listing.repository.js";
+import type {
+  DirectoryTrustSignal,
+  ListingsRepository,
+  ApprovalStatus,
+} from "../repositories/listing.repository.js";
 import type {
   ListingMetadata,
   OnChainListing,
@@ -30,6 +34,7 @@ export interface ListingDetailResponse {
   stats: ListingStats;
   score: number;
   recentErrors: RecentErrors;
+  directory?: DirectoryTrustSignal;
   /** "APPROVED" | "PENDING" | "REJECTED" | "REVOKED" | "UNLISTED" */
   adminStatus: string;
 }
@@ -47,10 +52,11 @@ export class ListingDetailService {
     const listing = await this.readListing(id);
     const meta = await this.tryResolveMetadata(listing.metadataURI);
 
-    const [stats, recentErrors, approval] = await Promise.all([
+    const [stats, recentErrors, approval, directory] = await Promise.all([
       this.getStats(Number(id)),
       this.getRecentErrors(Number(id)),
       this.repo.findApprovalStatus(Number(id)),
+      this.repo.findDirectoryTrust(Number(id)),
     ]);
 
     return {
@@ -64,6 +70,7 @@ export class ListingDetailService {
       stats,
       score: scoreListing(stats),
       recentErrors,
+      ...(directory ? { directory } : {}),
       adminStatus: adminStatusLabel(approval),
     };
   }

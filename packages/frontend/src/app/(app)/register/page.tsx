@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import RegisterForm from "@/components/register/RegisterForm";
 import RegisterPageHeader from "@/components/register/RegisterPageHeader";
-
-function titleFromSlug(slug: string) {
-  return slug
-    .split("-")
-    .filter(Boolean)
-    .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
-    .join(" ");
-}
+import DraftStatusBanner from "@/components/register/DraftStatusBanner";
+import {
+  fallbackPrefill,
+  fetchDirectoryPrefill,
+  type DirectoryPrefill,
+} from "@/lib/provider-directory";
+import { fetchProviderDraft, type ProviderDraft } from "@/lib/provider-draft";
 
 function cleanProviderSlug(value: string | null) {
   if (!value) return null;
@@ -22,18 +22,54 @@ function cleanProviderSlug(value: string | null) {
 export default function RegisterPage() {
   const searchParams = useSearchParams();
   const providerSlug = cleanProviderSlug(searchParams.get("provider"));
-  const prefill = providerSlug
-    ? {
-        providerSlug,
-        name: `${titleFromSlug(providerSlug)} API`,
-        description: `Executable API listing for ${titleFromSlug(providerSlug)}.`,
-        tags: `${providerSlug}, onchain-data`,
-      }
-    : undefined;
+  const [prefill, setPrefill] = useState<DirectoryPrefill | undefined>(
+    providerSlug ? fallbackPrefill(providerSlug) : undefined,
+  );
+  const [draft, setDraft] = useState<ProviderDraft | null>(null);
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!providerSlug) {
+      setPrefill(undefined);
+      setDraft(null);
+      return;
+    }
+
+    setPrefill(fallbackPrefill(providerSlug));
+    fetchDirectoryPrefill(providerSlug).then((nextPrefill) => {
+      if (!cancelled) setPrefill(nextPrefill);
+    });
+
+    setDraftLoading(true);
+    setDraftError(null);
+    fetchProviderDraft(providerSlug)
+      .then((d) => {
+        if (!cancelled) {
+          setDraft(d);
+          setDraftLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setDraftError(err instanceof Error ? err.message : String(err));
+          setDraftLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [providerSlug]);
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <RegisterPageHeader />
+      {providerSlug && (
+        <DraftStatusBanner draft={draft} loading={draftLoading} error={draftError} />
+      )}
       <div className="mb-6 rounded-lg border border-[var(--border)] bg-[var(--bg2)] p-4">
         <p className="text-sm font-medium text-[var(--text)]">
           Not ready for a paid API listing yet?

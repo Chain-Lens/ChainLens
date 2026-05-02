@@ -27,6 +27,16 @@ export interface McpConfig {
   pollIntervalMs: number;
   /** How long `chain-lens.request` waits for a COMPLETED/REFUNDED state before giving up. */
   pollTimeoutMs: number;
+  /**
+   * GitHub personal-access token (or fine-grained token) for Phase B seller tools.
+   * Required scopes: contents:write, pull_requests:write on the target repo.
+   * Optional: Phase B tools are omitted from ListTools when this is unset.
+   */
+  githubToken?: string;
+  /** Owner (user or org) of the awesome-onchain-data-providers repo. */
+  githubRepoOwner?: string;
+  /** Repository name, usually "awesome-onchain-data-providers". */
+  githubRepoName?: string;
 }
 
 const warnedDeprecatedEnvNames = new Set<string>();
@@ -96,6 +106,17 @@ export function loadMcpConfig(env: NodeJS.ProcessEnv = process.env): McpConfig {
   if (!Number.isInteger(pollTimeoutMs) || pollTimeoutMs <= 0) {
     throw new Error(`Invalid CHAIN_LENS_POLL_TIMEOUT_MS: ${env.CHAIN_LENS_POLL_TIMEOUT_MS}`);
   }
+  const githubToken = env.GITHUB_TOKEN || undefined;
+  const githubRepoOwner = env.GITHUB_REPO_OWNER || undefined;
+  const githubRepoName = env.GITHUB_REPO_NAME || undefined;
+
+  if (githubToken && (!githubRepoOwner || !githubRepoName)) {
+    throw new Error(
+      "GITHUB_TOKEN is set but GITHUB_REPO_OWNER or GITHUB_REPO_NAME is missing. " +
+        "Set all three to enable Phase B seller tools (open_directory_pr, backfill_listing_url).",
+    );
+  }
+
   return {
     apiBaseUrl,
     chainId,
@@ -104,5 +125,8 @@ export function loadMcpConfig(env: NodeJS.ProcessEnv = process.env): McpConfig {
     signSocketPath,
     pollIntervalMs,
     pollTimeoutMs,
+    githubToken,
+    githubRepoOwner,
+    githubRepoName,
   };
 }

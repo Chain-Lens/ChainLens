@@ -10,7 +10,11 @@
  * and delegates here.
  */
 
-import type { ListingsRepository, ListingsOrder } from "../repositories/listing.repository.js";
+import type {
+  DirectoryTrustSignal,
+  ListingsRepository,
+  ListingsOrder,
+} from "../repositories/listing.repository.js";
 import type { ListingMetadata } from "./market-chain.service.js";
 import { rngFrom, weightedShuffle } from "../utils/ranker.js";
 import type { ListingStats } from "./call-log.service.js";
@@ -34,6 +38,7 @@ export interface ListingsSearchItem {
   metadata: ListingMetadata;
   stats: ListingStats;
   score: number;
+  directory?: DirectoryTrustSignal;
 }
 
 export interface ListingsSearchResult {
@@ -74,6 +79,7 @@ export class ListingsSearchService {
         metadata: reconstructMetadata(r),
         stats,
         score: scoreListing(stats),
+        ...(r.directory ? { directory: r.directory } : {}),
       };
     });
 

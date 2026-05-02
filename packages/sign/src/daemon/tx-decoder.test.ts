@@ -50,7 +50,21 @@ const PAY_ABI = [
   },
 ] as const;
 
+const MARKET = "0x45bB56fDB0E6bb14d178E417b67Ed7B3323ffFf7" as const;
 const ZERO32 = `0x${"0".repeat(64)}` as `0x${string}`;
+
+const REGISTER_ABI = [
+  {
+    type: "function",
+    name: "register",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "payout", type: "address" },
+      { name: "metadataURI", type: "string" },
+    ],
+    outputs: [{ name: "listingId", type: "uint256" }],
+  },
+] as const;
 
 describe("decodeTx", () => {
   it("decodes USDC approve", () => {
@@ -90,6 +104,22 @@ describe("decodeTx", () => {
     if (out.kind !== "pay") throw new Error("unreachable");
     assert.equal(out.amountAtomic, 2_500_000n);
     assert.equal(out.counterparty.toLowerCase(), RECIPIENT.toLowerCase());
+  });
+
+  it("decodes ChainLensMarket.register and extracts payout + metadataUri", () => {
+    const data = encodeFunctionData({
+      abi: REGISTER_ABI,
+      functionName: "register",
+      args: [RECIPIENT, "https://chainlens.xyz/meta/1.json"],
+    });
+    const out = decodeTx({ to: MARKET, data });
+    assert.equal(out.kind, "register");
+    if (out.kind !== "register") throw new Error("unreachable");
+    assert.equal(out.target, MARKET);
+    assert.equal(out.counterparty.toLowerCase(), RECIPIENT.toLowerCase());
+    assert.equal(out.amountAtomic, 0n);
+    assert.equal(out.metadataUri, "https://chainlens.xyz/meta/1.json");
+    assert.equal(out.valueWei, 0n);
   });
 
   it("returns unknown on selector not in allowlist", () => {

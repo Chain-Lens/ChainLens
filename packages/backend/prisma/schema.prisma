@@ -14,6 +14,13 @@ enum ApiStatus {
   REVOKED
 }
 
+enum ProviderDraftStatus {
+  UNCLAIMED
+  CLAIMED
+  LISTED
+  ARCHIVED
+}
+
 enum PaymentStatus {
   PENDING
   PAID
@@ -128,6 +135,35 @@ model ApiListing {
   @@index([status])
   @@index([sellerAddress])
   @@index([contractVersion, status])
+}
+
+model ProviderDraft {
+  id                String              @id @default(uuid())
+  providerSlug      String              @unique
+  name              String
+  description       String
+  category          String              @default("general")
+  website           String
+  docs              String?
+  sourceAttestation String
+  directoryMetadata Json
+  directoryVerified Boolean             @default(false)
+  sourceRepoUrl     String?
+  sourcePrUrl       String?
+  sourceCommit      String?
+  reviewedAt        DateTime?
+  lastSyncedAt      DateTime?
+  status            ProviderDraftStatus @default(UNCLAIMED)
+  claimedBy         String?
+  claimedAt         DateTime?
+  listingUrl        String?
+  listingOnChainId  Int?                @unique
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([status])
+  @@index([claimedBy])
+  @@index([directoryVerified])
 }
 
 model PaymentRequest {

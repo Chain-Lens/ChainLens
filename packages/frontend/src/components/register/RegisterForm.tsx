@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { parseUnits } from "viem";
 import { useRegisterV3, type ListingMetadata } from "@/hooks/useRegisterV3";
@@ -11,6 +11,11 @@ export type RegisterFormPrefill = {
   name?: string;
   description?: string;
   tags?: string;
+  website?: string;
+  docs?: string;
+  sourceAttestation?: string;
+  directoryStatus?: "loaded" | "fallback" | "not_found" | "error";
+  directoryMessage?: string;
 };
 
 type PreflightResult = {
@@ -149,6 +154,13 @@ export default function RegisterForm({ prefill }: { prefill?: RegisterFormPrefil
   const [preflightResult, setPreflightResult] = useState<PreflightResult | null>(null);
   const schemaSummary = schemaPreviewSummary(outputSchemaText);
 
+  useEffect(() => {
+    if (!prefill?.providerSlug) return;
+    setName((current) => current || prefill.name || "");
+    setDescription((current) => current || prefill.description || "");
+    setTags((current) => current || prefill.tags || "");
+  }, [prefill?.providerSlug, prefill?.name, prefill?.description, prefill?.tags]);
+
   if (!isConnected) {
     return (
       <div className="card text-center py-8">
@@ -270,14 +282,53 @@ export default function RegisterForm({ prefill }: { prefill?: RegisterFormPrefil
       {prefill?.providerSlug && (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--bg3)] p-4 text-sm text-[var(--text2)] leading-relaxed">
           <p className="mb-1 font-medium text-[var(--text)]">
-            Prefilled from the open provider directory
+            {prefill.directoryStatus === "loaded"
+              ? "Imported from the open provider directory"
+              : "Prefilled from the provider slug"}
           </p>
           <p>
             Provider slug{" "}
             <code className="mx-1 text-[var(--accent)]">{prefill.providerSlug}</code>
-            was passed in the URL. Review the details below, then add your
-            executable endpoint, price, output schema, and payout address.
+            was passed in the URL. Review the details below, then add your executable
+            endpoint, price, output schema, and payout address.
           </p>
+          {prefill.directoryMessage && (
+            <p className="mt-2 text-xs text-[var(--text3)]">{prefill.directoryMessage}</p>
+          )}
+          {prefill.directoryStatus === "loaded" && (
+            <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+              {prefill.website && (
+                <a
+                  href={prefill.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate text-[var(--accent)] hover:underline"
+                >
+                  Website: {prefill.website}
+                </a>
+              )}
+              {prefill.docs && (
+                <a
+                  href={prefill.docs}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate text-[var(--accent)] hover:underline"
+                >
+                  Docs: {prefill.docs}
+                </a>
+              )}
+              {prefill.sourceAttestation && (
+                <a
+                  href={prefill.sourceAttestation}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate text-[var(--accent)] hover:underline sm:col-span-2"
+                >
+                  Source attestation: {prefill.sourceAttestation}
+                </a>
+              )}
+            </div>
+          )}
         </div>
       )}
 
