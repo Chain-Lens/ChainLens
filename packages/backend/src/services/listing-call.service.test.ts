@@ -231,7 +231,8 @@ describe("ListingCallService", () => {
     );
   });
 
-  test("schema validation failure → ok with warning, not rejected", async () => {
+  test("schema validation failure → schema_mismatch result, settlement blocked", async () => {
+    let settledCalled = false;
     const { svc } = buildService({
       resolveMetadata: async () => ({
         ...okMeta,
@@ -242,15 +243,18 @@ describe("ListingCallService", () => {
           return { ok: true, status: 200, body: { value: "not-a-number" } };
         },
       },
+      settlement: {
+        async simulateSettlement() {},
+        async settle() {
+          settledCalled = true;
+          return "0xtxhash";
+        },
+        watchReceipt() {},
+      },
     });
     const result = await svc.execute(baseArgs);
-    if (result.kind !== "ok") assert.fail(`expected ok, got ${result.kind}`);
-    assert.ok(result.ok.warnings.length > 0, "should have at least one warning");
-    assert.ok(
-      result.ok.warnings.some((w) => w.startsWith("schema_validation_failed:")),
-      `warning should reference schema_validation_failed, got: ${result.ok.warnings.join(", ")}`,
-    );
-    assert.equal(result.ok.schemaValid, false);
+    assert.equal(result.kind, "schema_mismatch", `expected schema_mismatch, got ${result.kind}`);
+    assert.ok(!settledCalled, "settle() must not be called on schema mismatch");
   });
 
   test("success with warnings logs warningCount matching warnings array length", async () => {

@@ -73,6 +73,54 @@
 
 > 작업 단위(커밋 기준)로 누적 기록. 최신이 위.
 
+### 2026-05-05
+
+- **SDK + CLI — Phase 5~9 완료 (sdk_execution_plan.md 전체 구현)**
+
+  **Phase 5: `packages/sdk` 신규 생성**
+  - [packages/sdk/src/types.ts](packages/sdk/src/types.ts) — 전체 퍼블릭 타입 표면: `ChainLensConfig`, `WalletAdapter`, `CallOptions`, `CallResult<T>`, `RankedListing`, `FailureMetadata`, `ListingInfo`, `BudgetConfig`
+  - [packages/sdk/src/errors.ts](packages/sdk/src/errors.ts) — 타입 에러 계층: `ChainLensError` → `ChainLensResolveError` / `BudgetExceededError` / `ChainLensSignError` / `ChainLensGatewayError` / `ChainLensCallError`
+  - [packages/sdk/src/eip3009.ts](packages/sdk/src/eip3009.ts) — `USDC_ADDRESSES` / `CHAIN_LENS_MARKET_ADDRESSES` / `signReceiveWithAuthorization()` / `usdcToAtomic()` / `atomicToUsdc()`
+  - [packages/sdk/src/wallet/viem.ts](packages/sdk/src/wallet/viem.ts) — `ViemWallet`: viem `WalletClient` 래퍼, `signTypedData` → `parseSignature`로 v/r/s 분해
+  - [packages/sdk/src/budget.ts](packages/sdk/src/budget.ts) — `BudgetController`: 24h 일간·30d 월간 rolling window, LevelDB 퍼시스턴스 + InMemoryDB 폴백, idempotency key 지원
+
+  **Phase 6: 로컬 텔레메트리**
+  - [packages/sdk/src/telemetry.ts](packages/sdk/src/telemetry.ts) — `TelemetryRecorder`: `~/.chainlens/telemetry/<wallet>.jsonl` JSONL 버퍼, 비차단 appendFile, upload 옵트인(fire-and-forget), `hashParams()` 파라미터 해시 유틸
+
+  **Phase 5 call 경로**
+  - [packages/sdk/src/call.ts](packages/sdk/src/call.ts) — `executeCall()` 8단계 순서: 리스팅 조회 → 가격 확인 → budget 체크(서명 전) → EIP-3009 서명 → POST /v1/call → budget debit → 텔레메트리 기록 → 타입 에러 throw
+  - [packages/sdk/src/recommend.ts](packages/sdk/src/recommend.ts) — `fetchRecommendations()`: POST /v1/recommend 씬 클라이언트
+  - [packages/sdk/src/provider.ts](packages/sdk/src/provider.ts) — `ProviderClient`: `claimable()` / `claim()` (잔액 0이면 skip) / `listingDashboard(listingId)`
+  - [packages/sdk/src/client.ts](packages/sdk/src/client.ts) — `ChainLens`: 지연 wallet init, `call<T>()` + fallback 루프 (http_5xx·timeout·schema_mismatch만 재시도), `recommend()`, `currentSpend()`
+  - [packages/sdk/src/index.ts](packages/sdk/src/index.ts) — 전체 퍼블릭 API 재수출
+  - 빌드: ESM 17KB + CJS 19KB + .d.ts. `tsc --noEmit` 에러 없음.
+
+  **Phase 7: `packages/cli` 신규 생성**
+  - [packages/cli/src/wallet.ts](packages/cli/src/wallet.ts) — `WALLET_PRIVATE_KEY` env → `ViemWallet` 해석, dev 경고 출력, `resolveChainId()` (`CHAIN_ID` env)
+  - [packages/cli/src/report.ts](packages/cli/src/report.ts) — `loadTelemetry()` JSONL 읽기, `printReport()` 통계 요약 (총 호출·성공·실패·지출·평균 레이턴시·리스팅별·실패유형별)
+  - [packages/cli/src/bin.ts](packages/cli/src/bin.ts) — commander 기반 5개 커맨드:
+    - `chainlens init` — 설정 안내 출력
+    - `chainlens version` — 버전 출력
+    - `chainlens estimate <listingId>` — 리스팅 가격/통계 조회
+    - `chainlens call <listingId> [paramsJson]` — EIP-3009 결제 + 응답 출력 (`--json` 플래그 지원)
+    - `chainlens report` — 로컬 텔레메트리 리포트
+    - `chainlens claim` — 수익 청구 (잔액 0이면 exit 0)
+    - `chainlens listing <listingId>` — 소유 리스팅 대시보드
+
+  **Phase 8: 백엔드 `/v1/recommend`**
+  - [packages/backend/src/routes/v1.routes.ts](packages/backend/src/routes/v1.routes.ts) — `POST /v1/recommend` 추가: 모든 approved 리스팅 조회 → 복합 점수 계산 (relevance 0.4 / success_rate_adj 0.3 / latency_score 0.15 / cost_score 0.15) → 상위 N개 반환
+  - [packages/backend/src/services/listings-search.service.ts](packages/backend/src/services/listings-search.service.ts) — `score_strict` 정렬 버그 수정: Thompson sampling 확률 대신 `stats.successRate` 직접 정렬 (deterministic 보장)
+
+  **Phase 9: SDK 프로바이더 도구**
+  - `ProviderClient.claimable()` / `.claim()` / `.listingDashboard()` SDK에 구현 완료
+  - CLI `chainlens claim` / `chainlens listing <id>` 구현 완료
+
+  **검증**
+  - 백엔드 95/95 테스트 통과 (이전에 플레키하던 `score_strict` 포함)
+  - SDK `tsc --noEmit` 에러 없음, ESM+CJS+DTS 빌드 성공
+  - CLI `tsc --noEmit` 에러 없음, ESM 빌드 성공
+  - 백엔드 `tsc --noEmit` 에러 없음
+
 ### 2026-04-20
 
 - **`@chain-lens/sign` 0.0.3 + `@chain-lens/mcp-tool` 0.0.6 — 한도·승인 프롬프트·MCP 소켓 연동**

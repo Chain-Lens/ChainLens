@@ -161,7 +161,7 @@ function applyRanking(
   opts: ListingsSearchOptions,
 ): ListingsSearchItem[] {
   if (opts.sort === "latest") return items;
-  if (opts.sort === "score_strict") return [...items].sort((a, b) => b.score - a.score);
+  if (opts.sort === "score_strict") return [...items].sort((a, b) => b.stats.successRate - a.stats.successRate);
   const rng = rngFrom(opts.seed);
   return weightedShuffle(items, items.map((it) => it.score), rng);
 }

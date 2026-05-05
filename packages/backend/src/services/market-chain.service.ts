@@ -26,7 +26,42 @@ export interface ListingMetadata {
   example_request?: unknown;
   example_response?: unknown;
   tags?: string[];
+  /** Maximum seller response time in milliseconds. Default: 5000. */
+  max_latency_ms?: number;
+  /** Free-text category used for SDK fallback routing. */
+  task_category?: string;
+  /** Human-readable category (fallback for task_category). */
+  category?: string;
   [k: string]: unknown;
+}
+
+/** Runtime-resolved configuration derived from listing metadata. */
+export interface ListingRuntimeConfig {
+  /** Atomic USDC string (e.g. "50000"), or null if not declared. */
+  priceAtomic: string | null;
+  /** Seller call timeout in ms. */
+  maxLatencyMs: number;
+  /** Free-text category for fallback routing. */
+  taskCategory: string;
+  /** JSON Schema for response validation, or null if absent. */
+  outputSchema: unknown | null;
+}
+
+/** Derive stable runtime config from raw listing metadata. */
+export function resolveListingRuntimeConfig(meta: ListingMetadata): ListingRuntimeConfig {
+  return {
+    priceAtomic: meta.pricing?.amount ?? null,
+    maxLatencyMs:
+      typeof meta.max_latency_ms === "number" && meta.max_latency_ms > 0
+        ? meta.max_latency_ms
+        : 5000,
+    taskCategory:
+      (meta.task_category as string | undefined) ??
+      (meta.category as string | undefined) ??
+      (Array.isArray(meta.tags) ? (meta.tags[0] as string | undefined) : undefined) ??
+      "general",
+    outputSchema: meta.output_schema ?? null,
+  };
 }
 
 export interface OnChainListing {

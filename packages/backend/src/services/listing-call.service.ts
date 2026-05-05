@@ -75,6 +75,7 @@ export type CallResult =
     }
   | { kind: "seller_non_2xx"; status: number; body: unknown }
   | { kind: "response_rejected"; rejectionReason: string; host: string }
+  | { kind: "schema_mismatch"; reason: string; host: string }
   | { kind: "payment_preflight_failed"; detail: string }
   | {
       kind: "settle_failed";
@@ -265,7 +266,12 @@ export class ListingCallService {
 
     const schemaCheck = validateResponseShape(sellerResult.body, meta);
     if (schemaCheck.applicable && !schemaCheck.valid) {
-      warnings.push(`schema_validation_failed: ${schemaCheck.reason ?? "unknown"}`);
+      outcome.errorReason = "schema_mismatch";
+      return {
+        kind: "schema_mismatch",
+        reason: schemaCheck.reason ?? "unknown",
+        host: safeHostFromUrl(meta.endpoint),
+      };
     }
 
     let txHash: `0x${string}`;

@@ -63,6 +63,8 @@ const settlementService = new OnChainSettlementService(
   logger,
 );
 
+export { listingDetailService, listingsSearchService };
+
 export const listingCallService = new ListingCallService({
   repo: listingsRepo,
   readListing,
@@ -212,6 +214,12 @@ export function sendCallResult(
         error: "seller response cannot be relayed",
         rejectionReason: result.rejectionReason,
         host: result.host,
+      });
+      return;
+    case "schema_mismatch":
+      res.status(422).json({
+        error: "seller response failed schema validation",
+        failure: { kind: "schema_mismatch", hint: result.reason, host: result.host },
       });
       return;
     case "settle_failed":
