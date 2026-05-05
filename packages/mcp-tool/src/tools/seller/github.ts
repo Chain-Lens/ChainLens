@@ -1,6 +1,55 @@
-/** GitHub REST API helpers for seller Phase B tools. */
+/** GitHub REST API helpers for seller Phase B tools and Gist publishing. */
 
 import { type FetchFn } from "./common.js";
+
+export interface GistDeps {
+  token: string;
+  fetch: FetchFn;
+}
+
+interface GistFile {
+  raw_url: string;
+  filename: string;
+}
+
+interface GistResponse {
+  id: string;
+  html_url: string;
+  files: Record<string, GistFile>;
+}
+
+/** Create a GitHub Gist. Returns the gist metadata including per-file raw_url values. */
+export async function createGist(
+  deps: GistDeps,
+  description: string,
+  files: Record<string, { content: string }>,
+  isPublic: boolean = true,
+): Promise<{ id: string; html_url: string; files: Record<string, { raw_url: string }> }> {
+  const res = await deps.fetch("https://api.github.com/gists", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${deps.token}`,
+      "Content-Type": "application/json",
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+    body: JSON.stringify({ description, files, public: isPublic }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    let msg = `GitHub Gist API ${res.status}`;
+    try {
+      const parsed = JSON.parse(text) as { message?: string };
+      if (parsed.message) msg += `: ${parsed.message}`;
+    } catch {
+      if (text) msg += `: ${text}`;
+    }
+    throw new Error(msg);
+  }
+
+  return res.json() as Promise<GistResponse>;
+}
 
 export interface GitHubDeps {
   token: string;

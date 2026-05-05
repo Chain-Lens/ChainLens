@@ -17,8 +17,8 @@ export interface RegisterTxResult {
  * Signing abstraction for seller.register_paid_listing.
  *
  * local_signer: Phase C MVP — existing WALLET_PRIVATE_KEY / SIGN_SOCKET path.
- * smart_account: Phase C.2 — session key + policy (not yet implemented).
- * waiaas: Phase C.3 — external wallet-as-a-service (not yet implemented).
+ * smart_account: Phase C.2 — session key + smart account execute() routing.
+ * waiaas: Phase C.3 — provider-neutral WAIAAS boundary; real SDK wiring in index.ts.
  */
 export interface SigningProvider {
   kind: SigningProviderKind;
@@ -26,23 +26,34 @@ export interface SigningProvider {
 }
 
 // Structural interfaces for walletClient/publicClient so tests can mock without viem boilerplate.
-type ContractWriteFn = (args: {
+// Exported so smart-account-adapter can reuse the same types without coupling to viem.
+export type ContractWriteFn = (args: {
   address: `0x${string}`;
   abi: Abi;
   functionName: string;
   args: readonly unknown[];
 }) => Promise<`0x${string}`>;
 
-type WaitForReceiptFn = (args: { hash: `0x${string}` }) => Promise<{
+export type TransactionLog = {
+  address: `0x${string}`;
+  topics: ReadonlyArray<`0x${string}`>;
+  data: `0x${string}`;
+};
+
+export type WaitForReceiptFn = (args: { hash: `0x${string}` }) => Promise<{
   status: "success" | "reverted";
-  logs: ReadonlyArray<{
-    address: `0x${string}`;
-    topics: ReadonlyArray<`0x${string}`>;
-    data: `0x${string}`;
-  }>;
+  logs: ReadonlyArray<TransactionLog>;
 }>;
 
 export interface LocalSignerAdapterDeps {
+  writeContract: ContractWriteFn;
+  waitForTransactionReceipt: WaitForReceiptFn;
+  marketAddress: `0x${string}`;
+  marketAbi: Abi;
+}
+
+/** Shared type for adapter deps that interact with the market contract. */
+export interface MarketAdapterDeps {
   writeContract: ContractWriteFn;
   waitForTransactionReceipt: WaitForReceiptFn;
   marketAddress: `0x${string}`;
@@ -80,12 +91,8 @@ export function createLocalSignerAdapter(deps: LocalSignerAdapterDeps): SigningP
   };
 }
 
-function extractListingId(
-  logs: ReadonlyArray<{
-    address: `0x${string}`;
-    topics: ReadonlyArray<`0x${string}`>;
-    data: `0x${string}`;
-  }>,
+export function extractListingId(
+  logs: ReadonlyArray<TransactionLog>,
   marketAddress: `0x${string}`,
 ): number {
   for (const log of logs) {

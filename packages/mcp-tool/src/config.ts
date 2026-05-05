@@ -37,6 +37,45 @@ export interface McpConfig {
   githubRepoOwner?: string;
   /** Repository name, usually "awesome-onchain-data-providers". */
   githubRepoName?: string;
+  /**
+   * Which signing provider to use for seller.register_paid_listing.
+   * "local_signer" (default) uses CHAIN_LENS_WALLET_PRIVATE_KEY or CHAIN_LENS_SIGN_SOCKET.
+   * "smart_account" uses a session-key-backed smart account (Phase C.2).
+   * "waiaas" delegates signing to an external wallet-as-a-service provider (Phase C.3).
+   */
+  signingProvider: "local_signer" | "smart_account" | "waiaas";
+  /**
+   * Smart account address (Phase C.2). Required when signingProvider=smart_account.
+   * This is the on-chain account that submits the registration transaction.
+   */
+  smartAccountAddress?: `0x${string}`;
+  /**
+   * Session key private key (Phase C.2). Required when signingProvider=smart_account.
+   * This key must be authorised to call ChainLensMarket.register on the smart account.
+   * Keep out of version control — treat with the same care as WALLET_PRIVATE_KEY.
+   */
+  sessionKeyPrivateKey?: `0x${string}`;
+  /**
+   * Optional comma-separated list of permitted payout addresses for the smart account
+   * adapter. When non-empty, register_paid_listing rejects any payout address not in the
+   * list. Addresses are compared case-insensitively.
+   */
+  payoutAllowlist?: ReadonlyArray<`0x${string}`>;
+  /**
+   * WAIAAS provider API base URL (Phase C.3). Required when signingProvider=waiaas.
+   * Example: "https://api.privy.io/v1" or your WAIAAS provider's endpoint.
+   */
+  waiaasApiUrl?: string;
+  /**
+   * WAIAAS provider API key (Phase C.3). Required when signingProvider=waiaas.
+   * Keep out of version control.
+   */
+  waiaasApiKey?: string;
+  /**
+   * Wallet/account ID within the WAIAAS provider (Phase C.3). Required when signingProvider=waiaas.
+   * This identifies which managed wallet submits the registration transaction.
+   */
+  waiaasWalletId?: string;
 }
 
 const warnedDeprecatedEnvNames = new Set<string>();
@@ -117,6 +156,83 @@ export function loadMcpConfig(env: NodeJS.ProcessEnv = process.env): McpConfig {
     );
   }
 
+  // Signing provider config (Phase C.1/C.2/C.3)
+  const signingProviderRaw = env.CHAIN_LENS_SIGNING_PROVIDER ?? "local_signer";
+  if (
+    signingProviderRaw !== "local_signer" &&
+    signingProviderRaw !== "smart_account" &&
+    signingProviderRaw !== "waiaas"
+  ) {
+    throw new Error(
+      `Invalid CHAIN_LENS_SIGNING_PROVIDER: "${signingProviderRaw}". Expected "local_signer", "smart_account", or "waiaas".`,
+    );
+  }
+  const signingProvider = signingProviderRaw as "local_signer" | "smart_account" | "waiaas";
+
+  let smartAccountAddress: `0x${string}` | undefined;
+  let sessionKeyPrivateKey: `0x${string}` | undefined;
+
+  if (signingProvider === "smart_account") {
+    const rawAddr = env.CHAIN_LENS_SMART_ACCOUNT_ADDRESS;
+    if (!rawAddr || !/^0x[0-9a-fA-F]{40}$/.test(rawAddr)) {
+      throw new Error(
+        "CHAIN_LENS_SMART_ACCOUNT_ADDRESS is required when CHAIN_LENS_SIGNING_PROVIDER=smart_account " +
+          "(expected 0x + 40 hex chars).",
+      );
+    }
+    smartAccountAddress = rawAddr as `0x${string}`;
+
+    const rawSk = env.CHAIN_LENS_SESSION_KEY_PRIVATE_KEY;
+    if (!rawSk || !/^0x[0-9a-fA-F]{64}$/.test(rawSk)) {
+      throw new Error(
+        "CHAIN_LENS_SESSION_KEY_PRIVATE_KEY is required when CHAIN_LENS_SIGNING_PROVIDER=smart_account " +
+          "(expected 0x + 64 hex chars).",
+      );
+    }
+    sessionKeyPrivateKey = rawSk as `0x${string}`;
+  }
+
+  // WAIAAS config (Phase C.3)
+  let waiaasApiUrl: string | undefined;
+  let waiaasApiKey: string | undefined;
+  let waiaasWalletId: string | undefined;
+
+  if (signingProvider === "waiaas") {
+    waiaasApiUrl = env.CHAIN_LENS_WAIAAS_API_URL;
+    if (!waiaasApiUrl) {
+      throw new Error(
+        "CHAIN_LENS_WAIAAS_API_URL is required when CHAIN_LENS_SIGNING_PROVIDER=waiaas.",
+      );
+    }
+    waiaasApiKey = env.CHAIN_LENS_WAIAAS_API_KEY;
+    if (!waiaasApiKey) {
+      throw new Error(
+        "CHAIN_LENS_WAIAAS_API_KEY is required when CHAIN_LENS_SIGNING_PROVIDER=waiaas.",
+      );
+    }
+    waiaasWalletId = env.CHAIN_LENS_WAIAAS_WALLET_ID;
+    if (!waiaasWalletId) {
+      throw new Error(
+        "CHAIN_LENS_WAIAAS_WALLET_ID is required when CHAIN_LENS_SIGNING_PROVIDER=waiaas.",
+      );
+    }
+  }
+
+  // Optional payout allowlist — comma-separated EVM addresses.
+  const rawAllowlist = env.CHAIN_LENS_PAYOUT_ALLOWLIST;
+  let payoutAllowlist: ReadonlyArray<`0x${string}`> | undefined;
+  if (rawAllowlist) {
+    const entries = rawAllowlist.split(",").map((s) => s.trim()).filter(Boolean);
+    for (const entry of entries) {
+      if (!/^0x[0-9a-fA-F]{40}$/.test(entry)) {
+        throw new Error(
+          `CHAIN_LENS_PAYOUT_ALLOWLIST contains invalid EVM address: "${entry}".`,
+        );
+      }
+    }
+    payoutAllowlist = entries as `0x${string}`[];
+  }
+
   return {
     apiBaseUrl,
     chainId,
@@ -128,5 +244,12 @@ export function loadMcpConfig(env: NodeJS.ProcessEnv = process.env): McpConfig {
     githubToken,
     githubRepoOwner,
     githubRepoName,
+    signingProvider,
+    smartAccountAddress,
+    sessionKeyPrivateKey,
+    payoutAllowlist,
+    waiaasApiUrl,
+    waiaasApiKey,
+    waiaasWalletId,
   };
 }

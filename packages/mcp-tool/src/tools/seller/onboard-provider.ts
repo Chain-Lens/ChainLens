@@ -239,9 +239,12 @@ export function onboardProviderHandler(input: OnboardProviderInput): OnboardProv
     });
   }
 
+  // base step offset after optional draft_output_schema
+  const afterDraft = input.output_schema ? stepNum + 1 : stepNum + 2;
+
   // Step: prepare_paid_listing — done inline
   steps.push({
-    step: `${input.output_schema ? stepNum + 1 : stepNum + 2}. Prepare paid listing`,
+    step: `${afterDraft}. Prepare paid listing`,
     tool: "seller.prepare_paid_listing",
     status: "done",
     requires_confirmation: false,
@@ -250,15 +253,50 @@ export function onboardProviderHandler(input: OnboardProviderInput): OnboardProv
     result: listingPrep,
   });
 
-  // Step: register_paid_listing
+  // Step: publish_listing_metadata_gist
   const metaUri = input.metadata_uri;
-  const canRegister =
-    listingPrep.readiness === "ready" &&
-    !!metaUri &&
-    !!input.payout_address;
+  const canPublish = listingPrep.readiness === "ready" && !!input.payout_address;
+  const publishStatus: StepStatus = metaUri
+    ? "done"
+    : canPublish
+      ? "needs_confirmation"
+      : "pending";
 
   steps.push({
-    step: `${input.output_schema ? stepNum + 2 : stepNum + 3}. Register paid listing`,
+    step: `${afterDraft + 1}. Publish listing metadata`,
+    tool: "seller.publish_listing_metadata_gist",
+    status: publishStatus,
+    requires_confirmation: publishStatus === "needs_confirmation",
+    description:
+      "Upload listing metadata JSON to GitHub Gist and compute SHA-256 for on-chain verification. Returns register_args ready to pass to seller.register_paid_listing.",
+    args: {
+      provider_slug: slug,
+      name: input.name,
+      description: input.description,
+      endpoint: input.endpoint ?? "",
+      method: input.method ?? "GET",
+      price_usdc: input.price_usdc,
+      output_schema: input.output_schema,
+      payout_address: input.payout_address ?? "",
+      ...(input.source_attestation ? { source_attestation: input.source_attestation } : {}),
+    },
+    ...(metaUri
+      ? {
+          result: {
+            metadata_uri: metaUri,
+            expected_metadata_hash: input.expected_metadata_hash,
+          },
+        }
+      : !canPublish
+        ? { blocked_by: "listing_prep readiness must be \"ready\" and payout_address must be set before publishing." }
+        : {}),
+  });
+
+  // Step: register_paid_listing
+  const canRegister = canPublish && !!metaUri;
+
+  steps.push({
+    step: `${afterDraft + 2}. Register paid listing`,
     tool: "seller.register_paid_listing",
     status: canRegister ? "needs_confirmation" : "pending",
     requires_confirmation: true,
@@ -274,7 +312,7 @@ export function onboardProviderHandler(input: OnboardProviderInput): OnboardProv
     ...(!canRegister
       ? {
           blocked_by: !metaUri
-            ? "metadata_uri required — upload metadata and pass the returned URI."
+            ? "metadata_uri required — run seller.publish_listing_metadata_gist first."
             : !input.payout_address
               ? "payout_address is required."
               : "listing_prep readiness must be \"ready\" before registering.",
@@ -285,7 +323,7 @@ export function onboardProviderHandler(input: OnboardProviderInput): OnboardProv
   // Step: backfill_listing_url (directory_backed only)
   if (input.path === "directory_backed") {
     steps.push({
-      step: `${input.output_schema ? stepNum + 3 : stepNum + 4}. Backfill listing URL`,
+      step: `${afterDraft + 3}. Backfill listing URL`,
       tool: "seller.backfill_listing_url",
       status: "pending",
       requires_confirmation: true,
@@ -302,17 +340,18 @@ export function onboardProviderHandler(input: OnboardProviderInput): OnboardProv
   }
 
   // ── 4. Build summary ─────────────────────────────────────────────────────
-  const readyToRegister = canRegister;
   const missingListingFields = listingPrep.next_steps.length;
   const hasEntryWarnings = providerEntry.missing_fields.length > 0;
 
   let summary: string;
   if (hasEntryWarnings) {
     summary = `Provider entry for "${input.name ?? slug}" has missing fields: ${providerEntry.missing_fields.join(", ")}. Fix these before opening the PR.`;
-  } else if (readyToRegister) {
+  } else if (canRegister) {
     summary = `"${input.name ?? slug}" is ready to register on-chain via the ${input.path === "fast" ? "fast" : "directory-backed"} path. Confirm the registration step to proceed.`;
+  } else if (canPublish && !metaUri) {
+    summary = `"${input.name ?? slug}" listing is ready to publish. Run seller.publish_listing_metadata_gist to upload metadata and get register_args.`;
   } else if (missingListingFields > 0) {
-    summary = `"${input.name ?? slug}" provider entry is ready. Listing is incomplete — ${missingListingFields} field(s) still needed before registration.`;
+    summary = `"${input.name ?? slug}" provider entry is ready. Listing is incomplete — ${missingListingFields} field(s) still needed before publishing.`;
   } else {
     summary = `"${input.name ?? slug}" provider entry prepared via ${input.path === "fast" ? "fast" : "directory-backed"} path. Review the step plan and proceed.`;
   }

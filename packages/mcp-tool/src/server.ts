@@ -58,6 +58,10 @@ import {
   backfillListingUrlToolDefinition,
   type BackfillListingUrlDeps,
 } from "./tools/seller/backfill-listing-url.js";
+import {
+  publishListingMetadataGistHandler,
+  publishListingMetadataGistToolDefinition,
+} from "./tools/seller/publish-listing-metadata-gist.js";
 
 // Seller Phase B.5
 import {
@@ -106,7 +110,8 @@ export interface McpServerDeps {
   sellerDraft: InspectProviderDraftDeps & LinkListingDraftDeps;
   /**
    * Seller Phase C — register_paid_listing.
-   * Omit when no signer is configured (CHAIN_LENS_WALLET_PRIVATE_KEY or CHAIN_LENS_SIGN_SOCKET).
+   * Omit when no usable registration signing provider is configured.
+   * This hides the tool for read-only installs and for pre-SDK WAIAAS setups.
    */
   registerListing?: RegisterPaidListingDeps;
   /** Omit to disable chain-lens.request (no wallet or no v2 escrow on this chain). */
@@ -144,10 +149,11 @@ export function buildMcpServer(deps: McpServerDeps): McpServer {
     ];
     // Seller Phase B — only when GitHub token is configured
     if (deps.github) {
+      tools.push(publishListingMetadataGistToolDefinition);
       tools.push(openDirectoryPrToolDefinition);
       tools.push(backfillListingUrlToolDefinition);
     }
-    // Seller Phase C — only when signer is configured
+    // Seller Phase C — only when a usable registration signing provider is configured
     if (deps.registerListing) tools.push(registerPaidListingToolDefinition);
     if (deps.request) tools.push(requestToolDefinition);
     if (deps.call) tools.push(callToolDefinition);
@@ -194,6 +200,10 @@ export function buildMcpServer(deps: McpServerDeps): McpServer {
         return toolTextResult(await linkListingDraftHandler(args as never, deps.sellerDraft));
 
       // Seller Phase B
+      if (name === publishListingMetadataGistToolDefinition.name) {
+        if (!deps.github) throw new Error("seller.publish_listing_metadata_gist is not configured — set GITHUB_TOKEN to enable metadata Gist publishing.");
+        return toolTextResult(await publishListingMetadataGistHandler(args as never, deps.github));
+      }
       if (name === openDirectoryPrToolDefinition.name) {
         if (!deps.github) throw new Error("seller.open_directory_pr is not configured — set GITHUB_TOKEN, GITHUB_REPO_OWNER, and GITHUB_REPO_NAME.");
         return toolTextResult(await openDirectoryPrHandler(args as never, deps.github));

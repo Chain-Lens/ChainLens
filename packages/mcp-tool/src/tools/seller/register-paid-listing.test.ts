@@ -188,6 +188,27 @@ describe("registerPaidListingHandler", () => {
     );
   });
 
+  it("rejects invalid payout address before signing", async () => {
+    let signCalls = 0;
+    const deps = makeDeps(
+      makeSigningProvider({
+        signAndSubmit: async () => {
+          signCalls += 1;
+          return { txHash: TX_HASH, listingOnChainId: 1 };
+        },
+      }),
+    );
+
+    await assert.rejects(
+      registerPaidListingHandler(
+        { payout_address: "not-an-address", metadata_uri: "https://example.com/m.json" },
+        deps,
+      ),
+      /valid EVM address/,
+    );
+    assert.equal(signCalls, 0);
+  });
+
   it("throws when payout_address is empty", async () => {
     const deps = makeDeps();
     await assert.rejects(
@@ -208,6 +229,27 @@ describe("registerPaidListingHandler", () => {
       ),
       /https:\/\//,
     );
+  });
+
+  it("rejects disallowed metadata URI before signing", async () => {
+    let signCalls = 0;
+    const deps = makeDeps(
+      makeSigningProvider({
+        signAndSubmit: async () => {
+          signCalls += 1;
+          return { txHash: TX_HASH, listingOnChainId: 1 };
+        },
+      }),
+    );
+
+    await assert.rejects(
+      registerPaidListingHandler(
+        { payout_address: VALID_PAYOUT, metadata_uri: "ftp://example.com/meta.json" },
+        deps,
+      ),
+      /https:\/\//,
+    );
+    assert.equal(signCalls, 0);
   });
 
   it("throws when metadata_uri is empty", async () => {
