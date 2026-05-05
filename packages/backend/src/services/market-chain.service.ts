@@ -150,3 +150,35 @@ export async function nextListingId(): Promise<bigint> {
     functionName: "nextListingId",
   })) as bigint;
 }
+
+// 5-minute TTL cache to avoid reading serviceFeeBps on every call
+let _feeBpsCache: { value: number; expiresAt: number } | null = null;
+const FEE_BPS_TTL_MS = 5 * 60 * 1000;
+const FEE_BPS_DEFAULT = 250;
+
+export async function readServiceFeeBps(): Promise<number> {
+  const now = Date.now();
+  if (_feeBpsCache && now < _feeBpsCache.expiresAt) return _feeBpsCache.value;
+  try {
+    const bps = (await publicClient.readContract({
+      address: marketAddress(),
+      abi: ChainLensMarketAbi,
+      functionName: "serviceFeeBps",
+    })) as number;
+    _feeBpsCache = { value: bps, expiresAt: now + FEE_BPS_TTL_MS };
+    return bps;
+  } catch {
+    return FEE_BPS_DEFAULT;
+  }
+}
+
+/** Calculate fee and net amounts given gross atomic amount and fee bps. */
+export function calcFeeAndNet(
+  amountAtomic: string,
+  feeBps: number,
+): { fee: string; net: string } {
+  const gross = BigInt(amountAtomic);
+  const fee = (gross * BigInt(feeBps)) / 10000n;
+  const net = gross - fee;
+  return { fee: fee.toString(), net: net.toString() };
+}

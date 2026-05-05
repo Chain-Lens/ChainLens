@@ -81,8 +81,9 @@ export interface CallResult<T = unknown> {
 
 export interface RankedListing {
   listingId: number;
-  name: string;
+  name: string | null;
   score: number;
+  reasons: string[];
   stats: {
     successRate: number;
     p50LatencyMs: number;

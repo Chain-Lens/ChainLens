@@ -5,9 +5,11 @@ import {
   BudgetExceededError,
   ChainLensCallError,
   ProviderClient,
+  type RankedListing,
 } from "@chain-lens/sdk";
 import { resolveWallet, resolveChainId } from "./wallet.js";
 import { loadTelemetry, printReport } from "./report.js";
+import { buildDebugSummary } from "./debug.js";
 
 const VERSION = "0.1.0";
 
@@ -205,6 +207,60 @@ program
     printReport(entries);
   });
 
+// ─── recommend ────────────────────────────────────────────────────────────────
+
+program
+  .command("recommend <task>")
+  .description("Get ranked provider recommendations for a task")
+  .option("--gateway <url>", "Gateway URL")
+  .option("--max <n>", "Max results (default: 5)", "5")
+  .action(async (task: string, opts: { gateway?: string; max: string }) => {
+    const gatewayUrl =
+      opts.gateway ?? process.env["CHAINLENS_GATEWAY"] ?? "https://chainlens.pelicanlab.dev";
+    const maxResults = Math.max(1, Math.min(20, Number(opts.max) || 5));
+
+    try {
+      const res = await fetch(`${gatewayUrl}/v1/recommend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task, maxResults }),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        console.error(`Error: ${res.status} ${body}`);
+        process.exit(1);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = (await res.json()) as any;
+      const listings: RankedListing[] = data.listings ?? [];
+
+      if (listings.length === 0) {
+        console.log("No providers found for that task.");
+        process.exit(0);
+      }
+
+      console.log("Recommended providers\n");
+      for (let i = 0; i < listings.length; i++) {
+        const l = listings[i]!;
+        const costStr =
+          l.stats.avgCostUsdc > 0 ? `$${l.stats.avgCostUsdc.toFixed(6)}` : "free";
+        console.log(`${i + 1}. #${l.listingId} ${l.name ?? "(unnamed)"}`);
+        console.log(`   score:    ${l.score.toFixed(2)}`);
+        console.log(`   success:  ${(l.stats.successRate * 100).toFixed(1)}%`);
+        console.log(`   p50:      ${l.stats.p50LatencyMs} ms`);
+        console.log(`   avg cost: ${costStr}`);
+        if (l.reasons.length > 0) {
+          console.log(`   why:      ${l.reasons[0]}`);
+          for (const r of l.reasons.slice(1)) console.log(`             ${r}`);
+        }
+        console.log();
+      }
+    } catch (err) {
+      console.error(`Error: ${String(err)}`);
+      process.exit(1);
+    }
+  });
+
 // ─── claim ────────────────────────────────────────────────────────────────────
 
 program
@@ -264,6 +320,29 @@ program
       console.error(`Error: ${String(err)}`);
       process.exit(1);
     }
+  });
+
+// ─── debug ────────────────────────────────────────────────────────────────────
+
+program
+  .command("debug")
+  .description("Show a debug trace from local telemetry")
+  .option("--listing <id>", "Filter by listing ID")
+  .action(async (opts: { listing?: string }) => {
+    const chainId = resolveChainId();
+    let walletAddress: string;
+    try {
+      const wallet = resolveWallet(chainId);
+      walletAddress = await wallet.address();
+    } catch {
+      console.log("No telemetry recorded yet. (No wallet configured.)");
+      process.exit(0);
+    }
+
+    const listingFilter = opts.listing != null ? Number(opts.listing) : undefined;
+    const entries = await loadTelemetry(walletAddress);
+    const summary = buildDebugSummary(entries, listingFilter);
+    console.log(summary);
   });
 
 program.parseAsync(process.argv).catch((err) => {

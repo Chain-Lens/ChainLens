@@ -15,7 +15,11 @@ import {
   listingsSearchService,
 } from "./market.routes.js";
 import { parsePayment, type PaymentAuth } from "../utils/payment.js";
-import { resolveListingRuntimeConfig } from "../services/market-chain.service.js";
+import {
+  resolveListingRuntimeConfig,
+  readServiceFeeBps,
+  calcFeeAndNet,
+} from "../services/market-chain.service.js";
 import type { CallResult } from "../services/listing-call.service.js";
 import { scoreListing } from "../services/call-log.service.js";
 
@@ -92,21 +96,33 @@ router.post("/call", async (req: Request, res: Response, next: NextFunction) => 
   }
 
   try {
-    const result = await listingCallService.execute({
-      listingIdStr,
-      inputs: body.params ?? {},
-      payment,
-    });
-    sendV1CallResult(res, result);
+    const [result, feeBps] = await Promise.all([
+      listingCallService.execute({
+        listingIdStr,
+        inputs: body.params ?? {},
+        payment,
+      }),
+      readServiceFeeBps(),
+    ]);
+    sendV1CallResult(res, result, payment.amount, feeBps);
   } catch (err) {
     next(err);
   }
 });
 
 /** Map the service result union to the SDK wire format. */
-function sendV1CallResult(res: Response, result: CallResult): void {
+function sendV1CallResult(
+  res: Response,
+  result: CallResult,
+  paymentAmount?: string,
+  feeBps?: number,
+): void {
   switch (result.kind) {
-    case "ok":
+    case "ok": {
+      const economics =
+        paymentAmount != null && feeBps != null
+          ? calcFeeAndNet(paymentAmount, feeBps)
+          : { fee: null, net: null };
       res.status(200).json({
         ok: true,
         response: result.ok.body,
@@ -114,12 +130,13 @@ function sendV1CallResult(res: Response, result: CallResult): void {
           txHash: result.ok.settleTxHash,
           blockNumber: 0,
         },
-        amount: null,
-        fee: null,
-        net: null,
+        amount: paymentAmount ?? null,
+        fee: economics.fee,
+        net: economics.net,
         jobRef: result.ok.jobRef,
       });
       return;
+    }
 
     case "schema_mismatch":
       res.status(200).json({
@@ -222,10 +239,25 @@ router.post("/recommend", async (req: Request, res: Response, next: NextFunction
     const task = typeof body.task === "string" ? body.task.toLowerCase() : "";
     const maxResults = typeof body.maxResults === "number" ? Math.min(body.maxResults, 20) : 5;
 
-    const result = await listingsSearchService.search({
-      sort: "score",
-      limit: 100,
-    });
+    const result = await listingsSearchService.search({ sort: "score", limit: 100 });
+
+    const candidateStats = result.items.map((item) => ({
+      successRate: item.stats.successRate,
+      latencyMs: item.stats.avgLatencyMs,
+      costUsdc: atomicToUsdc(resolveListingRuntimeConfig(item.metadata).priceAtomic),
+    }));
+    const avgSuccessRate =
+      candidateStats.length > 0
+        ? candidateStats.reduce((s, c) => s + c.successRate, 0) / candidateStats.length
+        : 0;
+    const avgLatencyMs =
+      candidateStats.length > 0
+        ? candidateStats.reduce((s, c) => s + c.latencyMs, 0) / candidateStats.length
+        : 0;
+    const avgCostUsdc =
+      candidateStats.length > 0
+        ? candidateStats.reduce((s, c) => s + c.costUsdc, 0) / candidateStats.length
+        : 0;
 
     const scored = result.items.map((item) => {
       const meta = item.metadata;
@@ -245,24 +277,33 @@ router.post("/recommend", async (req: Request, res: Response, next: NextFunction
       const matchCount = taskWords.filter((w) => textBlob.includes(w)).length;
       const relevance = taskWords.length > 0 ? matchCount / taskWords.length : 0.5;
 
-      // Success rate (Thompson sampling draw)
       const successRateAdj = scoreListing(stats);
-
-      // Latency score: invert normalized latency (lower = better)
       const p50 = stats.avgLatencyMs;
       const latencyScore = p50 > 0 ? Math.max(0, 1 - p50 / 10_000) : 0.5;
-
-      // Cost score: invert normalized price (cheaper = better), cap at $1 USDC
       const priceUsdc = atomicToUsdc(runtime.priceAtomic);
       const costScore = priceUsdc > 0 ? Math.max(0, 1 - priceUsdc) : 1.0;
 
       const composite =
         0.4 * relevance + 0.3 * successRateAdj + 0.15 * latencyScore + 0.15 * costScore;
 
+      // Rule-based recommendation reasons
+      const reasons: string[] = [];
+      if (stats.successRate > avgSuccessRate + 0.05)
+        reasons.push("higher recent success rate than candidate average");
+      if (p50 > 0 && p50 < avgLatencyMs * 0.8)
+        reasons.push("lower latency than candidate average");
+      if (priceUsdc > 0 && priceUsdc < avgCostUsdc * 0.8)
+        reasons.push("lower cost than candidate average");
+      if (stats.totalCalls === 0 && relevance > 0.5)
+        reasons.push("new listing with strong task relevance");
+      if (reasons.length === 0 && composite > 0.6)
+        reasons.push("well-rounded provider across success rate, latency, and cost");
+
       return {
         listingId: Number(item.listingId),
         name: meta.name ?? null,
         score: composite,
+        reasons,
         stats: {
           successRate: stats.successRate,
           p50LatencyMs: stats.avgLatencyMs,
@@ -274,7 +315,6 @@ router.post("/recommend", async (req: Request, res: Response, next: NextFunction
     });
 
     scored.sort((a, b) => b.score - a.score);
-
     res.json({ listings: scored.slice(0, maxResults) });
   } catch (err) {
     next(err);

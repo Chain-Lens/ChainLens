@@ -2,6 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
   resolveListingRuntimeConfig,
+  calcFeeAndNet,
   type ListingMetadata,
 } from "./market-chain.service.js";
 
@@ -91,5 +92,31 @@ describe("resolveListingRuntimeConfig", () => {
       const cfg = resolveListingRuntimeConfig(meta({ output_schema: schema }));
       assert.deepEqual(cfg.outputSchema, schema);
     });
+  });
+});
+
+describe("calcFeeAndNet", () => {
+  test("250 bps on 50000 atomic → fee 1250, net 48750", () => {
+    const { fee, net } = calcFeeAndNet("50000", 250);
+    assert.equal(fee, "1250");
+    assert.equal(net, "48750");
+  });
+
+  test("0 bps → fee 0, net equals amount", () => {
+    const { fee, net } = calcFeeAndNet("50000", 0);
+    assert.equal(fee, "0");
+    assert.equal(net, "50000");
+  });
+
+  test("10000 bps (100%) → fee equals amount, net 0", () => {
+    const { fee, net } = calcFeeAndNet("100000", 10000);
+    assert.equal(fee, "100000");
+    assert.equal(net, "0");
+  });
+
+  test("large amount — no precision loss with BigInt", () => {
+    const { fee, net } = calcFeeAndNet("1000000000", 250);
+    assert.equal(fee, "25000000");
+    assert.equal(net, "975000000");
   });
 });
