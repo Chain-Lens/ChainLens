@@ -1,6 +1,6 @@
 {
   "name": "@chain-lens/sdk",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "ChainLens SDK — pay-and-call AI data APIs on Base with EIP-3009 instant settlement.",
   "license": "MIT",
   "type": "module",

@@ -56,7 +56,7 @@ export async function signReceiveWithAuthorization(opts: {
 
   const typedData: TypedData = {
     domain: {
-      name: "USD Coin",
+      name: "USDC",
       version: "2",
       chainId,
       verifyingContract: usdcAddress,

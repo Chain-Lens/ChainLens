@@ -1,6 +1,6 @@
 {
   "name": "@chain-lens/cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "ChainLens CLI — interact with AI data APIs on Base from the command line.",
   "license": "MIT",
   "type": "module",
@@ -13,7 +13,7 @@
     "dev": "tsx src/bin.ts"
   },
   "dependencies": {
-    "@chain-lens/sdk": "^0.1.1",
+    "@chain-lens/sdk": "^0.1.2",
     "commander": "^12.0.0",
     "viem": "^2.21.0"
   },
