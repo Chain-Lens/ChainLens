@@ -109,15 +109,26 @@ function renderSummary(ctx: PromptContext): string {
     transfer: "USDC transfer",
     pay: "Escrow.pay",
     createJob: "Escrow.createJob",
+    register: "ChainLensMarket.register",
     receiveWithAuthorization: "USDC ReceiveWithAuthorization",
   };
 
   lines.push(`  kind:       ${kindLabel[decoded.kind]}`);
   lines.push(`  target:     ${decoded.target}`);
-  lines.push(`  to/seller:  ${decoded.counterparty}`);
-  lines.push(`  amount:     ${atomicToUsdc(decoded.amountAtomic)} USDC`);
-  if (decoded.valueWei > 0n) {
-    lines.push(`  value:      ${decoded.valueWei} wei (native)`);
+
+  if (decoded.kind === "register") {
+    lines.push(`  payout:     ${decoded.counterparty}`);
+    lines.push(`  metadata:   ${decoded.metadataUri}`);
+    lines.push(`  spend:      0 USDC (registration — no token transfer)`);
+    if (decoded.valueWei > 0n) {
+      lines.push(`  value:      ${decoded.valueWei} wei (unexpected — register is nonpayable)`);
+    }
+  } else {
+    lines.push(`  to/seller:  ${decoded.counterparty}`);
+    lines.push(`  amount:     ${atomicToUsdc(decoded.amountAtomic)} USDC`);
+    if (decoded.valueWei > 0n) {
+      lines.push(`  value:      ${decoded.valueWei} wei (native)`);
+    }
   }
   lines.push(`  hour left:  ${atomicToUsdc(remainingHourAtomic)} USDC`);
   return lines.join("\n");

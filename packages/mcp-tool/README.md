@@ -31,6 +31,8 @@ npm install -g @chain-lens/mcp-tool
 
 ## Tools exposed
 
+### Buyer tools
+
 | Tool                  | Wallet?  | Purpose                                                                                                          |
 | --------------------- | -------- | ---------------------------------------------------------------------------------------------------------------- |
 | `chain-lens.discover` | —        | Search v3 listings (wraps `GET /api/market/listings`).                                                           |
@@ -38,6 +40,50 @@ npm install -g @chain-lens/mcp-tool
 | `chain-lens.status`   | —        | Fetch stored evidence for an on-chain job (wraps `GET /api/evidence/:jobId`).                                    |
 | `chain-lens.call`     | required | Current paid v3 flow. Signs a USDC ReceiveWithAuthorization and calls the gateway x402 endpoint for one listing. |
 | `chain-lens.request`  | required | Legacy paid v2 flow. Kept for backward compatibility where `ApiMarketEscrowV2` is still relevant.                |
+
+### Seller Onboarding Tools (Phase A — wallet-free)
+
+These tools help provider teams prepare, validate, and preflight paid listing
+metadata **without** a wallet, GitHub token, or on-chain registration. They are
+always listed by the MCP server regardless of wallet configuration.
+
+| Tool                               | Wallet? | Purpose                                                                                                                         |
+| ---------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `seller.prepare_provider_entry`    | —       | Create a `providers/<slug>.json` draft from structured inputs. Returns warnings and missing fields. Does not write the file.    |
+| `seller.import_directory_provider` | —       | Import a merged directory entry from ChainLens draft API or raw GitHub JSON and turn it into a paid listing prefill.           |
+| `seller.preflight_endpoint`        | —       | Run a seller endpoint through ChainLens backend preflight (SSRF-safe). Returns HTTP status, latency, body sample, schema check. |
+| `seller.draft_output_schema`       | —       | Generate a JSON Schema draft from a sample API response. Supports `loose`, `balanced`, and `strict` modes.                     |
+| `seller.prepare_paid_listing`      | —       | Merge directory metadata with endpoint/price/schema inputs. Returns a readiness checklist and a `/register?provider=<slug>` URL.|
+
+> **Phase A guarantee:** These tools never open GitHub PRs, write provider
+> JSON files, claim drafts with wallet auth, upload metadata, or call
+> `ChainLensMarket.register`. No wallet or signing env vars are required.
+
+### Seller Tool Phases And Visibility
+
+| Phase | Tools | Visibility | Status |
+| ----- | ----- | ---------- | ------ |
+| A | `seller.prepare_provider_entry`, `seller.import_directory_provider`, `seller.preflight_endpoint`, `seller.draft_output_schema`, `seller.prepare_paid_listing` | Always visible | Implemented |
+| B | `seller.publish_listing_metadata_gist`, `seller.open_directory_pr`, `seller.backfill_listing_url` | Only when GitHub env is configured | Implemented |
+| B.5 | `seller.inspect_provider_draft`, `seller.claim_handoff`, `seller.link_listing_draft` | Always visible | Implemented |
+| C.1 | `seller.register_paid_listing` with local signer or sign socket | Only when usable registration signing deps are wired | Implemented |
+| C.2 | `seller.register_paid_listing` with `CHAIN_LENS_SIGNING_PROVIDER=smart_account` | Visible when smart account env is configured | Adapter implemented; real testnet smart account dry-run pending |
+| C.3 | WAIAAS adapter boundary | Registration hidden until real SDK wiring is injected | Adapter implemented; real SDK pending |
+| D | `seller.onboard_provider` | Always visible | Implemented |
+
+#### Example prompts
+
+```
+Import provider metadata for "alchemy" and prepare a ChainLens listing draft.
+```
+
+```
+Preflight https://api.example.com/price with a POST payload and draft an output schema.
+```
+
+```
+Prepare a paid listing for my endpoint at 0.02 USDC per call, but do not register it.
+```
 
 An HTTP-only alternative exists at `GET /api/x402/:listingId` on the gateway.
 Use that path if you'd rather not install this MCP server — you'll still need
@@ -67,10 +113,42 @@ If any required variable is missing, `chain-lens-mcp` now fails at startup with 
 | `CHAIN_LENS_POLL_TIMEOUT_MS`    | `120000` | Timeout for legacy `chain-lens.request` evidence polling. Must be a positive integer.                                                                                                      |
 | `CHAIN_LENS_SIGN_SOCKET`        | _unset_  | Unix socket of a running `chain-lens-sign unlock` daemon. Preferred signing path — adds spending limits + per-tx approval prompt. Mutually exclusive with `CHAIN_LENS_WALLET_PRIVATE_KEY`. |
 | `CHAIN_LENS_WALLET_PRIVATE_KEY` | _unset_  | **Legacy, testnet-only, see warnings below.** Plaintext key; enables `chain-lens.request` without prompts. Mutually exclusive with `CHAIN_LENS_SIGN_SOCKET`.                               |
+| `CHAIN_LENS_SIGNING_PROVIDER`   | `local_signer` | Registration signer mode. Supported values are `local_signer`, `smart_account`, and `waiaas`. WAIAAS is adapter-ready only until a real provider SDK client is wired. |
+| `CHAIN_LENS_SMART_ACCOUNT_ADDRESS` | _unset_ | Smart account address. Required when `CHAIN_LENS_SIGNING_PROVIDER=smart_account`. Adapter mode is implemented; real smart account testnet dry-run is pending before advertising this as production-ready. |
+| `CHAIN_LENS_SESSION_KEY_PRIVATE_KEY` | _unset_ | Session key private key. Required when `CHAIN_LENS_SIGNING_PROVIDER=smart_account`. |
+| `CHAIN_LENS_PAYOUT_ALLOWLIST` | _unset_ | Optional comma-separated payout address allowlist for smart account or WAIAAS registration flows. |
+| `CHAIN_LENS_WAIAAS_API_URL` | _unset_ | WAIAAS provider API URL. Required when `CHAIN_LENS_SIGNING_PROVIDER=waiaas`, but the registration tool remains hidden until real SDK wiring is added. |
+| `CHAIN_LENS_WAIAAS_API_KEY` | _unset_ | WAIAAS provider API key. Required when `CHAIN_LENS_SIGNING_PROVIDER=waiaas`; never return this value in tool output. |
+| `CHAIN_LENS_WAIAAS_WALLET_ID` | _unset_ | WAIAAS wallet/account ID. Required when `CHAIN_LENS_SIGNING_PROVIDER=waiaas`. |
 
 Deprecated aliases still work for now with a stderr warning:
 `CHAIN_ID` -> `CHAIN_LENS_CHAIN_ID`, `RPC_URL` -> `CHAIN_LENS_RPC_URL`,
 `WALLET_PRIVATE_KEY` -> `CHAIN_LENS_WALLET_PRIVATE_KEY`.
+
+### Metadata publishing and registration flow
+
+With `GITHUB_TOKEN` configured, use `seller.publish_listing_metadata_gist` to
+upload listing metadata and obtain a `metadata_uri` + `expected_metadata_hash`
+in one step:
+
+```text
+1. seller.publish_listing_metadata_gist  — upload JSON to GitHub Gist, get metadata_uri + hash
+2. review returned metadata_uri and hash
+3. seller.register_paid_listing          — sign and submit on-chain (approve sign daemon prompt)
+```
+
+`publish_listing_metadata_gist` accepts the same seller-friendly inputs as
+`prepare_paid_listing` and returns `register_args` ready to copy-paste into
+`register_paid_listing`. The hash is computed from the fetched Gist content —
+not the local JSON string — so URI content drift is detected before registration.
+
+### WAIAAS pre-SDK status
+
+`CHAIN_LENS_SIGNING_PROVIDER=waiaas` validates the required WAIAAS environment
+fields and emits a startup warning, but it does not expose
+`seller.register_paid_listing` yet. The WAIAAS adapter boundary is implemented;
+real provider SDK wiring must be injected before the registration tool is made
+visible for WAIAAS installs.
 
 ## Claude Desktop integration (recommended, read-only)
 

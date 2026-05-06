@@ -91,6 +91,9 @@ pnpm --filter @chain-lens/sample-sellers dev:defillama # :8082
   [SKILL.md](packages/create-seller/SKILL.md) — `npx @chain-lens/create-seller init`,
   deploy, register, monitor. An IDE agent (Claude Code, Cursor) can
   drive the whole flow from the SKILL.md.
+- **Provider drafts:** [docs/PROVIDER_DRAFT_API.md](docs/PROVIDER_DRAFT_API.md) —
+  GitHub directory metadata can become a claimable ChainLens draft before
+  wallet-based seller registration.
 - **Demos:** [docs/DEMO.md](docs/DEMO.md) — three end-to-end scenarios
   (browser buyer, MCP agent, seller onboarding).
 

@@ -16,6 +16,7 @@ const envSchema = z.object({
   ADMIN_ADDRESSES: z.string().default(""),
   JWT_SECRET: z.string().min(32),
   PLATFORM_URL: z.string().url().default("http://localhost:3001"),
+  DIRECTORY_INGEST_TOKEN: z.string().min(16).optional(),
 });
 
 export const env = envSchema.parse(process.env);

@@ -37,6 +37,9 @@ class FakeRepo implements ListingsRepository {
     // null keeps the contract honest and surfaces accidental coupling.
     return null;
   }
+  async findDirectoryTrust() {
+    return null;
+  }
 }
 
 function fakeStats(byId: Record<number, Partial<ListingStats>>): GetListingsStatsFn {

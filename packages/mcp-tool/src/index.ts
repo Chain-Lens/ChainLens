@@ -19,6 +19,7 @@ import {
 } from "viem";
 import {
   ApiMarketEscrowV2Abi,
+  ChainLensMarketAbi,
   CONTRACT_ADDRESSES_V2,
   CHAIN_LENS_MARKET_ADDRESSES,
   USDC_ADDRESSES,
@@ -31,6 +32,13 @@ import { buildMcpServer } from "./server.js";
 import { resolveSigner } from "./signer.js";
 import type { RequestDeps } from "./tools/request.js";
 import type { CallDeps } from "./tools/call.js";
+import type { GitHubDeps } from "./tools/seller/github.js";
+import { createLocalSignerAdapter, type ContractWriteFn } from "./tools/seller/signing-adapter.js";
+import {
+  createSmartAccountSessionAdapter,
+  buildSmartAccountWriteFn,
+} from "./tools/seller/smart-account-adapter.js";
+import type { RegisterPaidListingDeps } from "./tools/seller/register-paid-listing.js";
 
 // USDC EIP-712 domain for TransferWithAuthorization signing. FiatTokenV2 on
 // both Base Mainnet and Base Sepolia uses "USDC" / "2". Exposed via env vars
@@ -146,10 +154,98 @@ async function main() {
     };
   }
 
+  // Phase C register listing deps.
+  //   local_signer (default): requires existing signer (walletPrivateKey or signSocket).
+  //   smart_account (Phase C.2): uses session key + smart account address.
+  //   waiaas (Phase C.3): adapter boundary wired; real SDK injection required to activate.
+  let registerListingDeps: RegisterPaidListingDeps | undefined;
+  if (!isZero(marketAddress)) {
+    if (config.signingProvider === "smart_account") {
+      // Phase C.2 — session key signs execute() on the smart account;
+      // smart account becomes msg.sender for the inner ChainLensMarket.register call.
+      const { privateKeyToAccount } = await import("viem/accounts");
+      const sessionKeyAccount = privateKeyToAccount(config.sessionKeyPrivateKey!);
+      const sessionKeyWalletClient = createWalletClient({
+        chain,
+        transport: http(config.rpcUrl),
+        account: sessionKeyAccount,
+      });
+      // Raw write bound to the session key EOA — used only by buildSmartAccountWriteFn.
+      const sessionKeyWrite = (args: Parameters<typeof sessionKeyWalletClient.writeContract>[0]) =>
+        sessionKeyWalletClient.writeContract({ ...args, account: sessionKeyAccount, chain });
+      registerListingDeps = {
+        signingProvider: createSmartAccountSessionAdapter({
+          // Routes inner calls through smartAccountAddress.execute(dest, 0, calldata).
+          // msg.sender for ChainLensMarket.register will be smartAccountAddress.
+          writeContract: buildSmartAccountWriteFn({
+            sessionKeyWriteContract: sessionKeyWrite as ContractWriteFn,
+            smartAccountAddress: config.smartAccountAddress!,
+          }),
+          waitForTransactionReceipt: (args) => publicClient.waitForTransactionReceipt(args),
+          marketAddress: marketAddress as `0x${string}`,
+          marketAbi: ChainLensMarketAbi as Abi,
+          smartAccountAddress: config.smartAccountAddress!,
+          payoutAllowlist: config.payoutAllowlist,
+        }),
+        chainLensBaseUrl: config.apiBaseUrl.replace(/\/api$/, ""),
+        fetch: globalThis.fetch.bind(globalThis),
+      };
+    } else if (config.signingProvider === "waiaas") {
+      // Phase C.3 — WAIAAS adapter boundary is implemented; real SDK wiring is the next step.
+      // To activate: replace this block with a real WaiaasClient (Privy, Turnkey, Coinbase CDP,
+      // etc.) and remove the warning. Until then, leave registerListingDeps undefined so
+      // seller.register_paid_listing is hidden from ListTools rather than exposed in a broken state.
+      process.stderr.write(
+        "⚠  chain-lens-mcp: CHAIN_LENS_SIGNING_PROVIDER=waiaas is configured but no real WAIAAS\n" +
+          "   SDK client is wired in index.ts. seller.register_paid_listing will not be available.\n" +
+          "   Inject a WaiaasClient for your provider (Privy, Turnkey, Coinbase CDP, etc.) and\n" +
+          "   call createWaiaasAdapter({ client, waitForTransactionReceipt, marketAddress, marketAbi }).\n",
+      );
+    } else if (signer) {
+      // Phase C.1 — local signer (walletPrivateKey or signSocket).
+      const registerWalletClient = createWalletClient({
+        chain,
+        transport: http(config.rpcUrl),
+        account: signer,
+      });
+      registerListingDeps = {
+        signingProvider: createLocalSignerAdapter({
+          writeContract: (args) =>
+            registerWalletClient.writeContract({
+              ...args,
+              account: signer,
+              chain,
+            } as Parameters<typeof registerWalletClient.writeContract>[0]),
+          waitForTransactionReceipt: (args) => publicClient.waitForTransactionReceipt(args),
+          marketAddress: marketAddress as `0x${string}`,
+          marketAbi: ChainLensMarketAbi as Abi,
+        }),
+        chainLensBaseUrl: config.apiBaseUrl.replace(/\/api$/, ""),
+        fetch: globalThis.fetch.bind(globalThis),
+      };
+    }
+    // If neither branch matches, registerListingDeps stays undefined and the tool is hidden.
+  }
+
+  // Phase B GitHub deps — only when all three env vars are set.
+  let githubDeps: GitHubDeps | undefined;
+  if (config.githubToken && config.githubRepoOwner && config.githubRepoName) {
+    githubDeps = {
+      token: config.githubToken,
+      repoOwner: config.githubRepoOwner,
+      repoName: config.githubRepoName,
+      fetch: globalThis.fetch.bind(globalThis),
+    };
+  }
+
   const server = buildMcpServer({
     discover: sharedReadDeps,
     status: sharedReadDeps,
     inspect: sharedReadDeps,
+    seller: sharedReadDeps,
+    sellerDraft: sharedReadDeps,
+    github: githubDeps,
+    registerListing: registerListingDeps,
     request: requestDeps,
     call: callDeps,
   });

@@ -1,10 +1,10 @@
 // Decodes a viem-style transaction request into a policy-friendly shape so the
 // daemon can enforce spending limits and show a meaningful approval prompt.
 //
-// Scope: 4 known function selectors only (USDC approve/transfer, Escrow v2
-// pay/createJob). Anything else returns `kind: "unknown"` and the daemon
-// refuses to sign. This is a security tool — guessing is worse than refusing.
-// Custom selector allowlist is a 0.0.4+ concern.
+// Scope: 5 known function selectors (USDC approve/transfer, Escrow v2
+// pay/createJob, ChainLensMarket register). Anything else returns
+// `kind: "unknown"` and the daemon refuses to sign. This is a security
+// tool — guessing is worse than refusing.
 
 import { decodeFunctionData, type Abi } from "viem";
 
@@ -55,20 +55,44 @@ const KNOWN_ABI: Abi = [
     ],
     outputs: [{ name: "jobId", type: "uint256" }],
   },
+  {
+    // ChainLensMarket.register — seller paid listing registration, no token spend.
+    type: "function",
+    name: "register",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "payout", type: "address" },
+      { name: "metadataURI", type: "string" },
+    ],
+    outputs: [{ name: "listingId", type: "uint256" }],
+  },
 ];
 
-export type KnownKind = "approve" | "transfer" | "pay" | "createJob";
+export type KnownKind = "approve" | "transfer" | "pay" | "createJob" | "register";
 
 export type DecodedTx =
   | {
-      kind: KnownKind;
+      kind: "approve" | "transfer" | "pay" | "createJob";
       /** Contract being called (tx.to). */
       target: `0x${string}`;
       /** USDC-atomic amount moved/approved by this tx. */
       amountAtomic: bigint;
       /** Recipient — spender (approve), destination (transfer), seller (pay/createJob). */
       counterparty: `0x${string}`;
-      /** Native value sent (wei). Non-zero for approve/transfer/pay/createJob is unusual. */
+      /** Native value sent (wei). Non-zero is unusual for these calls. */
+      valueWei: bigint;
+    }
+  | {
+      kind: "register";
+      /** ChainLensMarket contract address. */
+      target: `0x${string}`;
+      /** Always 0n — registration moves no tokens. */
+      amountAtomic: bigint;
+      /** Payout address — receives USDC settlements for executed calls. */
+      counterparty: `0x${string}`;
+      /** Metadata URI committed on-chain. */
+      metadataUri: string;
+      /** Native value (wei). Should be 0n — register is nonpayable. */
       valueWei: bigint;
     }
   | {
@@ -134,6 +158,15 @@ export function decodeTx(tx: RawTx): DecodedTx {
         target: to,
         counterparty: decoded.args[0] as `0x${string}`,
         amountAtomic: decoded.args[2] as bigint,
+        valueWei,
+      };
+    case "register":
+      return {
+        kind: "register",
+        target: to,
+        counterparty: decoded.args[0] as `0x${string}`,
+        amountAtomic: 0n,
+        metadataUri: decoded.args[1] as string,
         valueWei,
       };
     default:

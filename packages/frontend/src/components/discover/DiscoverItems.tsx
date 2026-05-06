@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { formatUnits } from "viem";
-import type { ListingMetadata, ListingStats } from "@/types/market";
+import type { DirectoryTrustSignal, ListingMetadata, ListingStats } from "@/types/market";
 
 export interface DiscoverItem {
   listingId: string;
@@ -11,6 +11,7 @@ export interface DiscoverItem {
   metadataError?: string;
   stats: ListingStats;
   score: number;
+  directory?: DirectoryTrustSignal;
 }
 
 export type SortKey = "score" | "score_strict" | "latest";
@@ -59,6 +60,19 @@ function SuccessRateBadge({ rate }: { rate: number }) {
   );
 }
 
+function DirectoryBadge({ directory }: { directory?: DirectoryTrustSignal }) {
+  if (!directory?.verified) return null;
+
+  return (
+    <span
+      className="inline-flex items-center rounded-full border border-[#3fb95055] bg-[rgba(63,185,80,0.12)] px-2 py-0.5 text-xs font-semibold text-[#3fb950]"
+      title="Imported from the open GitHub provider directory with public source attestation"
+    >
+      GitHub verified
+    </span>
+  );
+}
+
 function ListingCard({ item }: { item: DiscoverItem }) {
   const m = item.metadata;
   const name = m?.name ?? `Listing #${item.listingId}`;
@@ -78,6 +92,12 @@ function ListingCard({ item }: { item: DiscoverItem }) {
 
       <div className="pointer-events-none flex items-start justify-between gap-2">
         <div className="min-w-0">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <DirectoryBadge directory={item.directory} />
+            {item.directory?.sourcePrUrl && (
+              <span className="text-xs text-[var(--text3)]">community reviewed</span>
+            )}
+          </div>
           <h2 className="truncate text-sm font-semibold text-[var(--text)]">{name}</h2>
           {m?.description && (
             <p className="mt-0.5 line-clamp-2 text-xs text-[var(--text2)]">{m.description}</p>

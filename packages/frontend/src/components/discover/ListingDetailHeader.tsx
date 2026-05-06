@@ -14,6 +14,23 @@ export default function ListingDetailHeader({
         <p className="text-xs uppercase tracking-[0.18em] text-[var(--text3)]">
           Listing #{listing.listingId}
         </p>
+        {listing.directory?.verified && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-[#3fb95055] bg-[rgba(63,185,80,0.12)] px-2 py-0.5 text-xs font-semibold text-[#3fb950]">
+              GitHub directory verified
+            </span>
+            {listing.directory.sourcePrUrl && (
+              <a
+                href={listing.directory.sourcePrUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="relative z-10 text-xs text-[var(--accent)] underline-offset-4 hover:underline"
+              >
+                Review trail
+              </a>
+            )}
+          </div>
+        )}
         <h1 className="mt-2 text-3xl font-bold text-[var(--text)]">
           {meta?.name ?? `Listing #${listing.listingId}`}
         </h1>

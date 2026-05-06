@@ -11,6 +11,41 @@ import { buildPolicy, buildTypedDataPolicy } from "./policy.js";
 import { createLimitEnforcer } from "./limit-enforcer.js";
 import type { PromptContext, PromptResult } from "./approval-prompt.js";
 
+const MARKET = "0x45bB56fDB0E6bb14d178E417b67Ed7B3323ffFf7" as const;
+const PAYOUT = "0x3333333333333333333333333333333333333333" as const;
+
+const REGISTER_ABI = [
+  {
+    type: "function",
+    name: "register",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "payout", type: "address" },
+      { name: "metadataURI", type: "string" },
+    ],
+    outputs: [{ name: "listingId", type: "uint256" }],
+  },
+] as const;
+
+function mkRegisterTx(metadataUri: string) {
+  const data = encodeFunctionData({
+    abi: REGISTER_ABI,
+    functionName: "register",
+    args: [PAYOUT, metadataUri],
+  });
+  return {
+    type: "eip1559" as const,
+    chainId: 84532,
+    to: MARKET as `0x${string}`,
+    value: 0n,
+    nonce: 0,
+    gas: 200_000n,
+    maxFeePerGas: 1_000_000_000n,
+    maxPriorityFeePerGas: 1_000_000n,
+    data,
+  };
+}
+
 const APPROVE_ABI = [
   {
     type: "function",
@@ -196,6 +231,41 @@ describe("daemon policy gate", () => {
       const client = await connectDaemon(env.socketPath);
       await client.signTransaction(mkApproveTx(2_000_000n)).catch(() => undefined);
       assert.equal(env.limits.windowSum(), 0n);
+      client.close();
+    } finally {
+      await env.cleanup();
+    }
+  });
+
+  it("signs ChainLensMarket.register when approved (0 USDC — not counted in window)", async () => {
+    const env = await mkTestDaemon({ prompt: async () => ({ approved: true }) });
+    try {
+      const client = await connectDaemon(env.socketPath);
+      const signed = await client.signTransaction(
+        mkRegisterTx("https://chainlens.xyz/meta/1.json"),
+      );
+      assert.ok(signed.signedTransaction.startsWith("0x"));
+      // register has amountAtomic=0n, so window stays at 0
+      assert.equal(env.limits.windowSum(), 0n);
+      client.close();
+    } finally {
+      await env.cleanup();
+    }
+  });
+
+  it("denies ChainLensMarket.register when user denies", async () => {
+    const env = await mkTestDaemon({
+      prompt: async () => ({ approved: false, reason: "denied" }),
+    });
+    try {
+      const client = await connectDaemon(env.socketPath);
+      await assert.rejects(
+        () => client.signTransaction(mkRegisterTx("https://chainlens.xyz/meta/1.json")),
+        (err: unknown) => {
+          assert.equal((err as DaemonRpcError).code, "denied");
+          return true;
+        },
+      );
       client.close();
     } finally {
       await env.cleanup();

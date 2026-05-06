@@ -9,6 +9,15 @@ import { ChainLensMarketAbi } from "@chain-lens/shared";
 import type { PaymentAuth } from "../utils/payment.js";
 
 export interface SettlementService {
+  /** Dry-run the settle() call via eth_call. Throws SettlementPreflightError
+   *  if the simulation would revert (bad signature, insufficient balance, used
+   *  nonce, etc.). Call this before touching the seller to avoid free compute. */
+  simulateSettlement(args: {
+    listingId: bigint;
+    jobRef: `0x${string}`;
+    payment: PaymentAuth;
+  }): Promise<void>;
+
   settle(args: {
     listingId: bigint;
     jobRef: `0x${string}`;
@@ -19,6 +28,16 @@ export interface SettlementService {
    *  the receipt and log status; not awaited by the caller. Kept on the
    *  same interface so tests can opt out by injecting a no-op. */
   watchReceipt(txHash: `0x${string}`, ctx: { listingId: string; jobRef: `0x${string}` }): void;
+}
+
+export class SettlementPreflightError extends Error {
+  constructor(
+    message: string,
+    public readonly cause?: unknown,
+  ) {
+    super(message);
+    this.name = "SettlementPreflightError";
+  }
 }
 
 type WriteContractFn = (call: () => Promise<`0x${string}`>) => Promise<`0x${string}`>;
@@ -36,6 +55,36 @@ export class OnChainSettlementService implements SettlementService {
     private readonly marketAddress: () => `0x${string}`,
     private readonly logger: Logger,
   ) {}
+
+  async simulateSettlement(args: {
+    listingId: bigint;
+    jobRef: `0x${string}`;
+    payment: PaymentAuth;
+  }): Promise<void> {
+    try {
+      await this.publicClient.simulateContract({
+        address: this.marketAddress(),
+        abi: ChainLensMarketAbi,
+        functionName: "settle",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        account: (this.walletClient as any).account,
+        args: [
+          args.listingId,
+          args.jobRef,
+          args.payment.buyer,
+          BigInt(args.payment.amount),
+          BigInt(args.payment.validAfter),
+          BigInt(args.payment.validBefore),
+          args.payment.nonce,
+          args.payment.v,
+          args.payment.r,
+          args.payment.s,
+        ],
+      });
+    } catch (e) {
+      throw new SettlementPreflightError(e instanceof Error ? e.message : String(e), e);
+    }
+  }
 
   async settle(args: {
     listingId: bigint;

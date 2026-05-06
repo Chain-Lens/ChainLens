@@ -1,0 +1,36 @@
+{
+  "name": "@chain-lens/sdk",
+  "version": "0.1.0",
+  "description": "ChainLens SDK — pay-and-call AI data APIs on Base with EIP-3009 instant settlement.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "tsx --test 'src/**/*.test.ts'",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "cross-fetch": "^4.0.0",
+    "level": "^8.0.1"
+  },
+  "peerDependencies": {
+    "viem": ">=2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "viem": "^2.21.0"
+  }
+}
