@@ -28,6 +28,77 @@ function atomicToUsdc(atomic: string | null | undefined): number {
   return Number(BigInt(atomic)) / 1_000_000;
 }
 
+type RecommendationSource = "chainlens" | "coinbase_bazaar" | "fixture";
+
+interface V1Recommendation {
+  listingId: number | null;
+  name: string | null;
+  score: number;
+  reasons: string[];
+  source: RecommendationSource;
+  verifiedByChainLens: boolean;
+  resource?: string;
+  network?: string;
+  asset?: string;
+  payTo?: string;
+  stats: {
+    successRate: number;
+    p50LatencyMs: number;
+    p95LatencyMs: number;
+    avgCostUsdc: number;
+    sampleSize: number;
+  };
+}
+
+interface BazaarAccepts {
+  scheme?: string;
+  network?: string;
+  amount?: string;
+  maxAmountRequired?: string;
+  asset?: string;
+  payTo?: string;
+}
+
+interface BazaarResource {
+  resource?: string;
+  description?: string;
+  accepts?: BazaarAccepts[];
+}
+
+const BAZAAR_SEARCH_URL =
+  "https://api.cdp.coinbase.com/platform/v2/x402/discovery/search";
+
+const BAZAAR_TIMEOUT_MS = 1_500;
+
+const BAZAAR_FIXTURES: BazaarResource[] = [
+  {
+    resource: "https://weather-fast.example/x402/weather",
+    description: "Real-time weather API discovered through a Bazaar-like x402 catalog.",
+    accepts: [
+      {
+        scheme: "exact",
+        network: "eip155:8453",
+        amount: "10000",
+        asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        payTo: "0x0000000000000000000000000000000000000000",
+      },
+    ],
+  },
+  {
+    resource: "https://market-data.example/x402/quote",
+    description: "Market quote endpoint from a Bazaar-like external x402 provider.",
+    accepts: [
+      {
+        scheme: "exact",
+        network: "eip155:8453",
+        amount: "25000",
+        asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        payTo: "0x0000000000000000000000000000000000000000",
+      },
+    ],
+  },
+];
+
 const router = Router();
 
 // ──────────────────────────────────────────────────────────────────────
@@ -259,7 +330,7 @@ router.post("/recommend", async (req: Request, res: Response, next: NextFunction
         ? candidateStats.reduce((s, c) => s + c.costUsdc, 0) / candidateStats.length
         : 0;
 
-    const scored = result.items.map((item) => {
+    const scored: V1Recommendation[] = result.items.map((item) => {
       const meta = item.metadata;
       const runtime = resolveListingRuntimeConfig(meta);
       const stats = item.stats;
@@ -304,6 +375,8 @@ router.post("/recommend", async (req: Request, res: Response, next: NextFunction
         name: meta.name ?? null,
         score: composite,
         reasons,
+        source: "chainlens",
+        verifiedByChainLens: true,
         stats: {
           successRate: stats.successRate,
           p50LatencyMs: stats.avgLatencyMs,
@@ -315,10 +388,91 @@ router.post("/recommend", async (req: Request, res: Response, next: NextFunction
     });
 
     scored.sort((a, b) => b.score - a.score);
-    res.json({ listings: scored.slice(0, maxResults) });
+
+    const external = await fetchBazaarRecommendations(task, maxResults);
+    const externalCount = Math.min(external.length, Math.min(2, maxResults));
+    const chainLensCount = Math.max(0, maxResults - externalCount);
+    const listings = [
+      ...scored.slice(0, chainLensCount),
+      ...external.slice(0, externalCount),
+    ];
+
+    res.json({ listings });
   } catch (err) {
     next(err);
   }
 });
+
+async function fetchBazaarRecommendations(
+  task: string,
+  maxResults: number,
+): Promise<V1Recommendation[]> {
+  const query = task.trim();
+  const url = new URL(BAZAAR_SEARCH_URL);
+  if (query) url.searchParams.set("query", query);
+  url.searchParams.set("limit", String(Math.min(5, Math.max(1, maxResults))));
+
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(BAZAAR_TIMEOUT_MS) });
+    if (!res.ok) throw new Error(`Bazaar HTTP ${res.status}`);
+    const body = (await res.json()) as { resources?: BazaarResource[] };
+    const resources = Array.isArray(body.resources) ? body.resources : [];
+    if (resources.length > 0) return resources.map((r) => bazaarToRecommendation(r, "coinbase_bazaar"));
+  } catch {
+    // Demo stability: Bazaar is an upstream discovery source, not the
+    // integrity boundary. If it is unreachable, fall back to deterministic
+    // Bazaar-shaped fixtures so the recommendation surface stays explainable.
+  }
+
+  return BAZAAR_FIXTURES.map((r) => bazaarToRecommendation(r, "fixture"));
+}
+
+function bazaarToRecommendation(
+  resource: BazaarResource,
+  source: Exclude<RecommendationSource, "chainlens">,
+): V1Recommendation {
+  const accepted = resource.accepts?.[0];
+  const rawAmount = accepted?.amount ?? accepted?.maxAmountRequired;
+  const amount = rawAmount && /^\d+$/.test(rawAmount) ? rawAmount : null;
+  const costUsdc = atomicToUsdc(amount);
+  const isLive = source === "coinbase_bazaar";
+  const name = nameFromResource(resource.resource) ?? "External x402 provider";
+
+  return {
+    listingId: null,
+    name,
+    score: isLive ? 0.58 : 0.5,
+    reasons: [
+      isLive
+        ? "discovered from Coinbase Bazaar x402 catalog"
+        : "demo fallback candidate shaped like a Bazaar x402 resource",
+      "external candidate; wrap as a ChainLens listing to get verified execution receipts",
+    ],
+    source,
+    verifiedByChainLens: false,
+    ...(resource.resource ? { resource: resource.resource } : {}),
+    ...(accepted?.network ? { network: accepted.network } : {}),
+    ...(accepted?.asset ? { asset: accepted.asset } : {}),
+    ...(accepted?.payTo ? { payTo: accepted.payTo } : {}),
+    stats: {
+      successRate: 0,
+      p50LatencyMs: 0,
+      p95LatencyMs: 0,
+      avgCostUsdc: costUsdc,
+      sampleSize: 0,
+    },
+  };
+}
+
+function nameFromResource(resource: string | undefined): string | null {
+  if (!resource) return null;
+  try {
+    const url = new URL(resource);
+    const path = url.pathname.split("/").filter(Boolean).slice(-2).join("/");
+    return path ? `${url.hostname}/${path}` : url.hostname;
+  } catch {
+    return resource.slice(0, 80);
+  }
+}
 
 export default router;

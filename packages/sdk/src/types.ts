@@ -80,10 +80,16 @@ export interface CallResult<T = unknown> {
 }
 
 export interface RankedListing {
-  listingId: number;
+  listingId: number | null;
   name: string | null;
   score: number;
   reasons: string[];
+  source: "chainlens" | "coinbase_bazaar" | "fixture";
+  verifiedByChainLens: boolean;
+  resource?: string;
+  network?: string;
+  asset?: string;
+  payTo?: string;
   stats: {
     successRate: number;
     p50LatencyMs: number;

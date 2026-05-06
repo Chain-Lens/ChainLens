@@ -244,11 +244,22 @@ program
         const l = listings[i]!;
         const costStr =
           l.stats.avgCostUsdc > 0 ? `$${l.stats.avgCostUsdc.toFixed(6)}` : "free";
-        console.log(`${i + 1}. #${l.listingId} ${l.name ?? "(unnamed)"}`);
+        const idLabel = l.listingId === null ? "external" : `#${l.listingId}`;
+        const sourceLabel =
+          l.source === "chainlens"
+            ? "ChainLens verified"
+            : l.source === "coinbase_bazaar"
+              ? "Coinbase Bazaar"
+              : "fixture fallback";
+        console.log(`${i + 1}. ${idLabel} ${l.name ?? "(unnamed)"}`);
+        console.log(`   source:   ${sourceLabel}`);
+        console.log(`   verified: ${l.verifiedByChainLens ? "yes" : "not yet"}`);
         console.log(`   score:    ${l.score.toFixed(2)}`);
         console.log(`   success:  ${(l.stats.successRate * 100).toFixed(1)}%`);
         console.log(`   p50:      ${l.stats.p50LatencyMs} ms`);
         console.log(`   avg cost: ${costStr}`);
+        if (l.resource) console.log(`   resource: ${l.resource}`);
+        if (l.network) console.log(`   network:  ${l.network}`);
         if (l.reasons.length > 0) {
           console.log(`   why:      ${l.reasons[0]}`);
           for (const r of l.reasons.slice(1)) console.log(`             ${r}`);
