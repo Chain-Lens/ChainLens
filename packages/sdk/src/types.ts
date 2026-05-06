@@ -1,5 +1,5 @@
 export interface ChainLensConfig {
-  /** Base URL of the Gateway. Default: https://chainlens.pelicanlab.dev */
+  /** Base URL of the Gateway. Default: https://chainlens.pelicanlab.dev/api */
   gatewayUrl?: string;
 
   /** Wallet adapter — must be able to sign EIP-3009 typed data. */

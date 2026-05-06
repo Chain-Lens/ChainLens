@@ -88,8 +88,7 @@ export async function executeCall(
         listingId,
         params,
         auth: {
-          from: auth.from,
-          to: auth.to,
+          buyer: auth.from,
           amount: auth.amount,
           validAfter: auth.validAfter,
           validBefore: auth.validBefore,

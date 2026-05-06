@@ -11,7 +11,7 @@ import { resolveWallet, resolveChainId } from "./wallet.js";
 import { loadTelemetry, printReport } from "./report.js";
 import { buildDebugSummary } from "./debug.js";
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 
 const program = new Command();
 
@@ -44,7 +44,7 @@ ChainLens CLI Setup
 
 3. Set the gateway URL (optional):
 
-   export CHAINLENS_GATEWAY=https://chainlens.pelicanlab.dev
+   export CHAINLENS_GATEWAY=https://chainlens.pelicanlab.dev/api
 
 4. Test your setup:
 
@@ -80,7 +80,7 @@ program
     }
 
     const gatewayUrl =
-      opts.gateway ?? process.env["CHAINLENS_GATEWAY"] ?? "https://chainlens.pelicanlab.dev";
+      opts.gateway ?? process.env["CHAINLENS_GATEWAY"] ?? "https://chainlens.pelicanlab.dev/api";
 
     try {
       const res = await fetch(`${gatewayUrl}/v1/listings/${listingId}`);
@@ -146,7 +146,7 @@ program
       const chainId = resolveChainId();
       const wallet = resolveWallet(chainId);
       const gatewayUrl =
-        opts.gateway ?? process.env["CHAINLENS_GATEWAY"] ?? "https://chainlens.pelicanlab.dev";
+        opts.gateway ?? process.env["CHAINLENS_GATEWAY"] ?? "https://chainlens.pelicanlab.dev/api";
 
       const client = new ChainLens({
         gatewayUrl,
@@ -216,7 +216,7 @@ program
   .option("--max <n>", "Max results (default: 5)", "5")
   .action(async (task: string, opts: { gateway?: string; max: string }) => {
     const gatewayUrl =
-      opts.gateway ?? process.env["CHAINLENS_GATEWAY"] ?? "https://chainlens.pelicanlab.dev";
+      opts.gateway ?? process.env["CHAINLENS_GATEWAY"] ?? "https://chainlens.pelicanlab.dev/api";
     const maxResults = Math.max(1, Math.min(20, Number(opts.max) || 5));
 
     try {
@@ -282,7 +282,7 @@ program
     const chainId = resolveChainId();
     const wallet = resolveWallet(chainId);
     const gatewayUrl =
-      opts.gateway ?? process.env["CHAINLENS_GATEWAY"] ?? "https://chainlens.pelicanlab.dev";
+      opts.gateway ?? process.env["CHAINLENS_GATEWAY"] ?? "https://chainlens.pelicanlab.dev/api";
 
     const provider = new ProviderClient(gatewayUrl, wallet);
 
@@ -315,7 +315,7 @@ program
     const chainId = resolveChainId();
     const wallet = resolveWallet(chainId);
     const gatewayUrl =
-      opts.gateway ?? process.env["CHAINLENS_GATEWAY"] ?? "https://chainlens.pelicanlab.dev";
+      opts.gateway ?? process.env["CHAINLENS_GATEWAY"] ?? "https://chainlens.pelicanlab.dev/api";
 
     const provider = new ProviderClient(gatewayUrl, wallet);
 

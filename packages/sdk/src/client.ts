@@ -7,7 +7,7 @@ import { ProviderClient } from "./provider.js";
 import { ChainLensCallError } from "./errors.js";
 import type { FailureMetadata } from "./types.js";
 
-const DEFAULT_GATEWAY = "https://chainlens.pelicanlab.dev";
+const DEFAULT_GATEWAY = "https://chainlens.pelicanlab.dev/api";
 
 const RETRYABLE_KINDS: ReadonlySet<FailureMetadata["kind"]> = new Set([
   "http_5xx",
