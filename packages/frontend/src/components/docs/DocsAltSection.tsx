@@ -5,15 +5,16 @@ export default function DocsAltSection() {
   return (
     <section id="alt" className="mb-14">
       <h2 className="text-2xl font-bold mb-4" style={{ color: "var(--text)" }}>
-        9. Alternatives
+        10. Low-level alternatives
       </h2>
       <p className="mb-4" style={{ color: "var(--text2)" }}>
-        Two higher-level paths that wrap the steps above:
+        Most developers should start with the SDK or CLI. These lower-level paths are useful when
+        building custom agents or protocol integrations:
       </p>
       <ul className="list-disc list-inside space-y-3" style={{ color: "var(--text2)" }}>
         <li>
           <strong style={{ color: "var(--text)" }}>
-            MCP (recommended for Claude Desktop / Cursor / Claude Code agents):
+            MCP:
           </strong>{" "}
           register <InlineCode>@chain-lens/mcp-tool</InlineCode> in your MCP client config. The tool
           exposes <InlineCode>chain-lens.discover</InlineCode> /{" "}
@@ -32,8 +33,8 @@ export default function DocsAltSection() {
           .
         </li>
         <li>
-          <strong style={{ color: "var(--text)" }}>x402 HTTP facade:</strong> current
-          listing-specific paid path using USDC <InlineCode>ReceiveWithAuthorization</InlineCode>.
+          <strong style={{ color: "var(--text)" }}>x402 HTTP facade:</strong> listing-specific paid
+          path using USDC <InlineCode>ReceiveWithAuthorization</InlineCode>.
           Point any ChainLens-aware client at{" "}
           <InlineCode>
             {DOCS_BASE_URL}/x402/{"<listingId>"}

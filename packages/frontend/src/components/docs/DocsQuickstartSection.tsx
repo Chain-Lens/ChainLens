@@ -8,8 +8,8 @@ export default function DocsQuickstartSection() {
         7. Full quickstart code
       </h2>
       <p className="mb-4" style={{ color: "var(--text2)" }}>
-        Single x402 gateway call — the gateway handles seller execution, schema and safety checks,
-        and on-chain settlement in one round trip.
+        Minimal TypeScript buyer flow using the SDK. It signs, pays, validates, records local
+        telemetry, and returns the settlement receipt.
       </p>
       <DocsCodeBlock code={DOCS_QUICKSTART_CODE} language="agent.ts" />
     </section>

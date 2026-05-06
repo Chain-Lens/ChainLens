@@ -8,8 +8,9 @@ export default function DocsPrereqsSection() {
         1. Prerequisites
       </h2>
       <p className="mb-4" style={{ color: "var(--text2)" }}>
-        A wallet on <strong style={{ color: "var(--text)" }}>Base Sepolia</strong> with testnet ETH
-        (for gas) and testnet USDC (for payment).
+        For live paid calls, use a wallet on{" "}
+        <strong style={{ color: "var(--text)" }}>Base Sepolia</strong> with testnet ETH for gas and
+        testnet USDC for payment. Recommendation and discovery calls do not require a funded wallet.
       </p>
       <ul className="list-disc list-inside space-y-1 mb-4" style={{ color: "var(--text2)" }}>
         <li>Node.js 20+</li>
@@ -38,13 +39,16 @@ export default function DocsPrereqsSection() {
           </a>
         </li>
         <li>
-          <InlineCode>viem</InlineCode>
+          <InlineCode>@chain-lens/sdk</InlineCode>, <InlineCode>@chain-lens/cli</InlineCode>, or{" "}
+          <InlineCode>@chain-lens/mcp-tool</InlineCode>
         </li>
       </ul>
       <TerminalWindow title="terminal — install dependencies">
-        <Line>npm install viem</Line>
+        <Line>npm install @chain-lens/sdk viem</Line>
+        <Line>npm install -g @chain-lens/cli</Line>
+        <Line>npm install -g @chain-lens/mcp-tool</Line>
         <Line prompt={false} color="gray">
-          + viem@2.x.x
+          # SDK for app code, CLI for terminal flows, MCP for agent clients
         </Line>
       </TerminalWindow>
     </section>

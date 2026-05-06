@@ -2,9 +2,9 @@ import { DOCS_MARKET, DOCS_USDC } from "@/lib/docs-constants";
 
 const ROWS: ReadonlyArray<readonly [string, string, string]> = [
   [
-    "settle(listingId, buyer, amount, auth, signature, jobRef)",
+    "settle(listingId, jobRef, buyer, amount, validAfter, validBefore, nonce, v, r, s)",
     "Gateway",
-    "Pulls signed USDC, credits seller (95%) and protocol fee (5%), emits Settled",
+    "Pulls signed USDC, credits seller net and protocol fee to claimable balances, emits Settled",
   ],
   ["claim()", "Seller", "Withdraw accumulated seller earnings"],
   [

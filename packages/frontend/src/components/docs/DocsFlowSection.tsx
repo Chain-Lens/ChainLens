@@ -1,6 +1,6 @@
 import InlineCode from "./InlineCode";
 import { TerminalWindow, Line } from "./DocsTerminal";
-import { DOCS_FEE_DISPLAY } from "@/lib/docs-constants";
+import { DOCS_BASE_URL } from "@/lib/docs-constants";
 
 export default function DocsFlowSection() {
   return (
@@ -9,13 +9,11 @@ export default function DocsFlowSection() {
         2. Payment flow overview
       </h2>
       <p className="mb-4" style={{ color: "var(--text2)" }}>
-        Paid calls route through <InlineCode>ChainLensMarket</InlineCode> and the listing-specific{" "}
-        <InlineCode>/api/x402/:listingId</InlineCode> gateway path. The buyer signs a USDC{" "}
-        <InlineCode>ReceiveWithAuthorization</InlineCode>, the gateway executes the seller API, and
-        settlement happens on-chain only after a successful response. Failed seller calls drop the
-        signed authorization, so no USDC moves. ChainLens earns a flat{" "}
-        <strong style={{ color: "var(--text)" }}>{DOCS_FEE_DISPLAY}</strong> USDC fee on each settled
-        call — sellers receive the remainder.
+        SDK and CLI calls use <InlineCode>{DOCS_BASE_URL}/v1/call</InlineCode>. The buyer signs a
+        USDC <InlineCode>ReceiveWithAuthorization</InlineCode>, the gateway executes the seller API,
+        validates the response, and settles on <InlineCode>ChainLensMarket</InlineCode> only after a
+        successful verified response. The response reports amount, protocol fee, seller net, and
+        settlement tx hash.
       </p>
       <TerminalWindow title="terminal — flow diagram">
         <Line prompt={false} color="blue">
@@ -28,16 +26,16 @@ export default function DocsFlowSection() {
           ├─────────────────────────────────────────────────────────────┤
         </Line>
         <Line prompt={false} color="yellow">
-          │ 1. GET /api/market/listings?q=&lt;search&gt; │
+          │ 1. POST /api/v1/recommend {"{ task, maxResults }"} │
         </Line>
         <Line prompt={false} color="gray">
-          │ → [{"{ listingId, metadata, stats, score, ... }"}] │
+          │ → ChainLens verified + Coinbase Bazaar candidates │
         </Line>
         <Line prompt={false} color="blue">
           │ │
         </Line>
         <Line prompt={false} color="yellow">
-          │ 2. GET /api/market/listings/&lt;listingId&gt; │
+          │ 2. GET /api/v1/listings/&lt;listingId&gt; │
         </Line>
         <Line prompt={false} color="gray">
           │ → full metadata, examples, recent errors │
@@ -46,10 +44,10 @@ export default function DocsFlowSection() {
           │ │
         </Line>
         <Line prompt={false} color="yellow">
-          │ 3. GET /api/x402/&lt;listingId&gt;?inputs... │
+          │ 3. POST /api/v1/call │
         </Line>
         <Line prompt={false} color="yellow">
-          │ + X-Payment: signed ReceiveWithAuthorization │
+          │ + signed ReceiveWithAuthorization │
         </Line>
         <Line prompt={false} color="blue">
           │ │
@@ -64,10 +62,10 @@ export default function DocsFlowSection() {
           │ │
         </Line>
         <Line prompt={false} color="yellow">
-          │ 4. Response includes settleTxHash + seller payload │
+          │ 4. Response includes response + settlement + amount/fee/net │
         </Line>
         <Line prompt={false} color="green">
-          │ → {"{ jobRef, settleTxHash, safety, untrusted_data }"} │
+          │ → {"{ ok, response, settlement, amount, fee, net }"} │
         </Line>
         <Line prompt={false} color="blue">
           └─────────────────────────────────────────────────────────────┘

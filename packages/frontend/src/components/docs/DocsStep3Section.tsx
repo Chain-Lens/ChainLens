@@ -6,18 +6,15 @@ export default function DocsStep3Section() {
   return (
     <section id="step3" className="mb-14">
       <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text)" }}>
-        5. Step 3 — Sign and call through x402
+        5. Low-level x402 path
       </h2>
       <p className="mb-4" style={{ color: "var(--text2)" }}>
-        The paid path is a signed USDC authorization sent in the{" "}
-        <InlineCode>X-Payment</InlineCode> header to the listing-specific x402 route. The gateway
-        executes the seller API first, then settles on <InlineCode>ChainLensMarket</InlineCode> only
-        on success.
+        SDK and CLI are the recommended surfaces. The lower-level x402 route is still available for
+        MCP and ChainLens-aware clients that construct an <InlineCode>X-Payment</InlineCode> header.
       </p>
       <p className="mb-4" style={{ color: "var(--text2)" }}>
-        Inputs are forwarded as query params for GET listings or request body for POST listings,
-        depending on listing metadata. The frontend purchase card already handles this flow for
-        human users.
+        Inputs are forwarded as query params. The MCP tool handles the signing details for agent
+        clients.
       </p>
       <TerminalWindow title="terminal — x402 paid call">
         <Line>

@@ -6,6 +6,8 @@ dist/
 .next/
 out/
 docs/
+!packages/frontend/src/components/docs/
+!packages/frontend/src/components/docs/*.tsx
 release-hardening.md
 .mcp.json
 

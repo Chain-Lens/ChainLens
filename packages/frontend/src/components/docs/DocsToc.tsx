@@ -2,14 +2,17 @@
 
 const ENTRIES: ReadonlyArray<readonly [string, string]> = [
   ["#prereqs", "Prerequisites"],
+  ["#sdk", "SDK quickstart"],
+  ["#cli", "CLI reference"],
   ["#flow", "Payment flow overview"],
-  ["#step1", "Step 1 — Discover a listing"],
-  ["#step2", "Step 2 — Inspect before you spend"],
-  ["#step3", "Step 3 — Sign and call through x402"],
-  ["#step4", "Step 4 — Verify settlement and response"],
-  ["#quickstart", "Full quickstart code"],
+  ["#step1", "Discover a listing"],
+  ["#step2", "Inspect before you spend"],
+  ["#step3", "Low-level x402 path"],
+  ["#step4", "Verify settlement and response"],
+  ["#quickstart", "Full SDK quickstart code"],
+  ["#mcp", "MCP buyer and seller tools"],
   ["#contract", "Contract reference"],
-  ["#alt", "Alternatives (MCP, x402 HTTP)"],
+  ["#alt", "Low-level alternatives"],
 ];
 
 export default function DocsToc() {

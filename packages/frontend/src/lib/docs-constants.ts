@@ -4,35 +4,42 @@ export const DOCS_CHAIN_ID = 84532;
 export const DOCS_MARKET = CHAIN_LENS_MARKET_ADDRESSES[DOCS_CHAIN_ID]!;
 export const DOCS_USDC = USDC_ADDRESSES[DOCS_CHAIN_ID]!;
 export const DOCS_BASE_URL = "https://chainlens.pelicanlab.dev/api";
-export const DOCS_FEE_DISPLAY = "5%";
+export const DOCS_SDK_VERSION = "0.1.2";
+export const DOCS_CLI_VERSION = "0.1.2";
 
-export const DOCS_QUICKSTART_CODE = `const BASE = "${DOCS_BASE_URL}";
-const LISTING_ID = "3";      // from /api/market/listings
-const INPUTS = { protocol: "uniswap" };
-const X_PAYMENT = "<base64url-json>"; // signed ReceiveWithAuthorization payload
+export const DOCS_QUICKSTART_CODE = `import { ChainLens, ViemWallet, ChainLensCallError } from "@chain-lens/sdk";
+import { createWalletClient, http } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { baseSepolia } from "viem/chains";
 
-// Call the listing-specific x402 endpoint. The gateway runs the seller
-// API, validates the response, and only settles on-chain on success —
-// failed calls drop the signature, no USDC moves.
-const res = await fetch(
-  \`\${BASE}/x402/\${LISTING_ID}?\${new URLSearchParams(INPUTS as Record<string, string>)}\`,
-  {
-    method: "GET",
-    headers: { "X-Payment": X_PAYMENT },
-  },
-);
-
-if (!res.ok) {
-  throw new Error(\`Gateway returned \${res.status} \${res.statusText}\`);
-}
-
-const out = await res.json();
-console.log({
-  listingId: out.listingId,
-  jobRef: out.jobRef,
-  settleTxHash: out.settleTxHash,
-  delivery: out.delivery,
-  safety: out.safety,
-  untrustedData: out.untrusted_data,
+const account = privateKeyToAccount(process.env.WALLET_PRIVATE_KEY as \`0x\${string}\`);
+const walletClient = createWalletClient({
+  account,
+  chain: baseSepolia,
+  transport: http(process.env.RPC_URL),
 });
+
+const chainlens = new ChainLens({
+  wallet: new ViemWallet(walletClient),
+  chainId: 84532,
+  gatewayUrl: "${DOCS_BASE_URL}",
+  telemetry: { enabled: true, upload: false },
+});
+
+try {
+  const result = await chainlens.call(13, { symbol: "MSFT" });
+  console.log({
+    data: result.data,
+    amountUsdc: result.amountUsdc,
+    feeUsdc: result.feeUsdc,
+    netUsdc: result.netUsdc,
+    txHash: result.settlement.txHash,
+  });
+} catch (err) {
+  if (err instanceof ChainLensCallError) {
+    console.error(err.failure.kind, err.failure.hint);
+  } else {
+    throw err;
+  }
+}
 `;

@@ -8,49 +8,45 @@ export default function DocsStep4Section() {
         6. Step 4 — Verify settlement and response
       </h2>
       <p className="mb-4" style={{ color: "var(--text2)" }}>
-        A successful call returns the settlement tx hash immediately along with the seller response
-        and safety metadata — there is no separate polling step.
+        A successful SDK or CLI call returns the seller response and settlement data immediately.
+        Failed calls return typed failure metadata and do not submit settlement.
       </p>
       <TerminalWindow title="terminal — settlement result">
-        <Line>
-          curl -H &quot;X-Payment: &lt;base64url-json&gt;&quot; &quot;{DOCS_BASE_URL}
-          /x402/3?protocol=uniswap&quot;
-        </Line>
+        <Line>chainlens call 13 &apos;{"{"}&quot;symbol&quot;:&quot;MSFT&quot;{"}"}&apos;</Line>
         <Line prompt={false} color="gray">
           {"{"}
         </Line>
         <Line prompt={false} color="gray">
           {"  "}
-          <span style={{ color: "#e3b341" }}>&quot;listingId&quot;</span>:{" "}
-          <span style={{ color: "var(--green)" }}>&quot;3&quot;</span>,
+          <span style={{ color: "#e3b341" }}>&quot;Amount&quot;</span>:{" "}
+          <span style={{ color: "var(--green)" }}>&quot;$1.000000 USDC&quot;</span>,
         </Line>
         <Line prompt={false} color="gray">
           {"  "}
-          <span style={{ color: "#e3b341" }}>&quot;jobRef&quot;</span>:{" "}
-          <span style={{ color: "var(--green)" }}>&quot;0xjobref…&quot;</span>,
+          <span style={{ color: "#e3b341" }}>&quot;Fee&quot;</span>:{" "}
+          <span style={{ color: "var(--green)" }}>&quot;$0.010000 USDC&quot;</span>,
         </Line>
         <Line prompt={false} color="gray">
           {"  "}
-          <span style={{ color: "#e3b341" }}>&quot;settleTxHash&quot;</span>:{" "}
+          <span style={{ color: "#e3b341" }}>&quot;TxHash&quot;</span>:{" "}
           <span style={{ color: "var(--green)" }}>&quot;0xsettle…&quot;</span>,
         </Line>
         <Line prompt={false} color="gray">
           {"  "}
-          <span style={{ color: "#e3b341" }}>&quot;delivery&quot;</span>:{" "}
-          <span style={{ color: "var(--green)" }}>&quot;relayed_unmodified&quot;</span>,
+          <span style={{ color: "#e3b341" }}>&quot;Response&quot;</span>: {"{ "}
+          <span style={{ color: "#e3b341" }}>&quot;symbol&quot;</span>:{" "}
+          <span style={{ color: "var(--green)" }}>&quot;MSFT&quot;</span> {"}"}
         </Line>
         <Line prompt={false} color="gray">
           {"  "}
-          <span style={{ color: "#e3b341" }}>&quot;untrusted_data&quot;</span>: {"{ "}
-          <span style={{ color: "#e3b341" }}>&quot;tvl_usd&quot;</span>:{" "}
-          <span style={{ color: "var(--green)" }}>&quot;1234567890&quot;</span> {"}"}
+          <span style={{ color: "var(--text3)" }}>{"// schema_mismatch / timeout → no settlement"}</span>
         </Line>
         <Line prompt={false} color="gray">
           {"}"}
         </Line>
       </TerminalWindow>
       <p className="mb-2" style={{ color: "var(--text2)" }}>
-        For human users, the easiest path is the listing detail page itself at{" "}
+        For human users, the easiest path is still the listing detail page at{" "}
         <a href="/discover" className="underline" style={{ color: "var(--cyan)" }}>
           /discover
         </a>{" "}

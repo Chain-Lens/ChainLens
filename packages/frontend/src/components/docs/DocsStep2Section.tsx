@@ -7,21 +7,22 @@ export default function DocsStep2Section() {
         4. Step 2 — Inspect before you spend
       </h2>
       <p className="mb-4" style={{ color: "var(--text2)" }}>
-        The listing detail response tells you whether a paid call is worth it: endpoint/method,
-        example request and response, 30-day success rate, latency, and recent policy rejects.
+        The listing detail response tells the SDK what it needs before signing: price, max latency,
+        task category, output schema, payout address, and active state. The SDK checks local budget
+        before signing and records telemetry after success or failure.
       </p>
       <TerminalWindow title="terminal — what to check">
         <Line prompt={false} color="gray">
-          {"// metadata.endpoint / metadata.method"}
+          {"// priceAtomic / maxLatencyMs"}
         </Line>
         <Line prompt={false} color="gray">
-          {"// metadata.inputs_schema / example_request"}
+          {"// outputSchema"}
         </Line>
         <Line prompt={false} color="gray">
-          {"// stats.successRate / stats.avgLatencyMs"}
+          {"// active / payout"}
         </Line>
         <Line prompt={false} color="gray">
-          {"// recentErrors.breakdown.response_rejected_schema"}
+          {"// local budget check before signing"}
         </Line>
       </TerminalWindow>
     </section>
